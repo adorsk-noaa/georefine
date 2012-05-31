@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 from flask.ext.sqlalchemy import SQLAlchemy
-import flask_config
+import georefine.flask_config as flask_config
 import os
 
 app = Flask(__name__)
@@ -12,5 +12,5 @@ db = SQLAlchemy(app)
 def not_found(error):
 	return 'badness', 404
 
-from app.projects.views import bp as projects_bp
+from georefine.app.projects.views import bp as projects_bp
 app.register_blueprint(projects_bp)

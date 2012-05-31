@@ -1,4 +1,4 @@
-from app import db
+from georefine.app import db
 
 class Project(db.Model):
 	__tablename__ = 'projects_project'
@@ -6,5 +6,7 @@ class Project(db.Model):
 	name = db.Column(db.String(50), unique=True)
 	dir = db.Column(db.String)
 
-	def __init__(self, name=None):
+	def __init__(self, id=None, name=None, dir=None):
+		self.id = id
 		self.name = name
+		self.dir = dir

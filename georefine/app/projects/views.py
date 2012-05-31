@@ -1,9 +1,9 @@
 from georefine.config import config as gr_conf
 from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for
 from werkzeug import secure_filename
-from app import db
-from app.projects.forms import CreateProjectForm
-from app.projects.models import Project
+from georefine.app import db
+from georefine.app.projects.forms import CreateProjectForm
+from georefine.app.projects.models import Project
 import os
 import tarfile
 
