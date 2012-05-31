@@ -1,5 +1,4 @@
 config = {
-		'DEBUG': False
 		}
 
 import secrets
