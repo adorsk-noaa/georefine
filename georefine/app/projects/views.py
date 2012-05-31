@@ -1,10 +1,11 @@
+from georefine.config import config as gr_conf
 from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for
 from werkzeug import secure_filename
 from app import db
 from app.projects.forms import CreateProjectForm
 from app.projects.models import Project
 import os
-
+import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
 
@@ -23,12 +24,28 @@ def create_project():
 	form = CreateProjectForm(request.form)
 	if form.validate_on_submit():
 		project = Project(name=form.name.data)
+		project.id = project.name
+
+		# Create a directory for the project.
+		print gr_conf['PROJECT_FILES_DIR']
+		project_dir = os.path.join(gr_conf['PROJECT_FILES_DIR'], project.id)
+		os.mkdir(project_dir)
 
 		project_file = request.files['project_file']
 		if project_file:
-			print "pf is: ", project_file
 			filename = secure_filename(project_file.filename)
-			project_file.save(os.path.join('/tmp/', filename))
+
+			# HACK.
+			# @TODO: fix this later.
+			tmp_filename = os.path.join('/tmp', filename)
+			project_file.save(tmp_filename)
+
+			# Unpack the project file to the project dir.
+			tar = tarfile.open(tmp_filename)
+			tar.extractall(project_dir)
+			tar.close()
+
+
 			return "file is: {}".format(filename)
 	else:
 		flash('bad file')
