@@ -1,9 +1,10 @@
 from flask import Flask, render_template
 from flask.ext.sqlalchemy import SQLAlchemy
 import flask_config
+import os
 
 app = Flask(__name__)
-app.config.from_object('flask_config')
+app.config.from_object(flask_config)
 
 db = SQLAlchemy(app)
 
