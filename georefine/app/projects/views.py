@@ -24,12 +24,15 @@ def create_project():
 	form = CreateProjectForm(request.form)
 	if form.validate_on_submit():
 		project = Project(name=form.name.data)
-		project.id = project.name
 
 		# Create a directory for the project.
-		print gr_conf['PROJECT_FILES_DIR']
-		project_dir = os.path.join(gr_conf['PROJECT_FILES_DIR'], project.id)
+		# @TODO: change this to use project id or uuid later.
+		project_dir = os.path.join(gr_conf['PROJECT_FILES_DIR'], project.name)
 		os.mkdir(project_dir)
+
+		project.dir = project_dir
+		db.session.add(project)
+		db.session.commit()
 
 		project_file = request.files['project_file']
 		if project_file:
