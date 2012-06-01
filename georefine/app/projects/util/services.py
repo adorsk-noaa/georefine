@@ -14,4 +14,11 @@ def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[]):
 	dao = get_dao(project)
 	return dao.get_aggregates(data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
 
+def get_map(project):
+	dao = get_dao(project)
+	return open('/data/burger.png').read()
+	# @TODO: dummy return for right now.	
+
+
+
 
