@@ -16,13 +16,9 @@ class Manage_Projects_Test(BaseTest):
 		_basedir = os.path.abspath(os.path.dirname(__file__))
 		project_dir = os.path.join(_basedir, 'test_manage_projects_project_dir')
 
-		from time import time
 		project = Project(id=1, name=time(), dir=project_dir)
 
-		manage_projects.create_project(project)		
-
-	def tearDown(self):
-		self.trans.commit()
+		manage_projects.setupSchema(project)		
 
 
 if __name__ == '__main__':

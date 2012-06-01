@@ -7,15 +7,19 @@ import csv
 def get_project_schema(project):
 	schema_file = os.path.join(project.dir, 'schema.py')
 	schema = imp.load_source("gr_project_schema", schema_file)
+
+	# Prefix tables w/ project id.
+	for t in schema.metadata.tables.values():
+		t.name = "projects{}_{}".format(project.id, t.name)
+
 	return schema
 
 def setUpSchema(project): 
 	schema = get_project_schema(project)
-	prefixTables(project.id, schema)
 	
 	# Create tables.
 	con = db.engine.connect()
-	schema.metadata.create_all(bind=db.engine)
+	schema.metadata.create_all(bind=db.session.bind)
 
 	# Load data (in order defined by schema).
 	for t in schema.tables:
@@ -37,12 +41,8 @@ def setUpSchema(project):
 
 def tearDownSchema(project): 
 	schema = get_project_schema(project)
-	prefixTables(project.id, schema)
-	schema.metadata.drop_all(bind=db.engine)
+	schema.metadata.drop_all(bind=db.session.bind)
 
 
-def prefixTables(prefix, schema):
-	for t in schema.metadata.tables.values():
-		t.name = "projects{}_{}".format(prefix, t.name)
 
 
