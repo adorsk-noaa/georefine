@@ -4,20 +4,18 @@ import os
 import imp
 import csv
 
-def load_project_schema(project):
+def get_project_schema(project):
 	schema_file = os.path.join(project.dir, 'schema.py')
 	schema = imp.load_source("gr_project_schema", schema_file)
 	return schema
 
-def create_project(project): 
-	schema = load_project_schema(project)
-
-	# Prefix tables w/ project id.
-	for t in schema.metadata.tables.values():
-		t.name = "projects{}_{}".format(project.id, t.name)
+def setUpSchema(project): 
+	schema = get_project_schema(project)
+	prefixTables(project.id, schema)
 	
 	# Create tables.
-	schema.metadata.create_all(bind=db.session.bind)
+	con = db.engine.connect()
+	schema.metadata.create_all(bind=db.engine)
 
 	# Load data (in order defined by schema).
 	for t in schema.tables:
@@ -36,5 +34,15 @@ def create_project(project):
 		db.session.execute(t['table'].insert(), records)
 		db.session.commit()
 
+
+def tearDownSchema(project): 
+	schema = get_project_schema(project)
+	prefixTables(project.id, schema)
+	schema.metadata.drop_all(bind=db.engine)
+
+
+def prefixTables(prefix, schema):
+	for t in schema.metadata.tables.values():
+		t.name = "projects{}_{}".format(prefix, t.name)
 
 
