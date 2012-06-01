@@ -17,8 +17,14 @@ class Services_Test(BaseTest):
 		manage_projects.setUpSchema(self.project)
 
 	def test(self):
-		for e in services.get_entities(self.project):
-			print e.name
+		id_entity = {'expression': '{Test1.id}', 'id': 'id'}
+		name_entity = {'expression': '{Test1.name}', 'id': 'name'}
+
+		# Test aggregates.
+		data_entities = [id_entity]
+		grouping_entities = [name_entity]
+		aggregates = services.get_aggregates(self.project, data_entities=data_entities, grouping_entities=grouping_entities)
+		print aggregates
 
 	def tearDown(self):
 		manage_projects.tearDownSchema(self.project)

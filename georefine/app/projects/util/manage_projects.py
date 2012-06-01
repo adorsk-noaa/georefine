@@ -4,7 +4,7 @@ import os
 import imp
 import csv
 
-def get_project_schema(project):
+def getProjectSchema(project):
 	schema_file = os.path.join(project.dir, 'schema.py')
 	schema = imp.load_source("gr_project_schema", schema_file)
 
@@ -15,11 +15,14 @@ def get_project_schema(project):
 	return schema
 
 def setUpSchema(project): 
-	schema = get_project_schema(project)
+	schema = project.schema
 	
 	# Create tables.
 	con = db.engine.connect()
 	schema.metadata.create_all(bind=db.session.bind)
+
+def setUpData(project):
+	schema = project.schema
 
 	# Load data (in order defined by schema).
 	for t in schema.tables:
@@ -40,7 +43,7 @@ def setUpSchema(project):
 
 
 def tearDownSchema(project): 
-	schema = get_project_schema(project)
+	schema = project.schema
 	schema.metadata.drop_all(bind=db.session.bind)
 
 
