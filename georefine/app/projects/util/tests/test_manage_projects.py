@@ -19,7 +19,7 @@ class Manage_Projects_Test(BaseTest):
 		project = Project(id=1, name='test', dir=project_dir)
 		project.schema = manage_projects.getProjectSchema(project)
 		manage_projects.setUpSchema(project)		
-
+		manage_projects.setUpData(project)
 
 if __name__ == '__main__':
 	unittest.main()
