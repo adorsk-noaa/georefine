@@ -45,6 +45,9 @@ class SA_DAO(object):
 
 		for f in filters:
 
+			# Skip empty filters.
+			if not f: continue
+
 			# Default operator is '=='.
 			if not f.has_key('op'): f['op'] = '=='
 
@@ -126,8 +129,6 @@ class SA_DAO(object):
 		# Only select required entities.
 		q = q.with_entities(*q_entities)
 
-
-		print "q is: ", self.query_to_raw_sql(q), "\n\n"
 		return q
 
 	# Helper function for creating aggregate field labels.
