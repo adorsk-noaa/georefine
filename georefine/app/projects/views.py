@@ -70,7 +70,16 @@ def get_aggregates(project_id):
 	data_entities = json.loads(request.args.get('data_entities', '[]'))
 	grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
 	filters = json.loads(request.args.get('filters', '[]'))
+	with_unfiltered = json.loads(request.args.get('with_unfiltered', 'false'))
+	base_filters = json.loads(request.args.get('base_filters', '[]'))
 
-	result = projects_services.get_aggregates(project, data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
+	result = projects_services.get_aggregates(
+			project, 
+			data_entities = data_entities, 
+			grouping_entities = grouping_entities, 
+			filters = filters,
+			with_unfiltered = with_unfiltered,
+			base_filters = base_filters
+			)
 	return jsonify(result)
 
