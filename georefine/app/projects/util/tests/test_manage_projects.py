@@ -19,6 +19,10 @@ class Manage_Projects_Test(BaseTest):
 		project.schema = manage_projects.getProjectSchema(project)
 		manage_projects.setUpSchema(project)		
 		manage_projects.setUpData(project)
+	
+	def tearDown(self):
+		super(Manage_Projects_Test,self).tearDown()
+		#self.trans.commit()
 
 if __name__ == '__main__':
 	unittest.main()
