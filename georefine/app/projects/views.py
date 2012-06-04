@@ -1,9 +1,11 @@
 from georefine.config import config as gr_conf
-from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for
+from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify
 from werkzeug import secure_filename
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project
+from georefine.app.projects.util import manage_projects as projects_manage
+from georefine.app.projects.util import services as projects_services
 import os
 import tarfile
 
@@ -14,6 +16,10 @@ def before_request():
 	g.project = None
 	if 'project_id' in session:
 		g.project = Project.query.get(session['project_id'])
+
+@bp.route('/test_facets/<int:project_id>/')
+def test_facets(project_id):
+	return render_template("projects/test_facets.html")
 
 @bp.route('/')
 def home():
@@ -54,4 +60,17 @@ def create_project():
 		flash('bad file')
 	
 	return render_template("projects/create_project.html", form=form)
+
+@bp.route('/get_aggregates/<int:project_id>/', methods=['GET', 'POST'])
+def get_aggregates(project_id):
+	project = Project.query.get(project_id)
+	project.schema = projects_manage.getProjectSchema(project)
+
+	# Parse request parameters.
+	data_entities = [{'expression': '{Test1.id}', 'aggregate_funcs': ['sum']}]
+	grouping_entities = []
+	filters = []
+
+	result = projects_services.get_aggregates(project, data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
+	return jsonify(result)
 
