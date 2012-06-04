@@ -15,6 +15,11 @@ def getProjectSchema(project):
 
 	return schema
 
+def getProjectAppConfig(project):
+	app_config_file = os.path.join(project.dir, 'app_config.py')
+	app_config = imp.load_source("gr_app_config", app_config_file)
+	return app_config
+
 def setUpSchema(project): 
 	schema = project.schema
 	
