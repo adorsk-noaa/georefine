@@ -97,6 +97,11 @@ var require = {
 		{
 		  "name": "Charts",
 		  "location": ASSETS_BASEURL + "/js/charts/src"
+		},
+
+		{
+		  "name": "Util",
+		  "location": ASSETS_BASEURL + "/js/util/src"
 		}
 	]
 

@@ -1,5 +1,5 @@
 from georefine.config import config as gr_conf
-from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify
+from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json
 from werkzeug import secure_filename
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
@@ -67,9 +67,9 @@ def get_aggregates(project_id):
 	project.schema = projects_manage.getProjectSchema(project)
 
 	# Parse request parameters.
-	data_entities = [{'expression': '{Test1.id}', 'aggregate_funcs': ['sum']}]
-	grouping_entities = []
-	filters = []
+	data_entities = json.loads(request.args.get('data_entities', '[]'))
+	grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
+	filters = json.loads(request.args.get('filters', '[]'))
 
 	result = projects_services.get_aggregates(project, data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
 	return jsonify(result)
