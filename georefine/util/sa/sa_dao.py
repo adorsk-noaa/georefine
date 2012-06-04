@@ -4,6 +4,7 @@ from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.sql import func, asc
 import copy
 import re
+from sqlalchemy.sql import compiler
 
 from sqlalchemy import cast, String
 
@@ -135,14 +136,14 @@ class SA_DAO(object):
 
 		# Set default aggregate functions on data entities.
 		for entity in data_entities:
-			entity.setdefault('id', id(entity))
+			entity.setdefault('id', str(id(entity)))
 			entity.setdefault('label', entity['id'])
 			entity.setdefault('aggregate_funcs', ['sum'])
 	
 		# Process grouping entities.
 		grouping_entity_values = {}
 		for entity in grouping_entities:
-			entity.setdefault('id', id(entity))
+			entity.setdefault('id', str(id(entity)))
 			entity.setdefault('label', entity['id'])
 			entity.setdefault('label_type', 'alpha')
 
@@ -282,7 +283,7 @@ class SA_DAO(object):
 		mapped_entities = {}
 
 		# Set defaults on entity.
-		entity.setdefault('id', id(entity))
+		entity.setdefault('id', str(id(entity)))
 		entity.setdefault('label', entity['id'])
 
 		# Replace entity tokens in expression w/ mapped entities.
@@ -415,3 +416,21 @@ class SA_DAO(object):
 		q_entities = set()
 
 		return q, q_primary_alias, q_registry, q_entities
+
+	# Compile a query into raw sql.
+	def query_to_raw_sql(self, q):
+		dialect = q.session.bind.dialect
+		statement = q.statement
+		comp = compiler.SQLCompiler(dialect, statement)
+		comp.compile()
+		enc = dialect.encoding
+		params = {}
+		for k,v in comp.params.iteritems():
+			if isinstance(v, unicode):
+				v = v.encode(enc)
+			if isinstance(v, str):
+				v = comp.render_literal_value(v, str)
+			params[k] = v
+
+		raw_sql = (comp.string.encode(enc) % params).decode(enc)
+		return raw_sql
