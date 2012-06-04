@@ -1,6 +1,7 @@
 from georefine.config import config as gr_conf
 from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json
 from werkzeug import secure_filename
+from jinja2 import Markup
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project
@@ -19,7 +20,23 @@ def before_request():
 
 @bp.route('/test_facets/<int:project_id>/')
 def test_facets(project_id):
-	return render_template("projects/test_facets.html")
+	project = Project.query.get(project_id)
+	facets = [
+			{
+				'id': 'list_facet',
+				'label': 'Substrates',
+				'type': 'list',
+				'grouping_entity': { 
+					'expression': '{Test1.name}'
+					},
+				'count_entity': {
+					'expression': '{Test1.id}',
+					'aggregate_funcs': ['sum']
+					},
+				},
+			]
+	json_facets = json.dumps(facets)
+	return render_template("projects/test_facets.html", project_id=project.id, facets=Markup(json_facets))
 
 @bp.route('/')
 def home():
