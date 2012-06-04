@@ -6,6 +6,42 @@
 	<script src="/static/sasi_assets/js/less.js" type="text/javascript"></script>
 	<link rel="stylesheet" href="/static/sasi_assets/js/jquery.ui/styles/jquery-ui-1.8.18.custom.css" type="text/css">
 
+	<script type="text/javascript">
+		var GeoRefine = {};
+		GeoRefine.config = {
+project_id: 1,
+facets: [
+		{
+			id: 'list_facet',
+			label: 'Substrates',
+			type: 'list',
+			grouping_entity: {
+				'expression': '{Test1.name}'
+			},
+			count_entity: {
+				'expression': '{Test1.id}',
+				'aggregate_funcs': ['sum']
+			},
+		},
+		{
+			id: 'numeric_facet',
+			label: 'Numeric Facet',
+			type: 'numeric',
+			grouping_entity: {
+				'expression': '{Test1.id}',
+				'as_histogram': true,
+				'num_buckets': 25,
+				'all_values': true
+			},
+			count_entity: {
+				'expression': '{Test1.id}',
+				'aggregate_funcs': ['sum']
+			}
+		}
+	]
+		};
+	</script>
+
 	<script src="/static/js/require_config.js"></script>
 	<script data-main="/static/js/facets_test" src="/static/sasi_assets/js/require.js/require.js"></script>
 

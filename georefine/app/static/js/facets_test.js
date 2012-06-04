@@ -10,106 +10,147 @@ require([
 
 function($, Backbone, _, _s, ui, Facets, Util){
 
-	var facets = {};
+	// Assumes that GeoRefine.config has been set.
+	var setupFacets = function(opts){
 
-	// @TODO: NEED TO CREATE THIS FROM APP CONFIG.
-	list_facet_model = new Facets.models.FacetModel({
-		id: 'habitat_type.substrate.id',
-		label: 'Substrates',
-		type: 'multiselect',
-		grouping_entity: {
-			'expression': '{Test1.name}'
-		},
-		count_entity: {
-			'expression': '{Test1.id}',
-			'aggregate_funcs': ['sum']
-		},
-		choices: []
-	});
+		var facets = {};
+		var lji = new Util.util.LumberjackInterpreter();
 
-	window.m = list_facet_model;
+		var endpoint = _s.sprintf('/projects/get_aggregates/%s/', GeoRefine.config.project_id);
 
-	var lji = new Util.util.LumberjackInterpreter();
+		// The 'getData' functions will be called with a facet model as 'this'.
+		var listFacetGetData = function(){
+			var data = {
+				'filters': JSON.stringify(this.get('filters')),
+				'data_entities': JSON.stringify([this.get('count_entity')]),
+				'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
+			};
+			var _this = this;
+			$.ajax({
+				url: endpoint,
+				type: 'GET',
+				data: data,
+				error: Backbone.wrapError(function(){}, _this, {}),
+				success: function(data, status, xhr){
+					// Set total.
+					var total = data.data[0].value;
+					_this.set('total', total, {silent:true});
 
-	list_facet_model.getData = function() {
-		// @TODO: NEED TO PUT PROJECT ID IN HERE.
-		var endpoint = '/projects/get_aggregates/1/';
-
-		var data = {
-			'filters': JSON.stringify(this.get('filters')),
-			'data_entities': JSON.stringify([this.get('count_entity')]),
-			'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
-		};
-
-		var _this = this;
-		$.ajax({
-			url: endpoint,
-			complete: function(xhr, status){
-			},
-			type: 'GET',
-			data: data,
-			error: Backbone.wrapError(function(){}, _this, {}),
-			success: function(data, status, xhr){
-				// Set total.
-				var total = data.data[0].value;
-				_this.set('total', total, {silent:true});
-
-				// Format choices.
-				var choices = [];
-				var leafs = lji.parse(data);
-				_.each(leafs, function(leaf){
-					choices.push({
-						id: leaf.id,
-						label: leaf.label,
-						count: leaf.data[0].value
+					// Format choices.
+					var choices = [];
+					var leafs = lji.parse(data);
+					_.each(leafs, function(leaf){
+						choices.push({
+							id: leaf.id,
+							label: leaf.label,
+							count: leaf.data[0].value
+						});
 					});
-				});
-				_this.set('choices', choices);
-			}
-		});
-	};
-
-	list_facet_view = new Facets.views.ListFacetView({
-		model: list_facet_model
-	});
-	facets['list_facet'] = {
-		model: list_facet_model,
-		view: list_facet_view
-	};
-
-	// Define fetch method for each choice facet model.
-	_.each(facets, function(facet){
-		facet['model'].sync = function(method, model, options) {
-			if (method == 'read'){
-				options = options || {};
-				url_params= [];
-				filters = paramsToFilters(model.get('parameters'));
-				url_params.push('FILTERS=' + JSON.stringify(filters));
-				url_params.push('ID_FIELD=' + model.get('count_id_field'));
-				url_params.push('LABEL_FIELD=' + model.get('count_label_field'));
-				url_params.push('VALUE_FIELD=' + model.get('count_value_field'));
-				options.url = '/habitat/get_choice_facet/?' + url_params.join('&');
-			}
-			Backbone.sync(method, model, options);
+					_this.set('choices', choices);
+				}
+			});
 		};
-	});
 
-	// Create facet collection from models.
-	facet_models = [];
-	_.each(facets, function(facet){
-		facet_models.push(facet['model'])
-	});
-	f_fc = new Facets.models.FacetCollection(facet_models, {});
+		numericFacetGetData = function() {
+			var data = {
+				'filters': JSON.stringify(this.get('filters')),
+				'data_entities': JSON.stringify([this.get('count_entity')]),
+				'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
+				'with_unfiltered': true,
+				'base_filters': JSON.stringify(this.get('base_filters'))
+			};
+			var _this = this;
+			$.ajax({
+				url: endpoint,
+				type: 'GET',
+				data: data,
+				error: Backbone.wrapError(function(){}, _this, {}),
+				success: function(data, status, xhr){
 
-	// Create collection view.
-	f_fv = new Facets.views.FacetCollectionView({
-		el: $('#main'),
-		model: f_fc,
-	});
+					// Parse data into histograms.
+					var base_histogram = [];
+					var filtered_histogram = [];
 
-	// Add facet views to the collection view.
-	_.each(facets,function(facet){
-		f_fv.addFacetView(facet['view']);
-	});
+					var leafs = lji.parse(data);
+					_.each(leafs, function(leaf){
+						bucket_label = leaf.label;
+						var minmax_regex = /(.*) to (.*)/;
+						var match = minmax_regex.exec(bucket_label);
+						var bmin = parseFloat(match[1]);
+						var bmax = parseFloat(match[2]);
+
+						var base_bucket = {
+							bucket: leaf.label,
+							min: bmin,
+							max: bmax,
+							count: leaf.data[0].value
+						};
+						base_histogram.push(base_bucket);
+
+						var filtered_bucket = _.extend({}, base_bucket);
+						filtered_bucket.count = leaf.data[1].value;
+						filtered_histogram.push(filtered_bucket);
+
+					});
+
+					base_histogram = _.sortBy(base_histogram, function(b){return b.count});
+					filtered_histogram = _.sortBy(filtered_histogram, function(b){return b.count;});
+
+					_this.set({
+						base_histogram: base_histogram,
+						filtered_histogram: filtered_histogram
+					});
+				}
+			});
+		};
+
+		// For each facet definition...
+		_.each(GeoRefine.config.facets, function(facet){
+
+			var model, view;
+
+			if (facet.type == 'list'){
+				model = new Facets.models.FacetModel(_.extend({}, facet, {
+					choices: []
+				}));
+				model.getData = listFacetGetData;
+				view = new Facets.views.ListFacetView({ model: model });
+			}
+
+			else if (facet.type == 'numeric'){
+				model = new Facets.models.FacetModel(_.extend({}, facet, {
+					filtered_histogram: [],
+					base_histogram: []
+				}));
+				model.getData = numericFacetGetData;
+				view = new Facets.views.NumericFacetView({ model: model });
+			}
+
+			facets[model.cid] = {
+				model: model,
+				view: view
+			};
+		});
+
+		// Create facet collection.
+		var facet_models = [];
+		_.each(facets, function(facet){
+			facet_models.push(facet['model'])
+		});
+		facet_collection_model = new Facets.models.FacetCollection(facet_models, {});
+		facet_collection_view = new Facets.views.FacetCollectionView({
+			el: $('#main'),
+			model: facet_collection_model,
+		});
+		_.each(facets,function(facet){
+			facet_collection_view.addFacetView(facet['view']);
+		});
+
+		facet_collection_view.updateFacets({force: true});
+
+	};
+
+	// Call the setup function.
+	setupFacets();
 
 });
