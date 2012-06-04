@@ -21,21 +21,8 @@ def before_request():
 @bp.route('/test_facets/<int:project_id>/')
 def test_facets(project_id):
 	project = Project.query.get(project_id)
-	facets = [
-			{
-				'id': 'list_facet',
-				'label': 'Substrates',
-				'type': 'list',
-				'grouping_entity': { 
-					'expression': '{Test1.name}'
-					},
-				'count_entity': {
-					'expression': '{Test1.id}',
-					'aggregate_funcs': ['sum']
-					},
-				},
-			]
-	json_facets = json.dumps(facets)
+	project.app_config = projects_manage.getProjectAppConfig(project)
+	json_facets = json.dumps(project.app_config.facets)
 	return render_template("projects/test_facets.html", project_id=project.id, facets=Markup(json_facets))
 
 @bp.route('/')

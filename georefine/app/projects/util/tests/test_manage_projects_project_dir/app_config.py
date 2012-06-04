@@ -18,9 +18,9 @@ facets = [
 			'type': 'numeric',
 			'grouping_entity': {
 				'expression': '{Test1.id}',
-				'as_histogram': true,
+				'as_histogram': 'true',
 				'num_buckets': 25,
-				'all_values': true
+				'all_values': 'true'
 				},
 			'count_entity': {
 				'expression': '{Test1.id}',
