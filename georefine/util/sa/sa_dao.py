@@ -126,6 +126,8 @@ class SA_DAO(object):
 		# Only select required entities.
 		q = q.with_entities(*q_entities)
 
+
+		print "q is: ", self.query_to_raw_sql(q), "\n\n"
 		return q
 
 	# Helper function for creating aggregate field labels.
@@ -361,7 +363,7 @@ class SA_DAO(object):
 		num_buckets = entity.get('num_buckets', 10)
 
 		# Get bucket width.
-		bucket_width = (entity_max - entity_min)/num_buckets
+		bucket_width = (entity_max - entity_min)/float(num_buckets)
 
 		# Get bucket field entities.
 		# Bit of a trick here: we use max - bucket_width because normally last bucket gets all values >= max.
