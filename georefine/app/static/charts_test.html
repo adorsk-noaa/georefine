@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+
+	<link rel="stylesheet/less" type="text/css" href="/static/sasi_assets/js/charts/src/styles/charts-example.less">
+	<script src="/static/sasi_assets/js/less.js" type="text/javascript"></script>
+	<link rel="stylesheet" href="/static/sasi_assets/js/jquery.ui/styles/jquery-ui-1.8.18.custom.css" type="text/css">
+
+	<script type="text/javascript">
+		var GeoRefine = {};
+		GeoRefine.config = {
+project_id: 1,
+			charts: {
+				category_fields: [
+					{
+						'id': 'Test1.name',
+						'entity': {
+							'expression': '{Test1.name}',
+							'all_values': true
+						},
+						'label': 'Test1.Name',
+						'value_type': 'categorical',
+					},
+					{
+						'id': 'Test1.id',
+						'entity': {
+							'expression': '{Test1.id}',
+							'all_values': true,
+							'as_histogram': true,
+							'label_type': 'numeric_histogram',
+							'num_buckets': 10,
+							//'min': 0,
+							//'max': 3000,
+							minauto: true,
+							maxauto: true
+						},
+						'label': 'Test1.ID',
+						'value_type': 'numeric',
+					}
+				],
+
+				quantity_fields: [
+					{
+						'id': 'Test1.id:sum',
+						'label': 'Test1.ID: Sum',
+						'value_type': 'numeric',
+						'entity': {
+							'expression': '{Test1.id}',
+							'min': 0,
+							'maxauto': true,
+							'aggregate_funcs': ['sum']
+						}
+					}
+				]
+
+			}
+		};
+	</script>
+
+	<script src="/static/js/require_config.js"></script>
+	<script data-main="/static/js/charts_test" src="/static/sasi_assets/js/require.js/require.js"></script>
+
+	<script src="/static/js/facets_test.js"></script>
+
+	<script type="text/javascript">
+		 less.env = 'development';
+		 //less.watch();
+	</script>
+
+</head>
+
+<body>
+
+	<div class="container" style="width: 800px; height: 600px; margin-left: auto; margin-right: auto;">
+		<div id="main" style="min-width:100%; min-height: 100%; border: thin solid black;">
+		</div>
+	</div>
+
+
+</body>
+</html>
