@@ -1,5 +1,5 @@
 from georefine.config import config as gr_conf
-from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json
+from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json, Response
 from werkzeug import secure_filename
 from jinja2 import Markup
 from georefine.app import db
@@ -93,4 +93,14 @@ def get_aggregates(project_id):
 			base_filters = base_filters
 			)
 	return jsonify(result)
+
+@bp.route('/get_map/<int:project_id>/', methods=['GET'])
+def get_map(project_id):
+	project = Project.query.get(project_id)
+	project.schema = projects_manage.getProjectSchema(project)
+
+	# Parse request parameters.
+
+	map_image = projects_services.get_map(project)
+	return Response(map_image, mimetype='image/gif')
 
