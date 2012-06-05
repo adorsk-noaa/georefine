@@ -25,6 +25,13 @@ def test_facets(project_id):
 	json_facets = json.dumps(project.app_config.facets)
 	return render_template("projects/test_facets.html", project_id=project.id, facets=Markup(json_facets))
 
+@bp.route('/test_charts/<int:project_id>/')
+def test_charts(project_id):
+	project = Project.query.get(project_id)
+	project.app_config = projects_manage.getProjectAppConfig(project)
+	json_charts = json.dumps(project.app_config.charts)
+	return render_template("projects/test_charts.html", project_id=project.id, charts=Markup(json_charts))
+
 @bp.route('/')
 def home():
 	return 'home'
