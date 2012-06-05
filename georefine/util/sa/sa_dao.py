@@ -6,7 +6,7 @@ import copy
 import re
 from sqlalchemy.sql import compiler
 
-from sqlalchemy import cast, String
+from sqlalchemy import cast, String, case
 
 class SA_DAO(object):
 
@@ -113,8 +113,9 @@ class SA_DAO(object):
 
 			# Handle histogram fields.
 			if entity.get('as_histogram'):
-				q, bucket_label_entity = self.add_bucket_entity_to_query(q, q_entities, entity, mapped_entity)
-				q = q.group_by(bucket_label_entity)
+				q, bucket_id_entity, bucket_label_entity = self.add_bucket_entity_to_query(q, q_entities, entity, mapped_entity)
+				q = q.group_by(bucket_id_entity)
+
 			# Handle other fields.
 			else:
 				q_entities.add(mapped_entity)
@@ -159,14 +160,17 @@ class SA_DAO(object):
 			# include all values, with labels.
 			values = []
 			if entity.get('all_values'):
-				for v in self.get_entity_values([entity]):
+				for v in self.get_entity_values(entity):
 					if entity.get('as_histogram'):
-						label = v[entity['label']]
+						node_label = v[entity['label']]
+						node_id = v[self.get_bucket_id_label(entity)]
 					else:
-						label = v[entity['label_entity']['label']]
+						node_label = v[entity['label_entity']['label']]
+						node_id = v[entity['label']]
+
 					values.append({
-						'id': v[entity['label']],
-						'label': label,
+						'id': node_id,
+						'label': node_label,
 						'label_type': entity['label_type']
 						})
 			grouping_entity_values[entity['id']] = values 
@@ -188,13 +192,17 @@ class SA_DAO(object):
 						current_node['children'][value['id']] = {'label': value['label'], 'id': value['id']}
 
 				# Set current node to next tree node (initializing if not yet set).
-				current_node = current_node['children'].setdefault(aggregate[entity['label']], {})
-				current_node['id'] = aggregate[entity['label']]
-				if not entity.get('as_histogram', False):
-					label = entity['label_entity']['label']
+				if entity.get('as_histogram'):
+					node_id = aggregate[self.get_bucket_id_label(entity)]
+					node_label = aggregate[entity['label']]
 				else:
-					label = entity['label']
-				current_node['label'] = aggregate[label]
+					node_id = aggregate[entity['label']]
+					node_label = aggregate[entity['label_entity']['label']]
+
+				current_node = current_node['children'].setdefault(node_id, {})
+
+				current_node['id'] = node_id
+				current_node['label'] = node_label
 				current_node['label_type'] = entity['label_type']
 
 			# We should now be at a leaf. Set leaf's data.
@@ -206,7 +214,6 @@ class SA_DAO(object):
 						'label': aggregate_label,
 						'value': aggregate.get(aggregate_label)
 						})
-
 
 		# Set default values for unvisited leafs.
 		default_value = []
@@ -309,48 +316,48 @@ class SA_DAO(object):
 		return mapped_entity
 	
 
-	# Select values for a given set of entities.
-	def get_entity_values(self, entities, as_dicts=True):
+	# Select values for a given entity.
+	def get_entity_values(self, entity, as_dicts=True):
 
-		# Initialize registry and query.
-		primary_alias = aliased(self.primary_class)
-		q_registry = {self.primary_class.__name__: primary_alias}
-		q_entities = set()
-		q = self.session.query(primary_alias)
+		# If entity is a histogram entity, handle separately.
+		if entity.get('as_histogram'):
+			return self.get_histogram_buckets(entity)
 
-		# Process entities.
-		for entity in entities:
+		else:
+			# Initialize registry and query.
+			primary_alias = aliased(self.primary_class)
+			q_registry = {self.primary_class.__name__: primary_alias}
+			q_entities = set()
+			q = self.session.query(primary_alias)
 
-			# If entity has label entity, add to entity list.
-			if entity.get('label_entity'):
-				entities.append(entity['label_entity'])
+			# Initialize entities queue.
+			entities = [entity]
 
-			q = self.register_entity_dependencies(q, q_registry, entity)
-			mapped_entity = self.get_mapped_entity(q_registry, entity)
+			# Process entities.
+			for entity in entities:
 
-			# If entity is a histogram entity, get bucket entities.
-			if entity.get('as_histogram'):
-				q, bucket_label_entity = self.add_bucket_entity_to_query(q, q_entities, entity, mapped_entity)
-				q = q.group_by(bucket_label_entity)
+				# If entity has label entity, add to entity list.
+				if entity.get('label_entity'):
+					entities.append(entity['label_entity'])
 
-			else:
+				q = self.register_entity_dependencies(q, q_registry, entity)
+				mapped_entity = self.get_mapped_entity(q_registry, entity)
+
 				q_entities.add(mapped_entity)
 				q = q.group_by(mapped_entity)
-				
+					
 			q = q.with_entities(*q_entities)
 
-		rows = q.all()
+			rows = q.all()
 
-		# Return field values
-		if as_dicts:
-			return [dict(zip(row.keys(), row)) for row in rows]
-		else: 
-			return rows
+			# Return field values
+			if as_dicts:
+				return [dict(zip(row.keys(), row)) for row in rows]
+			else: 
+				return rows
 	
-
-	# Add bucket entity to query.
-	# Constrains buckets to given max. This overrides default sql behavior to make last bucket be all values >= field_max.
-	def add_bucket_entity_to_query(self, q, q_entities, entity, mapped_entity):
+	# Get all buckets for a histogram entity, not just those buckets which have data.
+	def get_histogram_buckets(self, entity):
 		# Get min, max if not provided.
 		entity_min = 0
 		entity_max = 0
@@ -366,16 +373,56 @@ class SA_DAO(object):
 		# Get bucket width.
 		bucket_width = (entity_max - entity_min)/float(num_buckets)
 
-		# Get bucket field entities.
-		# Bit of a trick here: we use max - bucket_width because normally last bucket gets all values >= max.
-		# Here we use one less bucket, and then filter.  This essentially makes the last bucket include values <= max.
-		bucket_entity = func.width_bucket(mapped_entity, entity_min, entity_max - bucket_width, num_buckets - 1)
-		q = q.filter(mapped_entity <= entity_max)
-		bucket_label_entity = (cast(entity_min + (bucket_entity - 1) * bucket_width, String) + ' to ' + cast(entity_min + bucket_entity * bucket_width, String))
-		bucket_label_entity = bucket_label_entity.label(entity['label'])
+		# Generate bucket values.
+		buckets = []
+		for b in range(1, num_buckets + 1):
+			bucket_min = entity_min + (b - 1) * bucket_width
+			bucket_max = entity_min + (b) * bucket_width
+			bucket_name = "[{}, {})".format(bucket_min, bucket_max)
+			buckets.append({
+				entity['label']: bucket_name,
+				self.get_bucket_id_label(entity): b
+				})
+		buckets.append({
+			entity['label']: "[{}, ...)".format(entity_max),
+			self.get_bucket_id_label(entity): num_buckets + 1
+			})
 
+		return buckets
+
+	def get_bucket_id_label(self, entity):
+		return "{}--bucket-id".format(entity['label'])
+	
+
+	# Add bucket entity to query.
+	def add_bucket_entity_to_query(self, q, q_entities, entity, mapped_entity):
+		# Get min, max if not provided.
+		entity_min = 0
+		entity_max = 0
+		if (not entity.has_key('min') or not entity.has_key('max')):
+			entity_min, entity_max = self.get_entity_min_max(entity)
+
+		# Override calculated min/max if values were provided.
+		if entity.has_key('min'): entity_min = entity.get('min')
+		if entity.has_key('max'): entity_max = entity.get('max')
+
+		num_buckets = entity.get('num_buckets', 10)
+		entity_range = entity_max - entity_min
+
+		bucket_width = (entity_max - entity_min)/float(num_buckets)
+
+		# Get bucket field entities.
+
+		# Can use the line below in case db doesn't have width_bucket function.
+		#bucket_id_entity = func.greatest(func.round( (((mapped_entity - entity_min)/entity_range) * num_buckets ) - .5) + 1, num_buckets).label(self.get_bucket_id_label(entity))
+		bucket_id_entity = func.width_bucket(mapped_entity, entity_min, entity_max - bucket_width, num_buckets).label(self.get_bucket_id_label(entity))
+		q_entities.add(bucket_id_entity)
+		bucket_label_entity = case(
+				[(bucket_id_entity == num_buckets + 1, '[' + cast( entity_max, String) + ', ...)')], 
+				else_ = '[' + cast(entity_min + bucket_width * (bucket_id_entity - 1), String ) + ', ' + cast(entity_min + bucket_width * (bucket_id_entity), String) + ')'  ).label(entity['label'])
 		q_entities.add(bucket_label_entity)
-		return q, bucket_label_entity
+
+		return q, bucket_id_entity, bucket_label_entity
 
 	# Get a mapserver connection string.
 	def get_mapserver_connection_string(self):

@@ -16,11 +16,11 @@ class BaseTest(unittest.TestCase):
 		self.trans = connection.begin()
 
 		# bind an individual Session to the connection
-		db.session = self.Session(bind=connection)
+		self.session = self.Session(bind=connection)
 
 	def tearDown(self):
 		# rollback - everything that happened with the
 		# Session above (including calls to commit())
 		# is rolled back.
 		self.trans.rollback()
-		db.session.close()
+		self.session.close()
