@@ -415,7 +415,7 @@ class SA_DAO(object):
 
 		# Can use the line below in case db doesn't have width_bucket function.
 		#bucket_id_entity = func.greatest(func.round( (((mapped_entity - entity_min)/entity_range) * num_buckets ) - .5) + 1, num_buckets).label(self.get_bucket_id_label(entity))
-		bucket_id_entity = func.width_bucket(mapped_entity, entity_min, entity_max - bucket_width, num_buckets).label(self.get_bucket_id_label(entity))
+		bucket_id_entity = func.width_bucket(mapped_entity, entity_min, entity_max, num_buckets).label(self.get_bucket_id_label(entity))
 		q_entities.add(bucket_id_entity)
 		bucket_label_entity = case(
 				[(bucket_id_entity == num_buckets + 1, '[' + cast( entity_max, String) + ', ...)')], 

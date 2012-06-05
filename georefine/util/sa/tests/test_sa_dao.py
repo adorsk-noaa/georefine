@@ -23,12 +23,12 @@ class SA_DAO_Test(BaseTest):
 		#sa_dao.get_entities(entity_class=self.schema['classes']['TestClass2'])
 
 		data_entities = [
-				{'expression': '{TestClass1.id}', 'label': 'area_label', 'aggregate_funcs': ['count']},
+				{'expression': '{TestClass1.id}', 'label': 'area_label', 'aggregate_funcs': ['sum']},
 				]
 
 		grouping_entities= [
-				#{'expression': '{TestClass1.id}', 'label': 'hist_id', 'as_histogram': True, 'all_values': True, 'min': 0, 'max': 5, 'num_buckets': 20},
-				{'expression': '{TestClass1.children.name}', 'label': 'name_id', 'all_values': True}
+				{'expression': '{TestClass1.id}', 'label': 'hist_id', 'as_histogram': True, 'all_values': True, 'num_buckets': 10},
+				#{'expression': '{TestClass1.children.name}', 'label': 'name_id', 'all_values': True}
 				]
 
 		aggregates = sa_dao.get_aggregates(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
