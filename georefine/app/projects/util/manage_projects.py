@@ -38,12 +38,13 @@ def setUpData(project):
 
 		# Read records from data file.
 		# @TODO: Clean this up later, for things like checking geom type etc.
-		with open(table_filename, 'rb') as table_file:
-			reader = csv.DictReader(table_file)
-			for r in reader:
-				r['geom'] = WKTSpatialElement(r['geom'])
-				# Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
-				db.session.execute(t['table'].insert().values(**r))
+		table_file = open(table_filename, 'rb') 
+		reader = csv.DictReader(table_file)
+		for r in reader:
+			r['geom'] = WKTSpatialElement(r['geom'])
+			# Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
+			db.session.execute(t['table'].insert().values(**r))
+		table_file.close()
 
 		db.session.commit()
 

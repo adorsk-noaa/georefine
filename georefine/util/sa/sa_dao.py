@@ -2,6 +2,7 @@ from sqlalchemy.orm import aliased, class_mapper, join
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.sql import func, asc
+from sqlalchemy.sql.expression import column
 import copy
 import re
 from sqlalchemy.sql import compiler
@@ -113,8 +114,7 @@ class SA_DAO(object):
 
 			# Handle histogram fields.
 			if entity.get('as_histogram'):
-				q, bucket_id_entity, bucket_label_entity = self.add_bucket_entity_to_query(q, q_entities, entity, mapped_entity)
-				q = q.group_by(bucket_id_entity)
+				q = self.add_bucket_grouping_to_query(q, q_entities, entity, mapped_entity)
 
 			# Handle other fields.
 			else:
@@ -134,7 +134,7 @@ class SA_DAO(object):
 
 	# Helper function for creating aggregate field labels.
 	def get_aggregate_label(self, entity_label, func_name):
-		return "{}--{}".format(entity_label, func_name)
+		return "%s--%s" % (entity_label, func_name)
 
 	def get_aggregates(self, data_entities=[], grouping_entities=[], **kwargs):
 
@@ -154,7 +154,7 @@ class SA_DAO(object):
 			# Add label to non-histogram fields.
 			if not entity.get('as_histogram', False):
 				entity.setdefault('label_entity', {'expression': entity['expression']})
-				entity['label_entity'].setdefault('label', "{}--label".format(entity['id']))
+				entity['label_entity'].setdefault('label', "%s--label" % entity['id'])
 
 			# Generate values for grouping entities which are configured to
 			# include all values, with labels.
@@ -306,7 +306,7 @@ class SA_DAO(object):
 			mapped_parent = registry.get(parent_id)
 			mapped_entity = getattr(mapped_parent, child_attr)
 			mapped_entities[entity_id] = mapped_entity
-			return "mapped_entities['{}']".format(entity_id)
+			return "mapped_entities['%s']" % entity_id
 
 		entity_code = re.sub('{(.*?)}', replace_token_with_mapped_entity, entity['expression'])
 
@@ -378,24 +378,24 @@ class SA_DAO(object):
 		for b in range(1, num_buckets + 1):
 			bucket_min = entity_min + (b - 1) * bucket_width
 			bucket_max = entity_min + (b) * bucket_width
-			bucket_name = "[{}, {})".format(bucket_min, bucket_max)
+			bucket_name = "[%s, %s)" % (bucket_min, bucket_max)
 			buckets.append({
 				entity['label']: bucket_name,
 				self.get_bucket_id_label(entity): b
 				})
 		buckets.append({
-			entity['label']: "[{}, ...)".format(entity_max),
+			entity['label']: "[%s, ...)" % entity_max,
 			self.get_bucket_id_label(entity): num_buckets + 1
 			})
 
 		return buckets
 
 	def get_bucket_id_label(self, entity):
-		return "{}--bucket-id".format(entity['label'])
+		return "%s--bucket-id" % entity['label']
 	
 
 	# Add bucket entity to query.
-	def add_bucket_entity_to_query(self, q, q_entities, entity, mapped_entity):
+	def add_bucket_grouping_to_query(self, q, q_entities, entity, mapped_entity):
 		# Get min, max if not provided.
 		entity_min = 0
 		entity_max = 0
@@ -420,9 +420,12 @@ class SA_DAO(object):
 		bucket_label_entity = case(
 				[(bucket_id_entity == num_buckets + 1, '[' + cast( entity_max, String) + ', ...)')], 
 				else_ = '[' + cast(entity_min + bucket_width * (bucket_id_entity - 1), String ) + ', ' + cast(entity_min + bucket_width * (bucket_id_entity), String) + ')'  ).label(entity['label'])
+		q_entities.add(bucket_id_entity)
 		q_entities.add(bucket_label_entity)
 
-		return q, bucket_id_entity, bucket_label_entity
+		q = q.group_by(column(bucket_id_entity._label), column(bucket_label_entity._label))
+
+		return q
 
 	# Get a mapserver connection string.
 	def get_mapserver_connection_string(self):

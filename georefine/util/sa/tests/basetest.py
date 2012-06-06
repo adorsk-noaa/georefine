@@ -4,12 +4,9 @@ from georefine.app import db
 
 class BaseTest(unittest.TestCase):
 
-	@classmethod
-	def setUpClass(cls):
-		cls.engine = db.engine
-		cls.Session = sessionmaker()
-
 	def setUp(self):
+		self.engine = db.engine
+		self.Session = sessionmaker()
 		connection = self.engine.connect()
 
 		# begin a non-ORM transaction

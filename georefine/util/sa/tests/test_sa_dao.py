@@ -96,7 +96,7 @@ class SA_DAO_Test(BaseTest):
 			self.session.add(tc1)
 
 			tc2 = TestClass2()
-			tc2.name = "tc2_{}".format(i)
+			tc2.name = "tc2_%s" % i
 			tc2s.append(tc2)
 			self.session.add(tc2)
 
@@ -110,7 +110,6 @@ class SA_DAO_Test(BaseTest):
 				tc1.children.append(tc2)
 		
 		self.session.commit()
-
 
 
 if __name__ == '__main__':
