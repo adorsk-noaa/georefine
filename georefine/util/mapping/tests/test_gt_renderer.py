@@ -5,7 +5,8 @@ class GeoToolsMapRendererTest(unittest.TestCase):
 
 	def testRendering(self):
 		renderer = GeoToolsMapRenderer()
-		print renderer
+
+		renderer.renderMap()
 
 if __name__ == '__main__':
 	unittest.main()
