@@ -54,38 +54,9 @@ class GeoToolsMapRenderer(object):
 		gt_renderer.paint(graphics, image_bounds, gt_map.getMaxBounds())
 		byte_array_output_stream = ByteArrayOutputStream()
 		ImageIO.write(buffered_image, "jpg", byte_array_output_stream)
-		raw_image = byte_array_output_stream.toString()
 		byte_array = byte_array_output_stream.toByteArray()
-		s = StringUtil.fromBytes(byte_array)
-		sio = StringIO()
 
-		# Doesn't work. bad image, but no unicode errors.
-		#java.lang.System.out.println(raw_image)
-
-		# Doesn't work. But string looks different.
-		#java.lang.System.out.write(raw_image)
-
-		# Works.
-		#byte_array_output_stream.writeTo(sys.stdout)
-
-		# Works.
-		#byte_array_output_stream.writeTo(open('/tmp/foo.jpg', 'wb'))
-
-		# Doesn't work.  Can't coerce it.
-		#byte_array_output_stream.writeTo(sio)
-
-		#ImageIO.write(buffered_image, "jpg", sys.stdout)
-
-		# Doesn't work.  ascii encoding error.
-		#print s
-		# Prints, but doesn't work.
-		#print s.encode('utf-8')
-
-		# Works.
-		#java.lang.System.out.write(StringUtil.fromBytes(byte_array))
-
-		#ns = Py.newString(StringUtil.fromBytes(byte_array))
-		print ns
+		raw_image = Py.newString(StringUtil.fromBytes(byte_array))
 
 		"""
 		gt_map = DefaultMapContext()
