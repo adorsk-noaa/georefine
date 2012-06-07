@@ -1,4 +1,6 @@
 import os
+import sys
+import java.lang
 
 from java.io import File as JFile
 from org.geotools.data import FileDataStoreFinder
@@ -6,6 +8,15 @@ from org.geotools.data.simple import SimpleFeatureSource
 from org.geotools.map import DefaultMapContext
 from org.geotools.swing import JMapFrame
 from org.geotools.renderer.lite import StreamingRenderer
+from java.awt.image import BufferedImage
+from java.awt import Rectangle
+from java.awt import Color
+from java.io import ByteArrayOutputStream
+from javax.imageio import ImageIO
+from org.python.core.util import StringUtil
+from StringIO import StringIO
+from org.python.core import Py
+
 
 class GeoToolsMapRenderer(object):
 
@@ -24,9 +35,57 @@ class GeoToolsMapRenderer(object):
 		gt_map.setTitle('foo')
 		gt_map.addLayer(feature_source, None)
 
+		"""
 		print "gt map is: ", gt_map
 		JMapFrame.showMap(gt_map)
 		raw_input("foo")
+		"""
+
+		gt_renderer = StreamingRenderer()
+		gt_renderer.setMapContent(gt_map)
+
+		image_bounds = Rectangle(0, 0, 400, 400)
+
+		buffered_image = BufferedImage(image_bounds.width, image_bounds.height, BufferedImage.TYPE_INT_RGB)
+		graphics = buffered_image.createGraphics()
+		graphics.setPaint(Color.WHITE)
+		graphics.fill(image_bounds)
+
+		gt_renderer.paint(graphics, image_bounds, gt_map.getMaxBounds())
+		byte_array_output_stream = ByteArrayOutputStream()
+		ImageIO.write(buffered_image, "jpg", byte_array_output_stream)
+		raw_image = byte_array_output_stream.toString()
+		byte_array = byte_array_output_stream.toByteArray()
+		s = StringUtil.fromBytes(byte_array)
+		sio = StringIO()
+
+		# Doesn't work. bad image, but no unicode errors.
+		#java.lang.System.out.println(raw_image)
+
+		# Doesn't work. But string looks different.
+		#java.lang.System.out.write(raw_image)
+
+		# Works.
+		#byte_array_output_stream.writeTo(sys.stdout)
+
+		# Works.
+		#byte_array_output_stream.writeTo(open('/tmp/foo.jpg', 'wb'))
+
+		# Doesn't work.  Can't coerce it.
+		#byte_array_output_stream.writeTo(sio)
+
+		#ImageIO.write(buffered_image, "jpg", sys.stdout)
+
+		# Doesn't work.  ascii encoding error.
+		#print s
+		# Prints, but doesn't work.
+		#print s.encode('utf-8')
+
+		# Works.
+		#java.lang.System.out.write(StringUtil.fromBytes(byte_array))
+
+		#ns = Py.newString(StringUtil.fromBytes(byte_array))
+		print ns
 
 		"""
 		gt_map = DefaultMapContext()
