@@ -33,6 +33,10 @@ class SA_DAO_Test(BaseTest):
 
 		sa_dao.execute_query(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
 
+		sql = sa_dao.get_sql(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
+		print sql
+
+
 		aggregates = sa_dao.get_aggregates(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
 
 		connection_parameters = sa_dao.get_connection_parameters()

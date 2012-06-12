@@ -385,6 +385,10 @@ class SA_DAO(object):
 
 		return q
 
+	# Get raw sql for given query parameters.
+	def get_sql(self, **kwargs):
+		q = self.get_query(**kwargs)
+		return self.query_to_raw_sql(q)
 
 	# Compile a query into raw sql.
 	def query_to_raw_sql(self, q):
