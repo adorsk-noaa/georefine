@@ -26,24 +26,49 @@ class SA_DAO(object):
 		self.session = session
 		self.primary_class = primary_class
 
-	def get_entities(self, entity_class=None, filters=[]):
-		if entity_class:
-			primary_alias = aliased(entity_class)
-		else:
-			primary_alias = aliased(self.primary_class)
+	def execute_query(self, **kwargs):
+		return self.get_query(**kwargs).all()
 
-		return self.get_filtered_query(primary_alias = primary_alias, filters=filters).all()
-
-	def get_filtered_query(self, primary_alias=None, filters=[]):
+	def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[]):
 
 		# If no alias was given, registry with aliased primary class.
 		if not primary_alias:
 			primary_alias = aliased(self.primary_class)
 
 		# Initialize registry and query.
+		q_entities = set()
 		q_registry = {self.primary_class.__name__: primary_alias}
-		q = self.session.query(primary_alias).distinct(primary_alias.id)
+		q = self.session.query(primary_alias)
 
+		# Register entities.
+		for entity in data_entities + grouping_entities:
+			q = self.register_entity_dependencies(q, q_registry, entity)
+
+		# Add data entities to query.
+		for entity in data_entities:
+			mapped_entity = self.get_mapped_entity(q_registry, entity)
+			q_entities.add(mapped_entity)
+
+		# Add grouping entities to query.
+		for entity in grouping_entities:
+			mapped_entity = self.get_mapped_entity(q_registry, entity)
+
+			# Handle histogram fields.
+			if entity.get('as_histogram'):
+				q = self.add_bucket_grouping_to_query(q, q_entities, entity, mapped_entity)
+
+			# Handle non-histogram fields.
+			else:
+				q_entities.add(mapped_entity)
+				q = q.group_by(mapped_entity)
+
+				# If entity field has a label entity, add it.
+				if entity.has_key('label_entity'):
+					mapped_label_entity = self.get_mapped_entity(q_registry, entity['label_entity'])
+					q_entities.add(mapped_label_entity)
+					q = q.group_by(mapped_label_entity)
+
+		# Process filters.
 		for f in filters:
 
 			# Skip empty filters.
@@ -65,72 +90,12 @@ class SA_DAO(object):
 			else:
 				q = q.filter(mapped_entity.op(f['op'])(f['value']))
 
-		# Return query.
-		return q
-
-	
-	# Get aggregates query.
-	# Note: this assumes that the primary_class has a single 'id' field for joining.
-	def get_aggregates_query(self, data_entities=[], grouping_entities=[], filters=None):
-
-		# Get base query as subquery, and select only the primary class id.
-		bq_primary_alias = aliased(self.primary_class)
-		bq = self.get_filtered_query(primary_alias=bq_primary_alias, filters=filters).with_entities(bq_primary_alias.id)
-		bq = bq.subquery()
-
-		# Initialize primary class alias and registry for main query.
-		q_primary_alias = aliased(self.primary_class)
-		q_registry = {self.primary_class.__name__: q_primary_alias}
-
-		# Initialize list of entities for the main query.
-		q_entities = set()
-
-		# Create the main query, and join the basequery on the primary class id.
-		q = self.session.query(q_primary_alias).join(bq, q_primary_alias.id == bq.c.id)
-
-		# Register entities.
-		for entity in data_entities + grouping_entities:
-			q = self.register_entity_dependencies(q, q_registry, entity)
-
-		# Add labeled aggregate entities to query entities.
-		for entity in data_entities:
-
-			# Set default aggregate functions.
-			entity.setdefault('aggregate_funcs', ['sum'])
-
-			mapped_entity = self.get_mapped_entity(q_registry, entity)
-
-			# Make individual entities for each aggregate function.
-			for func_name in entity['aggregate_funcs']:
-				aggregate_func = getattr(func, func_name)
-				label = entity.get('label', entity['id'])
-				aggregate_label = self.get_aggregate_label(label, func_name)
-				aggregate_entity = aggregate_func(mapped_entity).label(aggregate_label)
-				q_entities.add(aggregate_entity)
-
-		# Process grouping entities.
-		for entity in grouping_entities:
-			mapped_entity = self.get_mapped_entity(q_registry, entity)
-
-			# Handle histogram fields.
-			if entity.get('as_histogram'):
-				q = self.add_bucket_grouping_to_query(q, q_entities, entity, mapped_entity)
-
-			# Handle other fields.
-			else:
-				q_entities.add(mapped_entity)
-				q = q.group_by(mapped_entity)
-
-				# If entity field has a label entity, add it.
-				if entity.has_key('label_entity'):
-					mapped_label_entity = self.get_mapped_entity(q_registry, entity['label_entity'])
-					q_entities.add(mapped_label_entity)
-					q = q.group_by(mapped_label_entity)
-
 		# Only select required entities.
 		q = q.with_entities(*q_entities)
 
+		# Return query.
 		return q
+
 
 	# Helper function for creating aggregate field labels.
 	def get_aggregate_label(self, entity_label, func_name):
@@ -142,7 +107,6 @@ class SA_DAO(object):
 		for entity in data_entities:
 			entity.setdefault('id', str(id(entity)))
 			entity.setdefault('label', entity['id'])
-			entity.setdefault('aggregate_funcs', ['sum'])
 	
 		# Process grouping entities.
 		grouping_entity_values = {}
@@ -176,7 +140,7 @@ class SA_DAO(object):
 			grouping_entity_values[entity['id']] = values 
 
 		# Get aggregate results as dictionaries.
-		rows = self.get_aggregates_query(data_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
+		rows = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
 		aggregates = [dict(zip(row.keys(), row)) for row in rows]
 
 		# Initialize result tree with aggregates.
@@ -208,22 +172,18 @@ class SA_DAO(object):
 			# We should now be at a leaf. Set leaf's data.
 			current_node['data'] = []
 			for entity in data_entities:
-				for func_name in entity['aggregate_funcs']:
-					aggregate_label = self.get_aggregate_label(entity['label'], func_name)
-					current_node['data'].append({
-						'label': aggregate_label,
-						'value': aggregate.get(aggregate_label)
-						})
+				current_node['data'].append({
+					'label': entity['label'],
+					'value': aggregate.get(entity['label'])
+					})
 
 		# Set default values for unvisited leafs.
 		default_value = []
 		for entity in data_entities: 
-			for func_name in entity['aggregate_funcs']:
-				aggregate_label = self.get_aggregate_label(entity['label'], func_name)
-				default_value.append({
-					'label': aggregate_label,
-					'value': 0
-					})
+			default_value.append({
+				'label': entity['label'],
+				'value': 0
+				})
 
 		# Process tree recursively to set values on unvisited leafs and calculate branch values.
 		self._process_aggregates_tree(result_tree, default_value_func=lambda: copy.deepcopy(default_value))
@@ -253,11 +213,9 @@ class SA_DAO(object):
 		node2['data'] = node1['data']
 
 	def get_entity_min_max(self, entity, filters=[]):
-		simple_entity = {
-				'expression': entity.get('expression'),
-				'aggregate_funcs': ['min', 'max']
-				}
-		aggregates = self.get_aggregates(data_entities=[simple_entity], filters=filters)
+		min_entity = {'expression': "func.min(%s)" % entity.get('expression'), 'label': 'min'}
+		max_entity = {'expression': "func.max(%s)" % entity.get('expression'), 'label': 'max'}
+		aggregates = self.get_aggregates(data_entities=[min_entity, max_entity], filters=filters)
 		entity_min = aggregates['data'][0]['value']
 		entity_max = aggregates['data'][1]['value']
 		return entity_min, entity_max
@@ -427,48 +385,6 @@ class SA_DAO(object):
 
 		return q
 
-	# Get a mapserver connection string.
-	def get_mapserver_connection_string(self):
-
-		# Get engine associated with the session.
-		engine = self.session.bind.engine
-
-		# Map mapserver connection parts to SA's url elements.
-		mapserver_to_sa = {
-				"host": "host",
-				"dbname" : "database",
-				"user": "username",
-				"password": "password",
-				"port": "port"
-				}
-
-		# Add connection parts if present.
-		connection_parts = []
-		for ms_name, sa_name in mapserver_to_sa.items():
-			sa_value = getattr(engine.url, sa_name)
-			if sa_value: connection_parts.append("%s=%s" % (ms_name, sa_value))
-
-		# Return the combined connection string.
-		return " ".join(connection_parts)
-
-	def get_base_mapserver_query(self, filters):
-
-		# Get base query as subquery, and select only the primary class id.
-		bq_primary_alias = aliased(self.primary_class)
-		bq = self.get_filtered_query(primary_alias=bq_primary_alias, filters=filters).with_entities(bq_primary_alias.id)
-		bq = bq.subquery()
-
-		# Initialize primary class alias and registry for main query.
-		q_primary_alias = aliased(self.primary_class)
-		q_registry = {self.primary_class.__name__: q_primary_alias}
-
-		# Create the main query, and join the basequery on the primary class id.
-		q = self.session.query(q_primary_alias).join(bq, q_primary_alias.id == bq.c.id)
-
-		# Initialize list of entities for the main query.
-		q_entities = set()
-
-		return q, q_primary_alias, q_registry, q_entities
 
 	# Compile a query into raw sql.
 	def query_to_raw_sql(self, q):
@@ -492,6 +408,7 @@ class SA_DAO(object):
 		engine = self.session.bind.engine
 		connection_parameters = {}
 		parameter_names = [
+				"drivername",
 				"host",
 				"database",
 				"username",
