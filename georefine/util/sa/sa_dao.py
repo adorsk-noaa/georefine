@@ -1,3 +1,4 @@
+import sys
 from sqlalchemy.orm import aliased, class_mapper, join
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.orm.properties import RelationshipProperty
@@ -38,7 +39,7 @@ class SA_DAO(object):
 		# Initialize registry and query.
 		q_entities = set()
 		q_registry = {self.primary_class.__name__: primary_alias}
-		q = self.session.query(primary_alias)
+		q = self.session.query(primary_alias.id)
 
 		# Register entities.
 		for entity in data_entities + grouping_entities:
@@ -248,6 +249,10 @@ class SA_DAO(object):
 
 	def get_mapped_entity(self, registry, entity):
 
+		# Return entity if already in registry.
+		if registry.has_key(entity['expression']):
+			return registry[entity['expression']]
+
 		mapped_entities = {}
 
 		# Set defaults on entity.
@@ -270,6 +275,9 @@ class SA_DAO(object):
 
 		# Evaluate and label.
 		mapped_entity = eval(entity_code).label(entity['label'])
+
+		# Register.
+		registry[entity['expression']] = mapped_entity
 
 		return mapped_entity
 	

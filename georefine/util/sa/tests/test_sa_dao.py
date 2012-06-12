@@ -12,7 +12,7 @@ from pprint import pprint
 
 class SA_DAO_Test(BaseTest):
 
-	def test(self):
+	def test_SA_DAO(self):
 
 		sa_dao = SA_DAO(session=self.session, primary_class=self.schema['primary_class'])
 
@@ -34,8 +34,6 @@ class SA_DAO_Test(BaseTest):
 		sa_dao.execute_query(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
 
 		sql = sa_dao.get_sql(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
-		print sql
-
 
 		aggregates = sa_dao.get_aggregates(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
 
