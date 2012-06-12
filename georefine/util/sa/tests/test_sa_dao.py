@@ -33,6 +33,8 @@ class SA_DAO_Test(BaseTest):
 
 		aggregates = sa_dao.get_aggregates(data_entities=data_entities, grouping_entities=grouping_entities, filters=[])
 
+		connection_parameters = sa_dao.get_connection_parameters()
+
 	def setUp(self):
 		super(SA_DAO_Test, self).setUp()
 

@@ -487,3 +487,19 @@ class SA_DAO(object):
 
 		raw_sql = (comp.string.encode(enc) % params).decode(enc)
 		return raw_sql
+
+	def get_connection_parameters(self):
+		engine = self.session.bind.engine
+		connection_parameters = {}
+		parameter_names = [
+				"host",
+				"database",
+				"username",
+				"password",
+				"port"
+				]
+		for parameter in parameter_names:
+			connection_parameters[parameter] = getattr(engine.url, parameter)
+
+		return connection_parameters
+
