@@ -11,7 +11,7 @@ def getProjectSchema(project):
 
 	# Prefix tables w/ project id.
 	for t in schema.metadata.tables.values():
-		t.name = "projects{}_{}".format(project.id, t.name)
+		t.name = "projects%s_%s" % (project.id, t.name)
 
 	return schema
 
@@ -34,7 +34,7 @@ def setUpData(project):
 	for t in schema.tables:
 
 		# Get the filename for the table.
-		table_filename = os.path.join(project.dir, 'data', "{}.csv".format(t['id']))
+		table_filename = os.path.join(project.dir, 'data', "%s.csv" % (t['id']))
 
 		# Read records from data file.
 		# @TODO: Clean this up later, for things like checking geom type etc.
