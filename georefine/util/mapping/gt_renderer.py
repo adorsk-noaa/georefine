@@ -60,17 +60,13 @@ class GeoToolsMapRenderer(object):
 			id_entity = {'expression': "{%s.id}" % dao.primary_class.__name__, "label": "id"}
 		if geom_entity == None:
 			geom_entity = {'expression': "{%s.geom}.RAW" % dao.primary_class.__name__, "label": "geom"}
-		#func.ST_SetSRID(q_primary_alias.geom.RAW, 4326)
 		data_entity['label'] = 'value'
 
 		data_entities = [id_entity, geom_entity, data_entity]
 		grouping_entities = [id_entity, geom_entity]
 		sql = dao.get_sql(data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
 
-		#return
-
 		# Create VirtualTable from query.
-		#sql = "select id as geom_id, 100.0 * (id - 1.0)/(5.0 - 1.0) as value, geom from testpoly"
 		vtable = VirtualTable("vtable", sql)
 		vtable.setPrimaryKeyColumns(["id"])
 		# metadatata = intententional typo. GT needs to fix the name.
@@ -81,10 +77,9 @@ class GeoToolsMapRenderer(object):
 		feature_source = data_store.getFeatureSource("vtable")
 
 		# Generate class bounds.
-		# @TODO: GET FROM DATA ENTITY!, OR FROM CALCULATING!
-		num_classes = 10.0
-		vmin = 0.0
-		vmax = 100.0
+		num_classes = data_entity.get('num_classes', 10)
+		vmin = float(data_entity.get('min', 0))
+		vmax = float(data_entity.get('max', 1))
 		vrange = vmax - vmin
 		class_width = vrange/num_classes
 		classes = [(None, vmin)]

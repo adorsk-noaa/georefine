@@ -16,7 +16,7 @@ class GeoToolsMapRendererTest(BaseTest):
 		self.dao = SA_DAO(session=self.session, primary_class=self.schema['primary_class'])
 		renderer = GeoToolsMapRenderer()
 
-		data_entity = {"expression": "func.sum({TestClass1.id})"}
+		data_entity = {"expression": "func.sum({TestClass1.id})", "num_classes": 5, "min": 1, "max": 5}
 		print renderer.renderMap(dao=self.dao, data_entity=data_entity)
 	
 	def setUp(self):
