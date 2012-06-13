@@ -1,21 +1,22 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<script src="/static/sasi_assets/js/less.js" type="text/javascript"></script>
-	<link rel="stylesheet" href="/static/sasi_assets/js/jquery.ui/styles/jquery-ui-1.8.18.custom.css" type="text/css">
+<script src="{{context_root}}/static/sasi_assets/js/less.js" type="text/javascript"></script>
+<link rel="stylesheet" href="{{context_root}}/static/sasi_assets/js/jquery.ui/styles/jquery-ui-1.8.18.custom.css" type="text/css">
 
 	<script type="text/javascript">
 		var GeoRefine = {};
 		GeoRefine.config = {
+context_root: "{{context_root}}",
 project_id: {{ project_id }},
 facets: {{ facets }}
 		};
 	</script>
 
-	<script src="/static/js/require_config.js"></script>
-	<script data-main="/static/js/facets_test" src="/static/sasi_assets/js/require.js/require.js"></script>
+	<script src="{{context_root}}/static/js/require_config.js"></script>
+	<script data-main="{{context_root}}/static/js/facets_test" src="{{context_root}}/static/sasi_assets/js/require.js/require.js"></script>
 
-	<script src="/static/js/facets_test.js"></script>
+	<script src="{{context_root}}/static/js/facets_test.js"></script>
 
 	<script type="text/javascript">
 		 less.env = 'development';
