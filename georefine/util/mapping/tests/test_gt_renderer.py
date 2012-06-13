@@ -17,7 +17,14 @@ class GeoToolsMapRendererTest(BaseTest):
 		renderer = GeoToolsMapRenderer()
 
 		data_entity = {"expression": "func.sum({TestClass1.id})", "num_classes": 5, "min": 1, "max": 5}
-		print renderer.renderMap(dao=self.dao, data_entity=data_entity)
+		map_parameters = {
+				"width": 600,
+				"height": 600,
+				"bbox": "-10,-10,10,10",
+				"format": "image/png",
+				"transparent": True
+				}
+		print renderer.renderMap(dao=self.dao, data_entity=data_entity, map_parameters=map_parameters)
 	
 	def setUp(self):
 		super(GeoToolsMapRendererTest, self).setUp()

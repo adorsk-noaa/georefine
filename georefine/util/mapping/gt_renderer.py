@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import java.lang
 
 from java.io import File as JFile
@@ -28,7 +29,7 @@ class GeoToolsMapRenderer(object):
 		self.style_factory = CommonFactoryFinder.getStyleFactory(None)
 		self.filter_factory = CommonFactoryFinder.getFilterFactory(None)
 
-	def renderMap(self, dao=None, id_entity=None, geom_entity=None, data_entity=None, filters=[], map_context=None):
+	def renderMap(self, dao=None, id_entity=None, geom_entity=None, data_entity=None, filters=[], map_parameters={}):
 
 		# Get connection parameters.
 		connection_parameters = dao.get_connection_parameters()
@@ -60,7 +61,8 @@ class GeoToolsMapRenderer(object):
 			id_entity = {'expression': "{%s.id}" % dao.primary_class.__name__, "label": "id"}
 		if geom_entity == None:
 			geom_entity = {'expression': "{%s.geom}.RAW" % dao.primary_class.__name__, "label": "geom"}
-		data_entity['label'] = 'value'
+		if data_entity:
+			data_entity['label'] = '_value_'
 
 		data_entities = [id_entity, geom_entity, data_entity]
 		grouping_entities = [id_entity, geom_entity]
@@ -76,41 +78,58 @@ class GeoToolsMapRenderer(object):
 		data_store.addVirtualTable(vtable)
 		feature_source = data_store.getFeatureSource("vtable")
 
-		# Generate class bounds.
-		num_classes = data_entity.get('num_classes', 10)
-		vmin = float(data_entity.get('min', 0))
-		vmax = float(data_entity.get('max', 1))
-		vrange = vmax - vmin
-		class_width = vrange/num_classes
-		classes = [(None, vmin)]
-		for i in range(num_classes):
-			classes.append((vmin + i * class_width, vmin + (i + 1) * class_width))
-		classes.append((vmax, None))
+		# Add styling classes if there was a data entity.
+		if data_entity:
+			# Generate class bounds.
+			num_classes = data_entity.get('num_classes', 10)
+			vmin = float(data_entity.get('min', 0))
+			vmax = float(data_entity.get('max', 1))
+			vrange = vmax - vmin
+			class_width = vrange/num_classes
+			classes = [(None, vmin)]
+			for i in range(num_classes):
+				classes.append((vmin + i * class_width, vmin + (i + 1) * class_width))
+			classes.append((vmax, None))
 
-		# Generate style rules for classes.
-		rules = []
-		for c in classes:
-			rule = self.create_rule(c[0], c[1], vmin, vrange)
-			rules.append(rule)
-		feature_type_style = self.style_factory.createFeatureTypeStyle(rules)
-		style = self.style_factory.createStyle()
-		style.featureTypeStyles().add(feature_type_style)
+			# Generate style rules for classes.
+			rules = []
+			for c in classes:
+				rule = self.create_rule(c[0], c[1], vmin, vrange, attr=data_entity['label'])
+				rules.append(rule)
+			feature_type_style = self.style_factory.createFeatureTypeStyle(rules)
+			style = self.style_factory.createStyle()
+			style.featureTypeStyles().add(feature_type_style)
+		else:
+			style = None
 
 		# Setup map.
-		# @TODO: FROM WMS PARMS.
+		# @TODO: FROM MAP_PARAMETERS
 		gt_map = DefaultMapContext()
 		gt_map.addLayer(feature_source, style)
 		gt_renderer = StreamingRenderer()
 		gt_renderer.setMapContent(gt_map)
-		image_bounds = Rectangle(0, 0, 400, 400)
-		buffered_image = BufferedImage(image_bounds.width, image_bounds.height, BufferedImage.TYPE_INT_RGB)
-		graphics = buffered_image.createGraphics()
-		graphics.setPaint(Color.WHITE)
-		graphics.fill(image_bounds)
-		crs = CRS.decode("EPSG:4326")
-		map_bounds = ReferencedEnvelope(-10.0, 10.0, -10.0, 10.0, crs)
+		image_bounds = Rectangle(0, 0, map_parameters.get('width', 100), map_parameters.get('height', 100))
 
-		#gt_renderer.paint(graphics, image_bounds, gt_map.getMaxBounds())
+		# Set image type based on format.
+		image_format = map_parameters.get('format', 'image/png')
+		if image_format == 'image/jpeg':
+			image_type = BufferedImage.TYPE_INT_RGB
+		else:
+			image_type = BufferedImage.TYPE_INT_ARGB
+
+		buffered_image = BufferedImage(image_bounds.width, image_bounds.height, image_type)
+		graphics = buffered_image.createGraphics()
+
+		# Set background color if not transparent.
+		if not map_parameters.get('transparent'):
+			graphics.setPaint(Color.WHITE)
+			graphics.fill(image_bounds)
+
+		crs = CRS.decode(map_parameters.get('crs', "EPSG:4326"))
+		bbox = map_parameters.get('bbox', '-180,-90,180,90')
+		coords = [float(coord) for coord in bbox.split(",")]
+		map_bounds = ReferencedEnvelope(coords[0], coords[2], coords[1], coords[3], crs)
+
 		gt_renderer.paint(graphics, image_bounds, map_bounds)
 
 		# Release the JDBC connection.
@@ -118,7 +137,8 @@ class GeoToolsMapRenderer(object):
 
 		# Return raw image.
 		byte_array_output_stream = ByteArrayOutputStream()
-		ImageIO.write(buffered_image, "jpg", byte_array_output_stream)
+		informal_format = re.match('image/(.*)', image_format).group(1)
+		ImageIO.write(buffered_image, informal_format, byte_array_output_stream)
 		byte_array = byte_array_output_stream.toByteArray()
 		raw_image = Py.newString(StringUtil.fromBytes(byte_array))
 		return raw_image
@@ -140,7 +160,7 @@ class GeoToolsMapRenderer(object):
 		color = Color.HSBtoRGB(0.0, 0.0, brightness)
 		fill = self.style_factory.createFill(
 				self.filter_factory.literal(color),
-				self.filter_factory.literal(0.5)
+				self.filter_factory.literal(1)
 				)
 		symbolizer = self.style_factory.createPolygonSymbolizer(None, fill, None)
 		rule.symbolizers().add(symbolizer)
