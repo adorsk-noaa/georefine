@@ -117,7 +117,7 @@ class SA_DAO(object):
 			entity.setdefault('label_type', 'alpha')
 
 			# Add label to non-histogram fields.
-			if not entity.get('as_histogram', False):
+			if not entity.get('as_histogram'):
 				entity.setdefault('label_entity', {'expression': entity['expression']})
 				entity['label_entity'].setdefault('label', "%s--label" % entity['id'])
 
@@ -249,9 +249,12 @@ class SA_DAO(object):
 
 	def get_mapped_entity(self, registry, entity):
 
+		# Create key for entity (expression + label).
+		entity_key = "%s-%s" % (entity['expression'], entity['label'] )
+
 		# Return entity if already in registry.
-		if registry.has_key(entity['expression']):
-			return registry[entity['expression']]
+		if registry.has_key(entity_key):
+			return registry[entity_key]
 
 		mapped_entities = {}
 
@@ -277,7 +280,7 @@ class SA_DAO(object):
 		mapped_entity = eval(entity_code).label(entity['label'])
 
 		# Register.
-		registry[entity['expression']] = mapped_entity
+		registry[entity_key] = mapped_entity
 
 		return mapped_entity
 	
