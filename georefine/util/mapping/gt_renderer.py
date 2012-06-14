@@ -103,7 +103,6 @@ class GeoToolsMapRenderer(object):
 			style = None
 
 		# Setup map.
-		# @TODO: FROM MAP_PARAMETERS
 		gt_map = DefaultMapContext()
 		gt_map.addLayer(feature_source, style)
 		gt_renderer = StreamingRenderer()
@@ -125,7 +124,7 @@ class GeoToolsMapRenderer(object):
 			graphics.setPaint(Color.WHITE)
 			graphics.fill(image_bounds)
 
-		crs = CRS.decode(map_parameters.get('crs', "EPSG:4326"))
+		crs = CRS.decode(map_parameters.get('SRS', "EPSG:4326"))
 		bbox = map_parameters.get('BBOX', '-180,-90,180,90')
 		coords = [float(coord) for coord in bbox.split(",")]
 		map_bounds = ReferencedEnvelope(coords[0], coords[2], coords[1], coords[3], crs)
