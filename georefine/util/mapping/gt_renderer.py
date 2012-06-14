@@ -108,10 +108,10 @@ class GeoToolsMapRenderer(object):
 		gt_map.addLayer(feature_source, style)
 		gt_renderer = StreamingRenderer()
 		gt_renderer.setMapContent(gt_map)
-		image_bounds = Rectangle(0, 0, map_parameters.get('width', 100), map_parameters.get('height', 100))
+		image_bounds = Rectangle(0, 0, map_parameters.get('WIDTH', 100), map_parameters.get('HEIGHT', 100))
 
 		# Set image type based on format.
-		image_format = map_parameters.get('format', 'image/png')
+		image_format = map_parameters.get('FORMAT', 'image/png')
 		if image_format == 'image/jpeg':
 			image_type = BufferedImage.TYPE_INT_RGB
 		else:
@@ -121,12 +121,12 @@ class GeoToolsMapRenderer(object):
 		graphics = buffered_image.createGraphics()
 
 		# Set background color if not transparent.
-		if not map_parameters.get('transparent'):
+		if not map_parameters.get('TRANSPARENT'):
 			graphics.setPaint(Color.WHITE)
 			graphics.fill(image_bounds)
 
 		crs = CRS.decode(map_parameters.get('crs', "EPSG:4326"))
-		bbox = map_parameters.get('bbox', '-180,-90,180,90')
+		bbox = map_parameters.get('BBOX', '-180,-90,180,90')
 		coords = [float(coord) for coord in bbox.split(",")]
 		map_bounds = ReferencedEnvelope(coords[0], coords[2], coords[1], coords[3], crs)
 
