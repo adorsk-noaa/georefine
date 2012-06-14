@@ -31,13 +31,13 @@ def setUpSchema(project):
 	
 	# Create tables.
 	con = db.engine.connect()
-	schema.metadata.create_all(bind=db.session.bind)
+	schema['metadata'].create_all(bind=db.session.bind)
 
 def setUpData(project):
 	schema = project.schema
 
 	# Load data (in order defined by schema).
-	for t in schema.tables:
+	for t in schema['tables']:
 
 		# Get the filename for the table.
 		table_filename = os.path.join(project.dir, 'data', "%s.csv" % (t['id']))
@@ -47,6 +47,7 @@ def setUpData(project):
 		table_file = open(table_filename, 'rb') 
 		reader = csv.DictReader(table_file)
 		for r in reader:
+			r['id'] = int(r['id'])
 			r['geom'] = WKTSpatialElement(r['geom'])
 			# Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
 			db.session.execute(t['table'].insert().values(**r))
@@ -57,7 +58,7 @@ def setUpData(project):
 
 def tearDownSchema(project): 
 	schema = project.schema
-	schema.metadata.drop_all(bind=db.session.bind)
+	schema['metadata'].drop_all(bind=db.session.bind)
 
 
 
