@@ -15,7 +15,7 @@ function($, Backbone, _, _s, ui, Dialogs, Charts, Util){
 		var facets = {};
 		var lji = new Util.util.LumberjackInterpreter();
 
-		var endpoint = _s.sprintf('/projects/get_aggregates/%s/', GeoRefine.config.project_id);
+		var endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 		var charts_config = GeoRefine.config.charts;
 	

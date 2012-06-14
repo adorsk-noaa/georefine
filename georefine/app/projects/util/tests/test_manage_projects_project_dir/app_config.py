@@ -23,7 +23,6 @@ facets = [
 				},
 			'count_entity': {
 				'expression': 'func.sum({Test1.id})',
-				'aggregate_funcs': ['sum']
 				}
 			}
 		]
