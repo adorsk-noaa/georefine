@@ -1,4 +1,5 @@
-var ASSETS_BASEURL = '/static/sasi_assets';
+var CONTEXT_BASE = '/georefine';
+var ASSETS_BASEURL = CONTEXT_BASE + '/static/sasi_assets';
 var JQPLOT_BASE = '/js/jqplot';
 
 var require = {

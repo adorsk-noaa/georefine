@@ -1,3 +1,4 @@
+from georefine.app import app
 from georefine.config import config as gr_conf
 from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json, Response
 from werkzeug import secure_filename
@@ -11,26 +12,21 @@ import os
 import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
-
-@bp.before_request
-def before_request():
-	g.project = None
-	if 'project_id' in session:
-		g.project = Project.query.get(session['project_id'])
+context_root = "/%s" % app.config['APPLICATION_ROOT']
 
 @bp.route('/test_facets/<int:project_id>/')
 def test_facets(project_id):
 	project = Project.query.get(project_id)
 	project.app_config = projects_manage.getProjectAppConfig(project)
-	json_facets = json.dumps(project.app_config.facets)
-	return render_template("projects/test_facets.html", project_id=project.id, facets=Markup(json_facets))
+	json_facets = json.dumps(project.app_config.get('facets', '{}'))
+	return render_template("projects/test_facets.html", context_root=context_root, project_id=project.id, facets=Markup(json_facets))
 
 @bp.route('/test_charts/<int:project_id>/')
 def test_charts(project_id):
 	project = Project.query.get(project_id)
 	project.app_config = projects_manage.getProjectAppConfig(project)
-	json_charts = json.dumps(project.app_config.charts)
-	return render_template("projects/test_charts.html", project_id=project.id, charts=Markup(json_charts))
+	json_charts = json.dumps(project.app_config.get('charts', '{}'))
+	return render_template("projects/test_charts.html", context_root=context_root, project_id=project.id, charts=Markup(json_charts))
 
 @bp.route('/')
 def home():
@@ -98,7 +94,24 @@ def get_map(project_id):
 	project.schema = projects_manage.getProjectSchema(project)
 
 	# Parse request parameters.
+	data_entity = json.loads(request.args.get('data_entity', 'null'))
+	id_entity = json.loads(request.args.get('id_entity', 'null'))
+	geom_entity = json.loads(request.args.get('geom_entity', 'null'))
+	grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
+	filters = json.loads(request.args.get('filters', '[]'))
 
-	map_image = projects_services.get_map(project)
-	return Response(map_image, mimetype='image/gif')
+	# Parse WMS parameters.
+	map_parameters = {}
+	for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT']:
+		map_parameters[wms_parameter] = request.args.get(wms_parameter)
+
+	map_image = project_services.get_map(
+			project, 
+			data_entity=data_entity,
+			id_entity=id_entity, 
+			geom_entity=geom_entity,
+			filters=filters,
+			map_parameters=map_parameters
+			)
+	return Response(map_image, mimetype=map_parameters['FORMAT'])
 

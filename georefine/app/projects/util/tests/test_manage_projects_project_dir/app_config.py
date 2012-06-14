@@ -7,8 +7,7 @@ facets = [
 				'expression': '{Test1.name}'
 				},
 			'count_entity': {
-				'expression': '{Test1.id}',
-				'aggregate_funcs': ['sum']
+				'expression': 'func.sum({Test1.id})'
 				},
 			},
 
@@ -23,7 +22,7 @@ facets = [
 				'all_values': 'true'
 				},
 			'count_entity': {
-				'expression': '{Test1.id}',
+				'expression': 'func.sum({Test1.id})',
 				'aggregate_funcs': ['sum']
 				}
 			}
@@ -62,10 +61,9 @@ charts = {
 				'label': 'Test1.ID: Sum',
 				'value_type': 'numeric',
 				'entity': {
-					'expression': '{Test1.id}',
+					'expression': 'func.sum({Test1.id})',
 					'min': 0,
 					'maxauto': 'true',
-					'aggregate_funcs': ['sum']
 					}
 				}
 			]

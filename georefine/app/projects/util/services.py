@@ -2,21 +2,32 @@ from georefine.app import db
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects
 from georefine.util.sa.sa_dao import SA_DAO
+import platform
+if platform.system() == 'Java':
+	from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer
 import copy
 
 def get_dao(project):
-	return SA_DAO(session=db.session, primary_class=project.schema.primary_class)
+	return SA_DAO(session=db.session, primary_class=project.schema['primary_class'])
 
 def get_entities(project):
 	dao = get_dao(project)
 	return dao.get_entities()
 
 
-def get_map(project):
+def get_map(project, data_entity=None, id_entity=None, geom_entity=None, filters=[], map_parameters={}):
 	dao = get_dao(project)
-	return open('/data/burger.png').read()
-	# @TODO: dummy return for right now.	
+	renderer = GeoToolsMapRenderer()
 
+	return renderer.renderMap(self, 
+			dao=dao, 
+			data_entity=data_entity, 
+			id_entity=id_entity, 
+			geom_entity=geom_entity, 
+			filters=filters, 
+			map_parameters=map_parameters
+			)
+	#return open('/data/burger.png').read()
 
 def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], with_unfiltered=False, base_filters=[]):
 	dao = get_dao(project)

@@ -16,7 +16,7 @@ function($, Backbone, _, _s, ui, Facets, Util){
 		var facets = {};
 		var lji = new Util.util.LumberjackInterpreter();
 
-		var endpoint = _s.sprintf('/projects/get_aggregates/%s/', GeoRefine.config.project_id);
+		var endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 		// The 'getData' functions will be called with a facet model as 'this'.
 		var listFacetGetData = function(){
@@ -74,10 +74,16 @@ function($, Backbone, _, _s, ui, Facets, Util){
 					var leafs = lji.parse(data);
 					_.each(leafs, function(leaf){
 						bucket_label = leaf.label;
-						var minmax_regex = /(.*) to (.*)/;
+						var minmax_regex = /(-?\d+(\.\d*)?)\s*,\s*(-?\d+(\.\d*)?)/;
 						var match = minmax_regex.exec(bucket_label);
-						var bmin = parseFloat(match[1]);
-						var bmax = parseFloat(match[2]);
+						var bmin, bmax;
+						if (match != null){
+							bmin = parseFloat(match[1]);
+							bmax = parseFloat(match[3]);
+						}
+						else{
+							return;
+						}
 
 						var base_bucket = {
 							bucket: leaf.label,

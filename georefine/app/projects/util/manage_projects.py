@@ -2,22 +2,28 @@ from georefine.app.projects.models import Project
 from georefine.app import db
 from geoalchemy import WKTSpatialElement
 import os
-import imp
 import csv
 
 def getProjectSchema(project):
 	schema_file = os.path.join(project.dir, 'schema.py')
-	schema = imp.load_source("gr_project_schema", schema_file)
+	schema_source = open(schema_file, 'rb').read()
+	compiled_schema = compile(schema_source, '<schema>', 'exec') 
+	schema = {}
+	exec compiled_schema in schema
 
 	# Prefix tables w/ project id.
-	for t in schema.metadata.tables.values():
+	for t in schema['metadata'].tables.values():
 		t.name = "projects%s_%s" % (project.id, t.name)
 
 	return schema
 
 def getProjectAppConfig(project):
 	app_config_file = os.path.join(project.dir, 'app_config.py')
-	app_config = imp.load_source("gr_app_config", app_config_file)
+	app_config_source = open(app_config_file, 'rb').read()
+	compiled_app_config= compile(app_config_source, '<app_config>', 'exec') 
+	app_config = {}
+	exec compiled_app_config in app_config
+
 	return app_config
 
 def setUpSchema(project): 
