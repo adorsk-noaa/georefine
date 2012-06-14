@@ -48,8 +48,14 @@
     </init-param>
 
     <init-param>
+		<param-name>exec_handler></param-name>
+		<param-value>testing</param-value>
+	</init-param>
+
+    <init-param>
       <param-name>log_level</param-name>
-      <param-value>debug</param-value>
+	  <param-value>warn</param-value> 
+<!--  <param-value>debug</param-value>  -->
 <!--  <param-value>info</param-value>  -->
 <!--  <param-value>warn</param-value>  -->
 <!--  <param-value>error</param-value> -->
