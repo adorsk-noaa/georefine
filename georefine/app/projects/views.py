@@ -13,6 +13,7 @@ import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
 context_root = "/%s" % app.config['APPLICATION_ROOT']
+geoserver_url = "/geoserver"
 
 @bp.route('/test_facets/<int:project_id>/')
 def test_facets(project_id):
@@ -27,6 +28,13 @@ def test_charts(project_id):
 	project.app_config = projects_manage.getProjectAppConfig(project)
 	json_charts = json.dumps(project.app_config.get('charts', '{}'))
 	return render_template("projects/test_charts.html", context_root=context_root, project_id=project.id, charts=Markup(json_charts))
+
+@bp.route('/test_map/<int:project_id>/')
+def test_map(project_id):
+	project = Project.query.get(project_id)
+	project.app_config = projects_manage.getProjectAppConfig(project)
+	json_map = json.dumps(project.app_config.get('map', '{}'))
+	return render_template("projects/test_map.html", context_root=context_root, project_id=project.id, map=Markup(json_map), geoserver_url=geoserver_url)
 
 @bp.route('/')
 def home():
@@ -102,10 +110,13 @@ def get_map(project_id):
 
 	# Parse WMS parameters.
 	map_parameters = {}
-	for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT']:
-		map_parameters[wms_parameter] = request.args.get(wms_parameter)
+	for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT', 'SRS']:
+		value = request.args.get(wms_parameter)
+		if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
+			value = int(value)
+		map_parameters[wms_parameter] = value
 
-	map_image = project_services.get_map(
+	map_image = projects_services.get_map(
 			project, 
 			data_entity=data_entity,
 			id_entity=id_entity, 

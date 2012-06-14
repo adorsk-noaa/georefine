@@ -19,7 +19,8 @@ def get_map(project, data_entity=None, id_entity=None, geom_entity=None, filters
 	dao = get_dao(project)
 	renderer = GeoToolsMapRenderer()
 
-	return renderer.renderMap(self, 
+	#return open('/data/burger.png').read()
+	return renderer.renderMap(
 			dao=dao, 
 			data_entity=data_entity, 
 			id_entity=id_entity, 
@@ -27,7 +28,6 @@ def get_map(project, data_entity=None, id_entity=None, geom_entity=None, filters
 			filters=filters, 
 			map_parameters=map_parameters
 			)
-	#return open('/data/burger.png').read()
 
 def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], with_unfiltered=False, base_filters=[]):
 	dao = get_dao(project)

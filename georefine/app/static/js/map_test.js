@@ -12,48 +12,20 @@ function($, Backbone, _, _s, ui, ol, MapView, Util){
 	
 	var setupMapView = function(opts){
 
-		var endpoint = _s.sprintf('/projects/get_map/%s/', GeoRefine.config.project_id);
+		var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+		var map_endpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 		var map_config = GeoRefine.config.map;
-		map_config = {
-			max_extent : new OpenLayers.Bounds(-79, 31, -65, 45),
 
-			resolutions: [0.025, 0.0125, 0.00625, 0.003125, 0.0015625, 0.00078125],
-
-			default_layer_options : {
-				transitionEffect: 'resize'
-			},
-
-			default_layer_attributes: {
-				disabled: true
-			},
-
-			base_filters : [],
-
-			data_layers : [
-			{
-				id: "test1.layer",
-				name: 'Test1.Layer',
-				local: true,
-				layer_type: 'WMS',
-				layer_category: 'data',
-				options: {},
-				params: {
-					transparent: true
-				},
-				entity: new Backbone.Model({
-					expression: '{Test1.id}',
-					label: 'Test1.ID',
-					min: 0,
-					max: 1,
-				}),
-				filters: [],
-				disabled: false
-			}],
-
-			base_layers: [],
-			overlay_layers: []
+		bboxToMaxExtent = function(bbox){
+			var extent_coords = _.map(bbox.split(','), function(coord){
+				return parseFloat(coord);
+			});
+			return new OpenLayers.Bounds(extent_coords);
 		};
+
+		// Process map extent.
+		map_config.max_extent = bboxToMaxExtent(map_config.max_extent);
 
 		_.extend(map_config.default_layer_options, {
 			maxExtent: map_config.max_extent
@@ -68,7 +40,7 @@ function($, Backbone, _, _s, ui, ol, MapView, Util){
 			url_params = [];
 			_.each(params, function(p){
 				url_params.push(_s.sprintf("%s=%s", p[0], JSON.stringify(p[1])));
-				this.set('service_url', endpoint + '?' + url_params.join('&') + '&');
+				this.set('service_url', map_endpoint + '?' + url_params.join('&') + '&');
 			},this);
 		};
 		
@@ -77,34 +49,56 @@ function($, Backbone, _, _s, ui, ol, MapView, Util){
 			var layers = map_config[_s.sprintf('%s_layers', layer_category)];
 			var layer_collection = new Backbone.Collection();
 			_.each(layers, function(layer){
+
+				// If Layer has maxextent, create OpenLayers bounds from it.
+				if (layers.max_extent){
+					layer.max_extent = bboxToMaxExtent(layer.max_extent);
+				}
+
+				// Create model for layer.
 				var model = new Backbone.Model(_.extend({},	map_config.default_layer_attributes, layer, {
 					'layer_category': layer_category,
 					'options': _.extend({}, map_config.default_layer_options, layer.options)
 				}));
 
-				if (layer_category == 'data' && layer.local){
+				// Handle service url updates for various layer types.
+				if (layer.source == 'local_getmap'){
+					if (layer.entity){
+						var entity_model = new Backbone.Model(_.extend({}, layer.entity,{}));
+						model.set('entity', entity_model);
+					}
 					updateServiceUrlLocalDataLayer.call(model);
 					model.on('change:entity change:filters', updateServiceUrlLocalDataLayer, model);
 				}
+				else if (layer.source == 'local_geoserver'){
+					var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, layer.workspace);
+					model.set('service_url', service_url);
+				}
+				
 				layer_collection.add(model);
 			});
 			processed_layers[layer_category] = layer_collection;
 		});
 
-		var map_m = new Backbone.Model({
+		var map_m = new Backbone.Model(_.extend({
 			layers: new Backbone.Collection(),
 			options: {
 				allOverlays: true,
 				maxExtent: map_config.max_extent,
 				restrictedExtent: map_config.max_extent,
-				resolutions: map_config.resolutions
-			},
+				resolutions: map_config.resolutions,
+				theme: null
+				},
 			graticule_intervals: [2]
-		});
+			}, 
+			map_config, {
+			})
+		);
 
 		var map_v = new MapView.views.MapViewView({
 			model: map_m
 		});
+		window.m = map_v.map;
 
 		var mapeditor_m = new Backbone.Model({
 			data_layers: processed_layers['data'],
