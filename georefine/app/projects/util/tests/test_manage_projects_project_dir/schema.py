@@ -24,7 +24,7 @@ primary_class = Test1
 test1_table = Table('test1', metadata,
 		Column('id', Integer, primary_key=True),
 		Column('name', String),
-		GeometryExtensionColumn('geom', Point(2)),
+		GeometryExtensionColumn('geom', Polygon(2)),
 		)
 tables.append({'id': 'test1', 'table': test1_table})
 GeometryDDL(test1_table)
