@@ -103,6 +103,11 @@ var require = {
 		{
 		  "name": "Util",
 		  "location": ASSETS_BASEURL + "/js/util/src"
+		},
+
+		{
+		  "name": "GeoRefineClient",
+		  "location": CONTEXT_BASE + "/static/js/GeoRefineClient/src"
 		}
 	]
 
