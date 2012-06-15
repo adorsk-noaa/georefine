@@ -18,7 +18,8 @@ var require = {
 		jqp_bar: ASSETS_BASEURL + JQPLOT_BASE + "/plugins/jqplot.barRenderer.min",
 		jqp_cat_axis_renderer: ASSETS_BASEURL + JQPLOT_BASE + "/plugins/jqplot.categoryAxisRenderer.min",
 		jqp_log_axis_renderer: ASSETS_BASEURL + JQPLOT_BASE + "/plugins/jqplot.logAxisRenderer.min",
-		flot: ASSETS_BASEURL + "/js/flot/jquery.flot"
+		flot: ASSETS_BASEURL + "/js/flot/jquery.flot",
+		jqwindow: ASSETS_BASEURL + "/js/jquery.window/jquery.window"
 	},
 	
 	use: {
@@ -67,6 +68,10 @@ var require = {
 		  attach: "flot"
 		},
 
+		jqwindow: {
+		  deps: ["jquery", "ui"]
+		},
+
 	},
 
 	packages: [
@@ -103,6 +108,11 @@ var require = {
 		{
 		  "name": "Util",
 		  "location": ASSETS_BASEURL + "/js/util/src"
+		},
+
+		{
+		  "name": "Windows",
+		  "location": ASSETS_BASEURL + "/js/windows/src"
 		},
 
 		{

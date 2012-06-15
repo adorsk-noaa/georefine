@@ -6,10 +6,11 @@ define([
 	"_s",
 	"Facets",
 	"MapView",
+	"Windows",
 	"Util",
 	"text!./templates/GeoRefineClient.html"
 		],
-function($, Backbone, _, ui, _s, Facets, MapView, Util, template){
+function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 
 	var GeoRefineClientView = Backbone.View.extend({
 
@@ -267,21 +268,50 @@ function($, Backbone, _, ui, _s, Facets, MapView, Util, template){
 			var map_v = new MapView.views.MapViewView({
 				model: map_m
 			});
-			window.m = map_v.map;
 
 			var mapeditor_m = new Backbone.Model({
 				data_layers: processed_layers['data'],
 				base_layers: processed_layers['base'],
 				overlay_layers: processed_layers['overlay'],
-				map: map_v
+				map_view: map_v
 			});
 
 			var mapeditor_v = new MapView.views.MapEditorView({
-				el: $(_s.sprintf("#%s-map", this.model.cid)),
 				model: mapeditor_m
 			});
 
+			fillParent= function(el){
+				$parent= $(el).parent();
+				$(el).css('width', $parent.width());
+				$(el).css('height', $parent.height());
+			};
+
+			// Setup dock area.
+			$.window.prepare({
+				"dock": "top",
+				"dockArea": $('#log')
+			});
+
+			var map_w = new Windows.views.WindowView({
+				model: new Backbone.Model({
+					"title": "Map",
+					"inline-block": true,
+				})
+			});
+			map_w.on("resize", function(){
+				fillParent(mapeditor_v.el);
+				mapeditor_v.resize();
+			});
+			map_w.on("resizeStop", function(){mapeditor_v.resizeStop();});
+			map_w.on("dragStop", function(){mapeditor_v.trigger('pagePositionChange');});
+			map_w.on("minimize", function(){mapeditor_v.deactivate();});
+			map_w.on("cascade", function(){mapeditor_v.activate();});
+			map_w.on("close", function(){mapeditor_v.remove();});
+
+			$(map_w.getBody()).append(mapeditor_v.el);
+
 			$(document).ready(function(){
+				map_w.resize();
 				mapeditor_v.trigger('ready');
 				map_v.map.zoomToMaxExtent();
 			});
