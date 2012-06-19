@@ -26,7 +26,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 		render: function(){
 			var html = _.template(template, {model: this.model});
 			$(this.el).html(html);
-
+			this.setUpWindows();
 			this.setUpFacets();
 			this.setUpMapView();
 
@@ -34,6 +34,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 		},
 
 		onReady: function(){
+		},
+
+		setUpWindows: function(){
+			$.window.prepare({
+				"dock": "top",
+				"dockArea": $('.dock', this.el),
+				"minWinLong": 100,
+			});
 		},
 
 		setUpFacets: function(){
@@ -286,11 +294,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 				$(el).css('height', $parent.height());
 			};
 
+			/*
 			// Setup dock area.
 			$.window.prepare({
 				"dock": "top",
-				"dockArea": $('#log')
+				"dockArea": $('#log'),
+				"minWinLong": 200,
 			});
+			*/
 
 			var map_w = new Windows.views.WindowView({
 				model: new Backbone.Model({
@@ -298,6 +309,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 					"inline-block": true,
 				})
 			});
+
 			map_w.on("resize", function(){
 				fillParent(mapeditor_v.el);
 				mapeditor_v.resize();
