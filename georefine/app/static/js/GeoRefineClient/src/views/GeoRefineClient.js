@@ -25,6 +25,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			$(this.el).addClass('georefine-client');
 			this.render();
 			this.on('ready', this.onReady, this);
+			this.model.on('change:filters', this.onFiltersChange, this);
 		},
 
 		render: function(){
@@ -251,6 +252,18 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				facet_collection_view.addFacetView(facet['view']);
 			});
 
+			// Listen for selection changes.
+			facet_collection_model.on('change:selection', function(){
+				var selections = facet_collection_model.getSelections();
+				var filters = [];
+				_.each(selections, function(selection){
+					_.each(selection, function(filter){
+						filters.push(filter);
+					});
+				});
+				this.model.set('filters', filters);
+			}, this);
+
 			facet_collection_view.updateFacets({force: true});
 
 		},
@@ -442,6 +455,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				"selected_field": null,
 				"data": {}
 			});
+
+			// Listen for filter changes.
+			this.model.on('change:filters', function(){
+				summary_bar_model.set("filters", this.model.get("filters"));
+			}, this);
+
 			summary_bar_model.getData = function(){
 				var _this =  summary_bar_model;
 				var data = {
@@ -477,6 +496,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					this.fields = {};
 					this.initialRender();
 					this.model.on('change:selected_field', this.onSelectedFieldChange, this);
+					this.model.on('change:filters', this.onFiltersChange, this);
 					this.model.on('change:data', this.onDataChange, this);
 				},
 				initialRender: function(){
@@ -503,6 +523,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					this.model.getData();
 				},
 
+				onFiltersChange: function(){
+					if (this.model.get('selected_field')){
+						this.model.getData();
+					}
+				},
+
 				onDataChange: function(){
 					var formatter = this.model.get('selected_field').formatter || function(value){return value};
 					var data = this.model.get('data');
@@ -518,6 +544,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				model: summary_bar_model,
 				el: $(_s.sprintf("#%s-summary-bar", this.model.cid), this.el)
 			});
+		},
+
+		onFiltersChange: function(){
 		}
 
 	});
