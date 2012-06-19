@@ -9,9 +9,10 @@ define([
 	"Charts",
 	"Windows",
 	"Util",
+	"text!./templates/summary_bar.html",
 	"text!./templates/GeoRefineClient.html"
 		],
-function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
+function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary_bar_template, template){
 
 	var GeoRefineClientView = Backbone.View.extend({
 
@@ -31,6 +32,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			$(this.el).html(html);
 
 			this.setUpWindows();
+			this.setUpSummaryBar();
 			this.setUpFacets();
 
 			return this;
@@ -428,6 +430,56 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			});
 
 			return chart_editor_view;
+		},
+
+		setUpSummaryBar: function(){
+			var summary_bar_model = new Backbone.Model({
+				"quantity_fields": GeoRefine.config.summary_bar.quantity_fields,
+				"filters": [],
+				"data_entity": {},
+				"filtered_total": null,
+				"unfiltered_total": null
+			});
+			summary_bar_model.getData = function(){
+				var _this =  summary_bar_model;
+				var data = {
+					'filters': JSON.stringify(_this.get('filters')),
+					'data_entities': JSON.stringify([_this.get('data_entity')]),
+				};
+				var _this = this;
+				$.ajax({
+					url: aggregates_endpoint,
+					type: 'GET',
+					data: data,
+					complete: function(xhr, status){
+					},
+					error: Backbone.wrapError(function(){}, _this, {}),
+					success: function(data, status, xhr){
+						var parsed_data = lji.parse(data);
+						_this.set({
+							"filtered_total": parsed_data[0].data[0].value,
+							"unfiltered_total": parsed_data[0].data[1].value
+						});
+					}
+				});
+			};
+
+			var SummaryBarView = Backbone.View.extend({
+				initialize: function(){
+					this.initialRender();
+					this.render();
+				},
+				initialRender: function(){
+
+				},
+				render: function(){
+					$(this.el).html(summary_bar_template, {model: this.model});
+				}
+			});
+			var summary_bar_view = new SummaryBarView({
+				model: summary_bar_model,
+				el: $(_s.sprintf("#%s-summary-bar", this.model.cid), this.el)
+			});
 		}
 
 	});

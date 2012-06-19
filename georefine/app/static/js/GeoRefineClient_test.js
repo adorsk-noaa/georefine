@@ -146,8 +146,8 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 					'num_buckets': 10,
 					//'min': 0,
 					//'max': 3000,
-					minauto: true,
-					maxauto: true
+					"minauto": true,
+					"maxauto": true
 				},
 				'label': 'Test1.ID',
 				'value_type': 'numeric',
@@ -166,8 +166,30 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 					}
 				}
 			]
-		}
+		},
 		// End charts.
+
+		// Start summary bar.
+		"summary_bar": {
+			"quantity_fields": [
+				{
+					'id': 'Test1.id:sum',
+					'label': 'Test1.IDs',
+					'entity': {
+						'expression': 'func.sum({Test1.id})'
+					}
+				},
+				{
+					'id': 'Test1.id:sum 2',
+					'label': 'Test1.IDs 2',
+					'entity': {
+						'expression': 'func.sum({Test1.id})'
+					}
+				}
+			]
+		}
+		// End summary bar.
+
 	};
 	
 	var grc_m = new Backbone.Model();
