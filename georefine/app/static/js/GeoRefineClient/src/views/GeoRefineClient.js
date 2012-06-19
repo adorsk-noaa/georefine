@@ -29,6 +29,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 		render: function(){
 			var html = _.template(template, {model: this.model});
 			$(this.el).html(html);
+
 			this.setUpWindows();
 			this.setUpFacets();
 
