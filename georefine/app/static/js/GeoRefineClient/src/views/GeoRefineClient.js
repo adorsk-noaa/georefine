@@ -408,6 +408,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 			// Create datasource.
 			var datasource = new Charts.models.DataSourceModel({'schema':  schema });
+
 			datasource.getData = function() {
 				var q = datasource.get('query');
 				var data = {
@@ -429,6 +430,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}
 				});
 			};
+
+			// Set datasource query filters on app filter changes.
+			this.model.on('change:filters', function(){
+				var q = datasource.get("query");
+				q.set("filters", this.model.get("filters"));
+			}, this);
 
 			// Create model.
 			var chart_model = new Charts.models.XYChartModel({});
