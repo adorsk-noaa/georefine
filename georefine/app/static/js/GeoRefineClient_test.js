@@ -180,10 +180,10 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 					}
 				},
 				{
-					'id': 'Test1.id:sum 2',
-					'label': 'Test1.IDs 2',
+					'id': 'Test1.id:avg',
+					'label': 'Test1.IDs avg',
 					'entity': {
-						'expression': 'func.sum({Test1.id})'
+						'expression': 'func.avg({Test1.id})'
 					}
 				}
 			]

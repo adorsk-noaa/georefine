@@ -433,18 +433,21 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		},
 
 		setUpSummaryBar: function(){
+			var lji = new Util.util.LumberjackInterpreter();
+			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+
 			var summary_bar_model = new Backbone.Model({
-				"quantity_fields": GeoRefine.config.summary_bar.quantity_fields,
+				"fields": GeoRefine.config.summary_bar.quantity_fields,
 				"filters": [],
-				"data_entity": {},
-				"filtered_total": null,
-				"unfiltered_total": null
+				"selected_field": null,
+				"data": {}
 			});
 			summary_bar_model.getData = function(){
 				var _this =  summary_bar_model;
 				var data = {
 					'filters': JSON.stringify(_this.get('filters')),
-					'data_entities': JSON.stringify([_this.get('data_entity')]),
+					'data_entities': JSON.stringify([_this.get('selected_field').entity]),
+					'with_unfiltered': true
 				};
 				var _this = this;
 				$.ajax({
@@ -457,24 +460,59 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					success: function(data, status, xhr){
 						var parsed_data = lji.parse(data);
 						_this.set({
-							"filtered_total": parsed_data[0].data[0].value,
-							"unfiltered_total": parsed_data[0].data[1].value
+							"data": {
+								"filtered": parsed_data[0].data[0].value,
+								"unfiltered": parsed_data[0].data[1].value
+							}
 						});
 					}
 				});
 			};
 
 			var SummaryBarView = Backbone.View.extend({
+				events: {
+					'change select': 'onSelectChange'
+				},
 				initialize: function(){
+					this.fields = {};
 					this.initialRender();
-					this.render();
+					this.model.on('change:selected_field', this.onSelectedFieldChange, this);
+					this.model.on('change:data', this.onDataChange, this);
 				},
 				initialRender: function(){
+					$(this.el).html(summary_bar_template, {});
+					this.$select = $('select', this.el);
+					_.each(this.model.get('fields'), function(field){
+						this.$select.append($(_s.sprintf('<option value="%s">%s</option>', field.id, field.label )));
+						this.fields[field.id] = field;
+					}, this);
 
 				},
 				render: function(){
-					$(this.el).html(summary_bar_template, {model: this.model});
+				},
+
+				onSelectChange: function(e){
+					if (! this.selectInitialized){
+						this.$select.children('option:first').remove();
+						this.selectInitialized = true;
+					}
+					this.model.set('selected_field', this.fields[this.$select.val()]);
+				},
+				
+				onSelectedFieldChange: function(){
+					this.model.getData();
+				},
+
+				onDataChange: function(){
+					var formatter = this.model.get('selected_field').formatter || function(value){return value};
+					var data = this.model.get('data');
+					var formatted_selected = formatter(data.filtered);
+					var formatted_unfiltered = formatter(data.unfiltered);
+					var percentage = 100.0 * data.filtered/data.unfiltered;
+
+					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_unfiltered));
 				}
+
 			});
 			var summary_bar_view = new SummaryBarView({
 				model: summary_bar_model,
