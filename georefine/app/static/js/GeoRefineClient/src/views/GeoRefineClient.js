@@ -322,6 +322,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 						'options': _.extend({}, map_config.default_layer_options, proc_layer.options)
 					}));
 
+					// Have layer model listen for filter changes.
+					this.model.on('change:filters', function(){
+						model.set("filters", this.model.get("filters"));
+					}, this);
+
 					// Handle service url updates for various layer types.
 					if (proc_layer.source == 'local_getmap'){
 						if (proc_layer.entity){
@@ -337,9 +342,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}
 
 					layer_collection.add(model);
-				});
+				}, this);
 				processed_layers[layer_category] = layer_collection;
-			});
+			}, this);
 
 			var map_model = new Backbone.Model(_.extend({
 				layers: new Backbone.Collection(),
