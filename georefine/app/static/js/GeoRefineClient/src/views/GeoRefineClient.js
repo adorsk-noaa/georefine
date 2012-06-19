@@ -184,16 +184,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 								return;
 							}
 
-							var base_bucket = {
+							var unfiltered_bucket = {
 								bucket: leaf.label,
 								min: bmin,
 								max: bmax,
-								count: leaf.data[0].value
+								count: leaf.data[1].value
 							};
-							base_histogram.push(base_bucket);
+							base_histogram.push(unfiltered_bucket);
 
-							var filtered_bucket = _.extend({}, base_bucket);
-							filtered_bucket.count = leaf.data[1].value;
+							var filtered_bucket = _.extend({}, unfiltered_bucket);
+							filtered_bucket.count = leaf.data[0].value;
 							filtered_histogram.push(filtered_bucket);
 
 						});
