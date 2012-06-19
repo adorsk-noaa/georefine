@@ -6,15 +6,18 @@ define([
 	"_s",
 	"Facets",
 	"MapView",
+	"Charts",
 	"Windows",
 	"Util",
 	"text!./templates/GeoRefineClient.html"
 		],
-function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
+function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
 
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
+			"click .add-map-button": "addMapView",
+			"click .add-chart-button": "addChartView"
 		},
 
 		initialize: function(){
@@ -28,12 +31,73 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 			$(this.el).html(html);
 			this.setUpWindows();
 			this.setUpFacets();
-			this.setUpMapView();
 
 			return this;
 		},
 
 		onReady: function(){
+		},
+
+		addMapView: function(){
+
+			var map_editor = this.createMapEditor();
+
+			var w = new Windows.views.WindowView({
+				model: new Backbone.Model({
+					"title": "Map",
+					"inline-block": true,
+				})
+			});
+
+			w.on("resize", function(){
+				Util.util.fillParent(map_editor.el);
+				map_editor.resize();
+			});
+
+			w.on("resizeStop", function(){
+				map_editor.resizeStop();
+				Util.util.unsetWidthHeight(map_editor.el);
+			});
+			w.on("dragStop", function(){map_editor.trigger('pagePositionChange');});
+			w.on("minimize", function(){map_editor.deactivate();});
+			w.on("cascade", function(){map_editor.activate();});
+			w.on("close", function(){map_editor.remove();});
+
+			$(w.getBody()).append(map_editor.el);
+			w.resize();
+			w.resizeStop();
+			map_editor.trigger('ready');
+			map_editor.map_view.map.zoomToMaxExtent();
+		},
+
+		addChartView: function(){
+			var chart_editor = this.createChartEditor();
+
+			var w = new Windows.views.WindowView({
+				model: new Backbone.Model({
+					"title": "Chart",
+					"inline-block": true,
+				})
+			});
+
+			w.on("resize", function(){
+				Util.util.fillParent(chart_editor.el);
+				chart_editor.resize();
+			});
+
+			w.on("resizeStop", function(){
+				chart_editor.resizeStop();
+				Util.util.unsetWidthHeight(chart_editor.el);
+			});
+			w.on("dragStop", function(){chart_editor.trigger('pagePositionChange');});
+			w.on("minimize", function(){chart_editor.deactivate();});
+			w.on("cascade", function(){chart_editor.activate();});
+			w.on("close", function(){chart_editor.remove();});
+
+			$(w.getBody()).append(chart_editor.el);
+			w.resize();
+			w.resizeStop();
+			chart_editor.trigger('ready');
 		},
 
 		setUpWindows: function(){
@@ -188,12 +252,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 
 		},
 
-		setUpMapView : function(){
+		createMapEditor: function(){
 
 			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 			var map_endpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
-			var map_config = GeoRefine.config.map;
+			var map_config = _.extend({}, GeoRefine.config.map);
 
 			bboxToMaxExtent = function(bbox){
 				var extent_coords = _.map(bbox.split(','), function(coord){
@@ -228,28 +292,31 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 				var layer_collection = new Backbone.Collection();
 				_.each(layers, function(layer){
 
+					// Initialize processed layer.
+					var proc_layer = _.extend({}, layer);
+
 					// If Layer has maxextent, create OpenLayers bounds from it.
-					if (layers.max_extent){
-						layer.max_extent = bboxToMaxExtent(layer.max_extent);
+					if (proc_layer.max_extent){
+						proc_layer.max_extent = bboxToMaxExtent(proc_layer.max_extent);
 					}
 
 					// Create model for layer.
-					var model = new Backbone.Model(_.extend({},	map_config.default_layer_attributes, layer, {
+					var model = new Backbone.Model(_.extend({},	map_config.default_layer_attributes, proc_layer, {
 						'layer_category': layer_category,
-						'options': _.extend({}, map_config.default_layer_options, layer.options)
+						'options': _.extend({}, map_config.default_layer_options, proc_layer.options)
 					}));
 
 					// Handle service url updates for various layer types.
-					if (layer.source == 'local_getmap'){
-						if (layer.entity){
-							var entity_model = new Backbone.Model(_.extend({}, layer.entity,{}));
+					if (proc_layer.source == 'local_getmap'){
+						if (proc_layer.entity){
+							var entity_model = new Backbone.Model(_.extend({}, proc_layer.entity,{}));
 							model.set('entity', entity_model);
 						}
 						updateServiceUrlLocalDataLayer.call(model);
 						model.on('change:entity change:filters', updateServiceUrlLocalDataLayer, model);
 					}
-					else if (layer.source == 'local_geoserver'){
-						var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, layer.workspace);
+					else if (proc_layer.source == 'local_geoserver'){
+						var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, proc_layer.workspace);
 						model.set('service_url', service_url);
 					}
 
@@ -258,7 +325,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 				processed_layers[layer_category] = layer_collection;
 			});
 
-			var map_m = new Backbone.Model(_.extend({
+			var map_model = new Backbone.Model(_.extend({
 				layers: new Backbone.Collection(),
 				options: {
 					allOverlays: true,
@@ -273,61 +340,93 @@ function($, Backbone, _, ui, _s, Facets, MapView, Windows, Util, template){
 			})
 			);
 
-			var map_v = new MapView.views.MapViewView({
-				model: map_m
+			var map_view = new MapView.views.MapViewView({
+				model: map_model
 			});
 
-			var mapeditor_m = new Backbone.Model({
+			var mapeditor_model = new Backbone.Model({
 				data_layers: processed_layers['data'],
 				base_layers: processed_layers['base'],
 				overlay_layers: processed_layers['overlay'],
-				map_view: map_v
+				map_view: map_view
 			});
 
-			var mapeditor_v = new MapView.views.MapEditorView({
-				model: mapeditor_m
+			var mapeditor_view = new MapView.views.MapEditorView({
+				model: mapeditor_model
 			});
 
-			fillParent= function(el){
-				$parent= $(el).parent();
-				$(el).css('width', $parent.width());
-				$(el).css('height', $parent.height());
+			return mapeditor_view;
+
+		},
+
+
+		createChartEditor: function(){
+			var lji = new Util.util.LumberjackInterpreter();
+			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+			var charts_config = GeoRefine.config.charts;
+
+			// Generate models from fields.
+			var processed_fields = {};
+			_.each(['category', 'quantity'], function(field_type){
+				var fields = charts_config[_s.sprintf('%s_fields', field_type)] || [];
+				var field_models = [];
+				_.each(fields, function(field){
+					entity_model = new Backbone.Model(field['entity']);
+					field_model = new Backbone.Model(_.extend({}, field, {
+						'field_type': field_type,
+								'entity': entity_model
+					}));
+
+					field_models.push(field_model);
+				});
+
+				processed_fields[field_type] = new Backbone.Collection(field_models);
+			});
+
+
+			// Create schema model from fields.
+			var schema = new Charts.models.SchemaModel({
+				'category_fields': processed_fields['category'],
+				'quantity_fields': processed_fields['quantity']
+			});
+
+			// Create datasource.
+			var datasource = new Charts.models.DataSourceModel({'schema':  schema });
+			datasource.getData = function() {
+				var q = datasource.get('query');
+				var data = {
+					'filters': JSON.stringify(q.get('filters')),
+					'data_entities': JSON.stringify(q.get('data_entities')),
+					'grouping_entities': JSON.stringify(q.get('grouping_entities')),
+				};
+				var _this = this;
+				$.ajax({
+					url: aggregates_endpoint,
+					type: 'GET',
+					data: data,
+					complete: function(xhr, status){
+						datasource.set('loading', false);
+					},
+					error: Backbone.wrapError(function(){}, _this, {}),
+					success: function(data, status, xhr){
+						datasource.set('data', lji.parse(data));
+					}
+				});
 			};
 
-			/*
-			// Setup dock area.
-			$.window.prepare({
-				"dock": "top",
-				"dockArea": $('#log'),
-				"minWinLong": 200,
-			});
-			*/
+			// Create model.
+			var chart_model = new Charts.models.XYChartModel({});
 
-			var map_w = new Windows.views.WindowView({
-				model: new Backbone.Model({
-					"title": "Map",
-					"inline-block": true,
-				})
+			// Create chart editor.
+			var chart_editor_model = new Backbone.Model({
+				'chart': chart_model,
+				'datasource': datasource
+			});
+			var chart_editor_view = new Charts.views.ChartEditorView({
+				'model': chart_editor_model
 			});
 
-			map_w.on("resize", function(){
-				fillParent(mapeditor_v.el);
-				mapeditor_v.resize();
-			});
-			map_w.on("resizeStop", function(){mapeditor_v.resizeStop();});
-			map_w.on("dragStop", function(){mapeditor_v.trigger('pagePositionChange');});
-			map_w.on("minimize", function(){mapeditor_v.deactivate();});
-			map_w.on("cascade", function(){mapeditor_v.activate();});
-			map_w.on("close", function(){mapeditor_v.remove();});
-
-			$(map_w.getBody()).append(mapeditor_v.el);
-
-			$(document).ready(function(){
-				map_w.resize();
-				mapeditor_v.trigger('ready');
-				map_v.map.zoomToMaxExtent();
-			});
-
+			return chart_editor_view;
 		}
 
 	});

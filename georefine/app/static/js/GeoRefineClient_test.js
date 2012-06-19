@@ -121,8 +121,53 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 					"name":"nurc:Img_Sample"
 				}
 			]
-		}
+		},
 		// End Map.
+
+		// Start charts.
+		"charts": {
+			"category_fields": [
+			{
+				'id': 'Test1.name',
+				'entity': {
+					'expression': '{Test1.name}',
+					'all_values': true
+				},
+				'label': 'Test1.Name',
+				'value_type': 'categorical',
+			},
+			{
+				'id': 'Test1.id',
+				'entity': {
+					'expression': '{Test1.id}',
+					'all_values': true,
+					'as_histogram': true,
+					'label_type': 'numeric_histogram',
+					'num_buckets': 10,
+					//'min': 0,
+					//'max': 3000,
+					minauto: true,
+					maxauto: true
+				},
+				'label': 'Test1.ID',
+				'value_type': 'numeric',
+			}
+			],
+
+				"quantity_fields": [
+				{
+					'id': 'Test1.id:sum',
+					'label': 'Test1.ID: Sum',
+					'value_type': 'numeric',
+					'entity': {
+						'expression': 'func.sum({Test1.id})',
+						'min': 0,
+						'maxauto': true,
+					}
+				}
+			]
+		}
+		// End charts.
 	};
 	
 	var grc_m = new Backbone.Model();
