@@ -87,46 +87,45 @@
 		left: 300px;
 		top: 0px;
 		right: 0px;
+		bottom: 0px;
 
-		.inner {
-		}
+		> .inner {
 
-		.top-bar{
-			height: 32px;
-			vertical-align: baseline;
-			position: relative;
-			background: #bcf;
+			@top_bar_h: 27px;
+			@launcher_bar_h: 27px;
 
-			> .bar{
+			> .top-bar{
+				height: @top_bar_h;
+				vertical-align: baseline;
+				position: relative;
+				background: #bcf;
+
+				> .bar{
+					position: absolute;
+				}
+
+				> .summary-bar {
+					left: 7px;
+					font-weight: bold;
+				}
+
+			}
+
+			> .launchers {
+				width: 100%;
+				height: @launcher_bar_h;
+			}
+
+			> .data-views-container{
 				position: absolute;
-			}
-
-			> .summary-bar {
-				left: 7px;
-				font-weight: bold;
-			}
-
-		}
-
-		.data-views{
-
-			.launchers{
+				top: @top_bar_h + @launcher_bar_h;
+				bottom: 0px;
 				width: 100%;
-			}
 
-			.dock {
-				width: 100%;
-				background-color: @faint_grey;
-				min-height: 20px;
-			}
-
-			background-color: white;
-			height: 100%;
-			width: 100%;
-
-			.data-view-container{
-				width: 100%;
-				height: 100%;
+				> .data-views{
+					height: 100%;
+					width: 100%;
+				}
 			}
 		}
 	}	

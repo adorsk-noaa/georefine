@@ -106,9 +106,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 		setUpWindows: function(){
 			$.window.prepare({
-				"dock": "top",
-				"dockArea": $('.dock', this.el),
-				"minWinLong": 100,
+				"dock": "right",
+				"dockArea": $('.data-views', this.el),
 			});
 		},
 
