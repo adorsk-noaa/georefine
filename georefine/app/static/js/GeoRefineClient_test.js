@@ -198,7 +198,30 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 
 			"data_views": [
 				{
-					"type": "map"
+					"type": "map",
+					"initial_extent": [-10, -10, 10, 10],
+					"layers": [
+						{
+							"id":"nurc:Img_Sample",
+							"attributes": {
+								"disabled": true
+							}
+						}
+					]
+				},
+				{
+					"type": "chart",
+					"initial_category_field": {
+						"id": "Test1.name"
+					},
+					"initial_quantity_field": {
+						"id": "Test1.id:sum",
+						"attributes": {
+						},
+						"entity": {
+							"min": 0
+						}
+					}
 				}
 			]
 		}
