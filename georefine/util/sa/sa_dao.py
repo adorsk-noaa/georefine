@@ -401,16 +401,21 @@ class SA_DAO(object):
 		return q
 
 	# Get raw sql for given query parameters.
-	def get_sql(self, **kwargs):
+	def get_sql(self, dialect=None, **kwargs):
 		q = self.get_query(**kwargs)
-		return self.query_to_raw_sql(q)
+		return self.query_to_raw_sql(q, dialect=dialect)
 
 	# Compile a query into raw sql.
-	def query_to_raw_sql(self, q):
-		dialect = q.session.bind.dialect
+	def query_to_raw_sql(self, q, dialect=None):
+
+		# Get dialect object.
+		if not dialect:
+			dialect = q.session.bind.dialect
+		else:
+			dialect = self.get_dialect(dialect)
+
 		statement = q.statement
 		comp = compiler.SQLCompiler(dialect, statement)
-		comp.compile()
 		enc = dialect.encoding
 		params = {}
 		for k,v in comp.params.iteritems():
@@ -419,9 +424,15 @@ class SA_DAO(object):
 			if isinstance(v, str):
 				v = comp.render_literal_value(v, str)
 			params[k] = v
-
 		raw_sql = (comp.string.encode(enc) % params).decode(enc)
 		return raw_sql
+	
+	def get_dialect(self, dialect):
+		try:
+			dialects_module = __import__("sqlalchemy.dialects", fromlist=[dialect])
+			return getattr(dialects_module, dialect).dialect()
+		except:
+			return None
 
 	def get_connection_parameters(self):
 		engine = self.session.bind.engine
