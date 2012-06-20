@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+	<link rel="stylesheet/less" type="text/css" href="{{context_root}}/static/js/GeoRefineClient/src/styles/GeoRefineClient-example.less">
+	<script src="{{context_root}}/static/sasi_assets/js/less.js" type="text/javascript"></script>
+	<link rel="stylesheet" href="{{context_root}}/static/sasi_assets/js/jquery.ui/styles/jquery-ui-1.8.18.custom.css" type="text/css">
+
+	<script type="text/javascript">
+		var GeoRefine = {};
+		GeoRefine.config = {{georefine_config}};
+	</script>
+
+	<script src="{{context_root}}/static/js/require_config.js"></script>
+	<script data-main="{{context_root}}/static/js/" src="{{context_root}}/static/sasi_assets/js/require.js/require.js"></script>
+
+	<script type="text/javascript">
+		require(
+			[
+			"jquery",
+			"use!backbone",
+			"use!underscore",
+			"_s",
+			"use!ui",
+			"GeoRefineClient"
+			],
+			function($, Backbone, _, _s, ui, GeoRefineClient){
+				var grc_m = new Backbone.Model();
+				var grc_v = new GeoRefineClient.views.GeoRefineClientView({
+					model: grc_m,
+					el: $("#main")
+				});
+
+			$(document).ready(function(){
+				console.log("here");
+			});
+
+		});
+	</script>
+
+</head>
+
+<body>
+	<div id="main" style="position: absolute; top: 50px; left: 50px; right: 50px; bottom: 50px;">
+	</div>
+</body>
+</html>
+
+

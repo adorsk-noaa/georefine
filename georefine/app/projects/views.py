@@ -15,6 +15,23 @@ bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='te
 context_root = "/%s" % app.config['APPLICATION_ROOT']
 geoserver_url = "/geoserver"
 
+@bp.route('/view/client/<int:project_id>/')
+def georefine_client(project_id):
+	project = Project.query.get(project_id)
+	project.app_config = projects_manage.getProjectAppConfig(project)
+	georefine_config = {
+		"context_root": context_root,
+		"geoserver_url": geoserver_url,
+		"project_id": project_id,
+		"facets": project.app_config.get('facets', {}),
+		"charts": project.app_config.get('charts', {}),
+		"map": project.app_config.get('map', {}),
+		"summary_bar": project.app_config.get('summary_bar', {}),
+		"initial_state": project.app_config.get('initial_state', {}),
+	}
+	json_georefine_config = json.dumps(georefine_config)
+	return render_template("projects/georefine_client.html", context_root=context_root, georefine_config=Markup(json_georefine_config))
+
 @bp.route('/test_facets/<int:project_id>/')
 def test_facets(project_id):
 	project = Project.query.get(project_id)

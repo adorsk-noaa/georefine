@@ -26,18 +26,19 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			this.render();
 			this.on('ready', this.onReady, this);
 			this.model.on('change:filters', this.onFiltersChange, this);
-
 		},
 
 		render: function(){
 			var html = _.template(template, {model: this.model});
 			$(this.el).html(html);
 
-			this.setUpWindows();
-			this.setUpSummaryBar();
-			this.setUpFacets();
-
-			this.setUpInitialState();
+			var _this = this;
+			$(document).ready(function(){
+				_this.setUpWindows();
+				_this.setUpSummaryBar();
+				_this.setUpFacets();
+				_this.setUpInitialState();
+			});
 
 			return this;
 		},
@@ -57,7 +58,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					"height": $data_views.height(),
 					"x": dv_offset.left,
 					"y": dv_offset.top,
-					"showFooter": false
+					"showFooter": false,
+					"scrollable": false
 				}, opts))
 			});
 

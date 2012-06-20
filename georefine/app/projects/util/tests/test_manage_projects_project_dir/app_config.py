@@ -69,7 +69,7 @@ charts = {
 		}
 
 map = {
-		"max_extent" : "-180,-90,180,90",
+		"max_extent" : [-180,-90,180,90],
 		"graticule_intervals": [10.0],
 		#"resolutions": [0.025, 0.0125, 0.00625, 0.003125, 0.0015625, 0.00078125],
 		"default_layer_options" : {
@@ -135,5 +135,59 @@ map = {
 					"disabled": False
 					}
 				]
+		}
+
+summary_bar = {
+		"quantity_fields": [
+			{
+				'id': 'Test1.id:sum',
+				'label': 'Test1.IDs',
+				'entity': {
+					'expression': 'func.sum({Test1.id})'
+					}
+				},
+			{
+				'id': 'Test1.id:avg',
+				'label': 'Test1.IDs avg',
+				'entity': {
+					'expression': 'func.avg({Test1.id})'
+					}
+				}
+			]
+		}
+		
+initial_state = {
+		"summary_bar": {
+			"selected": "Test1.id:sum"
+			},
+
+		"data_views": [
+			{
+				"type": "map",
+				"initial_extent": [-10, -10, 10, 10],
+				"layers": [
+					{
+						"id":"nurc:Img_Sample",
+						"attributes": {
+							"disabled": True
+							}
+						}
+					]
+				},
+			{
+				"type": "chart",
+				"initial_category_field": {
+					"id": "Test1.name"
+					},
+				"initial_quantity_field": {
+					"id": "Test1.id:sum",
+					"attributes": {
+						},
+					"entity": {
+						"min": 0
+						}
+					}
+				}
+			]
 		}
 
