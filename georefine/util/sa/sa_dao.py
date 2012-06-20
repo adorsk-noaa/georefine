@@ -410,7 +410,15 @@ class SA_DAO(object):
 
 		# Get dialect object.
 		if not dialect:
-			dialect = q.session.bind.dialect
+			# If using jython w/ zxjdbc, need to get normal dialect
+			# for bind parameter substitution.
+			drivername = q.session.bind.engine.url.drivername
+			m = re.match("(.*)\+zxjdbc", drivername)
+			if m:
+				dialect = self.get_dialect(m.group(1))
+			# Otherwise use the normal session dialect.
+			else:
+				dialect = q.session.bind.dialect
 		else:
 			dialect = self.get_dialect(dialect)
 
