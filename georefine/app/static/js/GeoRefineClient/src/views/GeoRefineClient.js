@@ -26,6 +26,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			this.render();
 			this.on('ready', this.onReady, this);
 			this.model.on('change:filters', this.onFiltersChange, this);
+
 		},
 
 		render: function(){
@@ -36,81 +37,62 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			this.setUpSummaryBar();
 			this.setUpFacets();
 
+			this.setUpInitialState();
+
 			return this;
 		},
 
 		onReady: function(){
 		},
 
-		createDataViewWindow: function(opts){
+		createDataViewWindow: function(data_view, opts){
 			opts = opts || {};
 			$data_views = $('.data-views', this.el);
 			var dv_offset = $data_views.offset();
-			return new Windows.views.WindowView({
+
+			var w =  new Windows.views.WindowView({
 				model: new Backbone.Model(_.extend({}, {
 					"inline-block": true,
 					"width": $data_views.width(),
 					"height": $data_views.height(),
 					"x": dv_offset.left,
-					"y": dv_offset.top
+					"y": dv_offset.top,
+					"showFooter": false
 				}, opts))
-			});
-		},
-
-		addMapView: function(){
-
-			var map_editor = this.createMapEditor();
-
-			var w = this.createDataViewWindow({
-				"title": "Map"
 			});
 
 			w.on("resize", function(){
-				Util.util.fillParent(map_editor.el);
-				map_editor.resize();
+				Util.util.fillParent(data_view.el);
+				data_view.trigger('resize');
 			});
 
 			w.on("resizeStop", function(){
-				map_editor.resizeStop();
-				Util.util.unsetWidthHeight(map_editor.el);
+				data_view.trigger('resizeStop');
+				Util.util.unsetWidthHeight(data_view.el);
 			});
-			w.on("dragStop", function(){map_editor.trigger('pagePositionChange');});
-			w.on("minimize", function(){map_editor.deactivate();});
-			w.on("cascade", function(){map_editor.activate();});
-			w.on("close", function(){map_editor.remove();});
+			w.on("dragStop", function(){data_view.trigger('pagePositionChange');});
+			w.on("minimize", function(){data_view.trigger('deactivate');});
+			w.on("cascade", function(){data_view.trigger('activate');});
+			w.on("close", function(){data_view.trigger('remove');});
 
-			$(w.getBody()).append(map_editor.el);
+			$(w.getBody()).append(data_view.el);
 			w.resize();
 			w.resizeStop();
-			map_editor.trigger('ready');
-			map_editor.map_view.map.zoomToMaxExtent();
+			data_view.trigger('ready');
+		},
+
+		addMapView: function(){
+			var map_editor = this.createMapEditor();
+			this.createDataViewWindow(map_editor, {
+				"title": "Map"
+			});
 		},
 
 		addChartView: function(){
 			var chart_editor = this.createChartEditor();
-
-			var w = this.createDataViewWindow({
+			this.createDataViewWindow(chart_editor, {
 				"title": "Chart"
 			});
-
-			w.on("resize", function(){
-				Util.util.fillParent(chart_editor.el);
-				chart_editor.resize();
-			});
-
-			w.on("resizeStop", function(){
-				chart_editor.resizeStop();
-				Util.util.unsetWidthHeight(chart_editor.el);
-			});
-			w.on("dragStop", function(){chart_editor.trigger('pagePositionChange');});
-			w.on("minimize", function(){chart_editor.deactivate();});
-			w.on("cascade", function(){chart_editor.activate();});
-			w.on("close", function(){chart_editor.remove();});
-
-			$(w.getBody()).append(chart_editor.el);
-			w.resize();
-			w.resizeStop();
-			chart_editor.trigger('ready');
 		},
 
 		setUpWindows: function(){
@@ -292,7 +274,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			};
 
 			// Process map extent.
-			map_config.max_extent = bboxToMaxExtent(map_config.max_extent);
+			//map_config.max_extent = bboxToMaxExtent(map_config.max_extent);
 
 			_.extend(map_config.default_layer_options, {
 				maxExtent: map_config.max_extent
@@ -322,7 +304,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 					// If Layer has maxextent, create OpenLayers bounds from it.
 					if (proc_layer.max_extent){
-						proc_layer.max_extent = bboxToMaxExtent(proc_layer.max_extent);
+						//proc_layer.max_extent = bboxToMaxExtent(proc_layer.max_extent);
+						proc_layer.max_extent = proc_layer.max_extent;
 					}
 
 					// Create model for layer.
@@ -532,6 +515,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				render: function(){
 				},
 
+				setSelectedField: function(field_id){
+					this.$select.val(field_id);
+					this.model.set('selected_field', this.fields[field_id]);
+				},
+
 				onSelectChange: function(e){
 					if (! this.selectInitialized){
 						this.$select.children('option:first').remove();
@@ -561,13 +549,30 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				}
 
 			});
-			var summary_bar_view = new SummaryBarView({
+
+			this.summary_bar = new SummaryBarView({
 				model: summary_bar_model,
 				el: $(_s.sprintf("#%s-summary-bar", this.model.cid), this.el)
 			});
 		},
 
 		onFiltersChange: function(){
+		},
+
+		setUpInitialState: function(){
+			var initial_state = GeoRefine.config.initial_state;
+
+			// Initialize summary bar.
+			this.summary_bar.setSelectedField(initial_state.summary_bar.selected);
+
+			// Initialize Data Views.
+			_.each(initial_state.data_views, function(data_view){
+				if (data_view.type == 'map'){
+					var map_editor = this.createMapEditor();
+					map_editor.map_view.map.zoomToExtent([-10, -10, 10, 10], true);
+				}
+			}, this);
+			
 		}
 
 	});

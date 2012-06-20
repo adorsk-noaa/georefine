@@ -54,7 +54,7 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 			"base_filters":[
 
 			],
-			"max_extent":"-180,-90,180,90",
+			"max_extent":[-180,-90,180,90],
 			"graticule_intervals":[
 				10.0
 			],
@@ -187,8 +187,22 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
 					}
 				}
 			]
-		}
+		},
 		// End summary bar.
+		
+		// Start initial state.
+		"initial_state": {
+			"summary_bar": {
+				"selected": "Test1.id:sum"
+			},
+
+			"data_views": [
+				{
+					"type": "map"
+				}
+			]
+		}
+		// End initial state.
 
 	};
 	
