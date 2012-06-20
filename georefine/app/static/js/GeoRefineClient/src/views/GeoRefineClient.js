@@ -42,15 +42,27 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		onReady: function(){
 		},
 
+		createDataViewWindow: function(opts){
+			opts = opts || {};
+			$data_views = $('.data-views', this.el);
+			var dv_offset = $data_views.offset();
+			return new Windows.views.WindowView({
+				model: new Backbone.Model(_.extend({}, {
+					"inline-block": true,
+					"width": $data_views.width(),
+					"height": $data_views.height(),
+					"x": dv_offset.left,
+					"y": dv_offset.top
+				}, opts))
+			});
+		},
+
 		addMapView: function(){
 
 			var map_editor = this.createMapEditor();
 
-			var w = new Windows.views.WindowView({
-				model: new Backbone.Model({
-					"title": "Map",
-					"inline-block": true,
-				})
+			var w = this.createDataViewWindow({
+				"title": "Map"
 			});
 
 			w.on("resize", function(){
@@ -77,11 +89,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		addChartView: function(){
 			var chart_editor = this.createChartEditor();
 
-			var w = new Windows.views.WindowView({
-				model: new Backbone.Model({
-					"title": "Chart",
-					"inline-block": true,
-				})
+			var w = this.createDataViewWindow({
+				"title": "Chart"
 			});
 
 			w.on("resize", function(){
@@ -108,6 +117,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			$.window.prepare({
 				"dock": "right",
 				"dockArea": $('.data-views', this.el),
+				"handleScrollbar": false
 			});
 		},
 
