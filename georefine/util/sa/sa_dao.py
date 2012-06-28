@@ -278,6 +278,7 @@ class SA_DAO(object):
                         q = q.join(mapped_parent, getattr(mapped_grandparent, parent_attr))
         return q
 
+    # @TODO: HACK FOR NOW.  ASSUMES ALL CLASSES USE 'id' AS PRIMARY KEY.  GENERALIZE THIS LATER.
     def get_entity_parent_keys(self, registry, entity):
         parent_keys = []
         for m in re.finditer('{(.*?)}', entity['expression']):
@@ -293,15 +294,12 @@ class SA_DAO(object):
                 pass
             # Otherwise, get the keys which are used to connect the parent.
             else:
-                grandparent_id = '.'.join(parts[:-2])
-                mapped_grandparent = registry.get(grandparent_id)
-                parent_attr = parts[-2]
-                #parent_prop = class_mapper(mapped_grandparent._AliasedClass__target).get_property(parent_attr)
-                parent_prop = class_mapper(mapped_grandparent._AliasedClass__target).get_property(parent_attr)
-                if isinstance(parent_prop, RelationshipProperty):
-                    # @TODO! NEED TO FIND A WAY TO CHANGE THIS TO BE DERIVED FROM MAPPED PARENT.
-                    # OTHERWISE JUST GETS IT STRAIGHT FROM THE TABLE.
-                    parent_keys.extend(parent_prop._calculated_foreign_keys)
+                parent_id = '.'.join(parts[:-1])
+                mapped_parent = registry[parent_id]
+                parent_keys.append(mapped_parent.id)
+        for i in range(len(parent_keys)):
+            parent_keys[i] = parent_keys[i].label("%s_pk%s" % (entity['label'], i))
+            
         return parent_keys
 
 
