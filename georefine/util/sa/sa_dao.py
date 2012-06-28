@@ -2,7 +2,7 @@ import sys
 from sqlalchemy.orm import aliased, class_mapper, join
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.orm.properties import RelationshipProperty
-from sqlalchemy.sql import func, asc
+from sqlalchemy.sql import func, asc, distinct, and_
 from sqlalchemy.sql.expression import column
 import copy
 import re
@@ -30,7 +30,7 @@ class SA_DAO(object):
     def execute_query(self, **kwargs):
         return self.get_query(**kwargs).all()
 
-    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[]):
+    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[], return_registry=False):
 
         # If no alias was given, registry with aliased primary class.
         if not primary_alias:
@@ -94,8 +94,11 @@ class SA_DAO(object):
         # Only select required entities.
         q = q.with_entities(*q_entities)
 
-        # Return query.
-        return q
+        # Return query (and registry if specified).
+        if return_registry:
+            return q, q_registry
+        else:
+            return q
 
 
     # Helper function for creating aggregate field labels.
@@ -139,6 +142,35 @@ class SA_DAO(object):
                         'label_type': entity['label_type']
                         })
             grouping_entity_values[entity['id']] = values 
+
+        # Get base query and registry .
+        bq_primary_alias = aliased(self.primary_class)
+        bq, bq_registry = self.get_query(primary_alias=bq_primary_alias, data_entities=data_entities, grouping_entities=grouping_entities, return_registry=True, **kwargs)
+
+        # Add data entity parent keys.
+        bq_parent_keys = []
+        for entity in data_entities + grouping_entities:
+            bq_parent_keys.extend(self.get_entity_parent_keys(bq_registry, entity))
+        for pk in bq_parent_keys:
+            bq = bq.group_by(pk)
+        bq = bq.with_entities(*bq_parent_keys)
+
+        # Create main query by joining on the base query and grouping by the grouping entities.
+        subq = bq.subquery()
+        q, q_registry = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, return_registry=True)
+        q_parent_keys = []
+        for entity in data_entities + grouping_entities:
+            q_parent_keys.extend(self.get_entity_parent_keys(q_registry, entity))
+        for pk in q_parent_keys:
+            q.add_column(pk)
+            q = q.group_by(pk)
+
+        join_criteria = []
+        for i in range(len(q_parent_keys)):
+            bq_pk = bq_parent_keys[i]
+            q_pk = q_parent_keys[i]
+            join_criteria.append(q_pk == bq_pk)
+        q = q.join(subq, and_(*join_criteria))
 
         # Get aggregate results as dictionaries.
         rows = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
@@ -246,6 +278,33 @@ class SA_DAO(object):
                         q = q.join(mapped_parent, getattr(mapped_grandparent, parent_attr))
         return q
 
+    def get_entity_parent_keys(self, registry, entity):
+        parent_keys = []
+        for m in re.finditer('{(.*?)}', entity['expression']):
+            entity_id = m.group(1)
+
+            # Here parent refers to the table which contains the entity, grandparent is the table to which
+            # the parent should be joined.
+            # Assumes that the entity has already been registered.
+            parts = entity_id.split('.')
+
+            # If entity component is a direct property off the main parent, there are no parent properties.
+            if len(parts) <= 2:
+                pass
+            # Otherwise, get the keys which are used to connect the parent.
+            else:
+                grandparent_id = '.'.join(parts[:-2])
+                mapped_grandparent = registry.get(grandparent_id)
+                parent_attr = parts[-2]
+                #parent_prop = class_mapper(mapped_grandparent._AliasedClass__target).get_property(parent_attr)
+                parent_prop = class_mapper(mapped_grandparent._AliasedClass__target).get_property(parent_attr)
+                if isinstance(parent_prop, RelationshipProperty):
+                    # @TODO! NEED TO FIND A WAY TO CHANGE THIS TO BE DERIVED FROM MAPPED PARENT.
+                    # OTHERWISE JUST GETS IT STRAIGHT FROM THE TABLE.
+                    parent_keys.extend(parent_prop._calculated_foreign_keys)
+        return parent_keys
+
+
 
     def get_mapped_entity(self, registry, entity):
 
@@ -288,7 +347,7 @@ class SA_DAO(object):
         mapped_entity = eval(entity_code)
         if isinstance(mapped_entity, AliasedClass): pass
         else:
-            mapped_entity.label(entity['label'])
+            mapped_entity = mapped_entity.label(entity['label'])
 
         # Register.
         registry[entity_key] = mapped_entity
