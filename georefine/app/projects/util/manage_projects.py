@@ -1,7 +1,7 @@
 from georefine.app.projects.models import Project
 from georefine.app import db
 from sqlalchemy import Float, Integer
-from geoalchemy import Geometry, WKTSpatialElement
+from geoalchemy import Geometry, WKTSpatialElement, WKBSpatialElement
 import os
 import csv
 
@@ -41,9 +41,6 @@ def setUpData(project):
     for t in schema['tables']:
 
         table = t['table']
-        for c in table.columns:
-            print type(c.type)
-            print c.name
 
         # Get the filename for the table.
         table_filename = os.path.join(project.dir, 'data', "%s.csv" % (t['id']))
@@ -56,21 +53,41 @@ def setUpData(project):
             processed_row = {}
             # Parse values for columns.
             for c in table.columns:
-                if row.has_key(c.name):
-                    # Cast the value per the column's type.
+                # Cast the value per the column's type.
+                try:
+                    # Defaults.
+                    key = c.name
+                    cast = str
                     if isinstance(c.type, Float):
-                        value = float(row[c.name])
+                        cast = float
                     elif isinstance(c.type, Integer):
-                        value = int(row[c.name])
+                        cast = int
                     elif isinstance(c.type, Geometry):
                         if row.has_key(c.name + "_wkt"):
-                            value = WKBSpatialElement(row[c.name + "_wkt"])
+                            key = c.name + "_wkt"
+                            cast = WKTSpatialElement
                         if row.has_key(c.name + "_wkb"):
-                            value = WKTSpatialElement(row[c.name + "_wkb"])
-                    else:
-                        value = str(row[c.name])
-                    processed_row[c.name] = value
+                            key = c.name + "_wkb"
+                            cast = WKBSpatialElement
 
+                    # Skip row if no corresponding key.
+                    if not row.has_key(key): 
+                        continue
+
+                    # Handle empty values.
+                    is_blank = False
+                    if cast == float or cast == int:
+                        if row[key] == '' or row[key] == None:
+                            is_blank = True
+                    elif not row[key]: 
+                        is_blank = True
+                    
+                    # Process value if not blank.
+                    if not is_blank:
+                        processed_row[c.name] = cast(row[key])
+
+                except Exception, err:
+                    raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
             # Insert values.
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
             db.session.execute(t['table'].insert().values(**processed_row))
