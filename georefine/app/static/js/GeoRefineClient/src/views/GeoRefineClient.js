@@ -282,12 +282,17 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				maxExtent: map_config.max_extent
 			});
 
-			// This method will be called with a layer as 'this'.
+			// This method will be called with a layer model as 'this'.
 			updateServiceUrlLocalDataLayer = function(attr, options){
 				params = [
-					['data_entity', this.get('entity')],
 					['filters', this.get('filters')]
 				];
+                _.each(['data_entity', 'geom_entity', 'geom_id_entity', 'grouping_entities'], function(entity_attr){
+                    entity_model = this.get(entity_attr);
+                    if (entity_model){
+                        params.push([entity_attr, entity_model.toJSON()]);
+                    }
+                }, this);
 				url_params = [];
 				_.each(params, function(p){
 					url_params.push(_s.sprintf("%s=%s", p[0], JSON.stringify(p[1])));
@@ -317,19 +322,32 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}));
 
 					// Have layer model listen for filter changes.
-					this.model.on('change:filters', function(){
-						model.set("filters", this.model.get("filters"));
-					}, this);
+					model.on('change:filters', function(){
+                        model.set("filters", this.model.get("filters"));
+                    }, this);
 
 					// Handle service url updates for various layer types.
 					if (proc_layer.source == 'local_getmap'){
-						if (proc_layer.entity){
-							var entity_model = new Backbone.Model(_.extend({}, proc_layer.entity,{}));
-							model.set('entity', entity_model);
-						}
+                        _.each(['data_entity', 'geom_entity', 'geom_id_entity'], function(entity_attr){
+                            if (proc_layer[entity_attr]){
+                                var entity_model = new Backbone.Model(_.extend({}, proc_layer[entity_attr], {}));
+                                model.set(entity_attr, entity_model);
+                            }
+                        });
+
+                        if (proc_layer['grouping_entities']){
+                            grouping_entities_collection = new Backbone.Collection();
+                            _.each(proc_layer['grouping_entities'], function(grouping_entity){
+                                var entity_model = new Backbone.Model(_.extend({}, grouping_entity, {}));
+                                grouping_entities_collection.add(entity_model);
+                            });
+                            model.set('grouping_entities', grouping_entities_collection);
+                        }
+
 						updateServiceUrlLocalDataLayer.call(model);
-						model.on('change:entity change:filters', updateServiceUrlLocalDataLayer, model);
-					}
+						model.on('change:data_entity change:geom_entity change:grouping_entities change:filters', updateServiceUrlLocalDataLayer, model);
+                    }
+
 					else if (proc_layer.source == 'local_geoserver'){
 						var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, proc_layer.workspace);
 						model.set('service_url', service_url);

@@ -15,7 +15,7 @@ def get_entities(project):
 	return dao.get_entities()
 
 
-def get_map(project, data_entity=None, id_entity=None, geom_entity=None, filters=[], map_parameters={}):
+def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, grouping_entities=[], filters=[], map_parameters={}):
 	dao = get_dao(project)
 	renderer = GeoToolsMapRenderer()
 
@@ -23,8 +23,9 @@ def get_map(project, data_entity=None, id_entity=None, geom_entity=None, filters
 	return renderer.renderMap(
 			dao=dao, 
 			data_entity=data_entity, 
-			id_entity=id_entity, 
+			geom_id_entity=geom_id_entity, 
 			geom_entity=geom_entity, 
+            grouping_entities=grouping_entities,
 			filters=filters, 
 			map_parameters=map_parameters
 			)

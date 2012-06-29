@@ -120,7 +120,7 @@ def get_map(project_id):
 
 	# Parse request parameters.
 	data_entity = json.loads(request.args.get('data_entity', 'null'))
-	id_entity = json.loads(request.args.get('id_entity', 'null'))
+	geom_id_entity = json.loads(request.args.get('geom_id_entity', 'null'))
 	geom_entity = json.loads(request.args.get('geom_entity', 'null'))
 	grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
 	filters = json.loads(request.args.get('filters', '[]'))
@@ -136,8 +136,9 @@ def get_map(project_id):
 	map_image = projects_services.get_map(
 			project, 
 			data_entity=data_entity,
-			id_entity=id_entity, 
+			geom_id_entity=geom_id_entity, 
 			geom_entity=geom_entity,
+			grouping_entities=grouping_entities,
 			filters=filters,
 			map_parameters=map_parameters
 			)

@@ -307,7 +307,7 @@ class SA_DAO(object):
     def get_mapped_entity(self, registry, entity):
 
         # Set default label on entity if none given.
-        entity.setdefault('id', id(entity))
+        entity.setdefault('id', str(id(entity)))
         entity.setdefault('label', entity['id'])
 
         # Create key for entity (expression + label).
