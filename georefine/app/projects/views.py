@@ -23,6 +23,7 @@ def georefine_client(project_id):
 		"context_root": context_root,
 		"geoserver_url": geoserver_url,
 		"project_id": project_id,
+		"filter_groups": project.app_config.get('filter_groups', {}),
 		"facets": project.app_config.get('facets', {}),
 		"charts": project.app_config.get('charts', {}),
 		"map": project.app_config.get('map', {}),

@@ -25,7 +25,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			$(this.el).addClass('georefine-client');
 			this.render();
 			this.on('ready', this.onReady, this);
-			this.model.on('change:filters', this.onFiltersChange, this);
 		},
 
 		render: function(){
@@ -35,6 +34,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			var _this = this;
 			$(document).ready(function(){
 				_this.setUpWindows();
+				_this.setUpFilterGroups();
 				_this.setUpSummaryBar();
 				_this.setUpFacets();
 				_this.setUpInitialState();
@@ -45,6 +45,43 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 		onReady: function(){
 		},
+
+        setUpFilterGroups: function(){
+            this.filter_groups = {};
+
+            // Initialize filter groups.
+			_.each(GeoRefine.config.filter_groups, function(filter_group_config){
+                var filter_group = new Backbone.Collection();
+                this.filter_groups[filter_group_config.id] = filter_group;
+                filter_group.getFilters = function(){
+                    var filters = [];
+                    _.each(filter_group.models, function(model){
+                        var model_filters = model.get('filters');
+                        if (model_filters){
+                            filters.push({
+                                'source': {
+                                    'type': model.getFilterType ? model.getFilterType() : null,
+                                    'cid': model.cid
+                                },
+                                'filters': model_filters
+                            });
+                        }
+                    });
+                    return filters;
+                };
+            }, this);
+
+            // Add listeners for synchronizing linked groups.
+			_.each(GeoRefine.config.filter_groups, function(filter_group_config){
+                _.each(filter_group_config.linked_groups, function(linked_group_id){
+                    var main_group = this.filter_groups[filter_group_config.id];
+                    var linked_group = this.filter_groups[linked_group_id];
+                    _.each(['add', 'remove'], function(evnt){
+                        linked_group.on(evnt, function(model){main_group[evnt](model)});
+                    });
+                }, this);
+            }, this);
+        },
 
 		createDataViewWindow: function(data_view, opts){
 			opts = opts || {};
@@ -114,7 +151,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			// The 'getData' functions will be called with a facet model as 'this'.
 			var listFacetGetData = function(){
 				var data = {
-					'filters': JSON.stringify(this.get('filters')),
+					'filters': JSON.stringify(this.get('query_filters')),
 					'data_entities': JSON.stringify([this.get('count_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 				};
@@ -203,6 +240,28 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				});
 			};
 
+            // The 'formatFilter' functions will be called with a facet view as 'this'.
+            listFacetFormatFilters = function(selected_values){
+                var formatted_filters = [];
+                if (selected_values.length > 0){
+                    formatted_filters = [{entity: {expression: this.model.get('grouping_entity').expression}, op: 'in', value: selected_values}];
+                }
+                return formatted_filters;
+            };
+
+            numericFacetFormatFilters = function(selected_values){
+                var formatted_filters = [
+                    { 'entity': {'expression': this.model.get('grouping_entity').expression}, 'op': '>=', 'value': selected_values['selection_min']},
+                    { 'entity': {'expression': this.model.get('grouping_entity').expression}, 'op': '<=', 'value': selected_values['selection_max']}
+                ];
+                return formatted_filters;
+            };
+
+            timeSliderFacetFormatFilters = function(selected_value){
+                var formatted_filters = [{'entity': {expression: this.model.get('grouping_entity').expression}, op: '==', value: selected_value}];
+                return formatted_filters;
+            };
+
 			// For each facet definition...
 			_.each(GeoRefine.config.facets, function(facet){
 
@@ -214,6 +273,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}));
 					model.getData = listFacetGetData;
 					view = new Facets.views.ListFacetView({ model: model });
+                    view.formatFilters = listFacetFormatFilters;
 				}
 
 				else if (facet.type == 'numeric'){
@@ -223,13 +283,48 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}));
 					model.getData = numericFacetGetData;
 					view = new Facets.views.NumericFacetView({ model: model });
+                    view.formatFilters = numericFacetFormatFilters;
 				}
 
+				else if (facet.type == 'time-slider'){
+					model = new Facets.models.FacetModel(_.extend({}, facet, {
+					}));
+                    model.formatFilters = timeSliderFacetFormatFilters;
+					view = new Facets.views.TimeSliderFacetView({ model: model });
+                }
+                
+                // Setup the facet's filter group config.
+                _.each(facet.filter_groups, function(filter_group_id, key){
+                    var filter_group = this.filter_groups[filter_group_id];
+                    filter_group.add(model);
+
+                    // When the filter group changes, change the facet's query filters.
+                    filter_group.on('change:filters', function(){
+                        var all_filters = filter_group.getFilters();
+                        var keep_filters = [];
+                        // A facet should not use its own selection in the filters.
+                        _.each(all_filters, function(filter){
+                            if (filter.source.cid != model.cid){
+                                keep_filters = keep_filters.concat(filter.filters);
+                            }
+                        });
+                        model.set('query_filters', keep_filters);
+                    });
+                }, this);
+
+                // Have the facet update when its query filters change.
+                if (model.getData){
+                    model.on('change:query_filters', function(){
+                        model.getData();
+                    });
+                }
+
+                // Save the facet objects to the registry.
 				facets[model.cid] = {
 					model: model,
 					view: view
 				};
-			});
+			}, this);
 
 			// Create facet collection.
 			var facet_models = [];
@@ -245,19 +340,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				facet_collection_view.addFacetView(facet['view']);
 			});
 
-			// Listen for selection changes.
-			facet_collection_model.on('change:selection', function(){
-				var selections = facet_collection_model.getSelections();
-				var filters = [];
-				_.each(selections, function(selection){
-					_.each(selection, function(filter){
-						filters.push(filter);
-					});
-				});
-				this.model.set('filters', filters);
-			}, this);
-
-			facet_collection_view.updateFacets({force: true});
+            // Initialize the facets.
+			_.each(facet_collection_model.models, function(model){
+                if (model.getData){
+                    model.getData();
+                }
+            });
 
 		},
 
@@ -274,9 +362,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				});
 				return new OpenLayers.Bounds(extent_coords);
 			};
-
-			// Process map extent.
-			//map_config.max_extent = bboxToMaxExtent(map_config.max_extent);
 
 			_.extend(map_config.default_layer_options, {
 				maxExtent: map_config.max_extent
@@ -321,10 +406,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 						'options': _.extend({}, map_config.default_layer_options, proc_layer.options)
 					}));
 
-					// Have layer model listen for filter changes.
-					model.on('change:filters', function(){
-                        model.set("filters", this.model.get("filters"));
-                    }, this);
 
 					// Handle service url updates for various layer types.
 					if (proc_layer.source == 'local_getmap'){
@@ -344,8 +425,21 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                             model.set('grouping_entities', grouping_entities_collection);
                         }
 
-						updateServiceUrlLocalDataLayer.call(model);
-						model.on('change:data_entity change:geom_entity change:grouping_entities change:filters', updateServiceUrlLocalDataLayer, model);
+                        // Have layer model listen for filter changes.
+                        // @TODO: put filter groups in layers?
+                        _.each(map_config.filter_groups, function(filter_group_id){
+                            var filter_group = this.filter_groups[filter_group_id];
+                            filter_group.on('change:filters', function(){
+                                var filters = [];
+                                _.each(filter_group.getFilters(), function(filter){
+                                    filters = filters.concat(filter.filters);
+                                });
+                                model.set('filters', filters);
+                            });
+                        }, this);
+
+                        updateServiceUrlLocalDataLayer.call(model);
+                        model.on('change:data_entity change:geom_entity change:grouping_entities change:filters', updateServiceUrlLocalDataLayer, model);
                     }
 
 					else if (proc_layer.source == 'local_geoserver'){
@@ -368,10 +462,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					theme: null
 				},
 				graticule_intervals: [2]
-			}, 
-			map_config, {
-			})
-			);
+            }, 
+            map_config, {
+            })
+                    );
 
 			var map_view = new MapView.views.MapViewView({
 				model: map_model
@@ -448,7 +542,19 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				});
 			};
 
-			// Set datasource query filters on app filter changes.
+			// Set datasource query to listen to filter group changes.
+            _.each(charts_config.filter_groups, function(filter_group_id){
+                var filter_group = this.filter_groups[filter_group_id];
+                filter_group.on('change:filters', function(){
+                    filters = [];
+                    _.each(filter_group.getFilters(), function(filter){
+                        filters = filters.concat(filter.filters);
+                    });
+                    model.set('filters', filters);
+                });
+            }, this);
+
+            // Change the query when filters change.
 			this.model.on('change:filters', function(){
 				var q = datasource.get("query");
 				q.set("filters", this.model.get("filters"));
@@ -472,18 +578,26 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		setUpSummaryBar: function(){
 			var lji = new Util.util.LumberjackInterpreter();
 			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+            var summary_bar_config = GeoRefine.config.summary_bar;
 
 			var summary_bar_model = new Backbone.Model({
-				"fields": GeoRefine.config.summary_bar.quantity_fields,
+				"fields": summary_bar_config.quantity_fields,
 				"filters": [],
 				"selected_field": null,
 				"data": {}
 			});
 
 			// Listen for filter changes.
-			this.model.on('change:filters', function(){
-				summary_bar_model.set("filters", this.model.get("filters"));
-			}, this);
+            _.each(summary_bar_config.filter_groups, function(filter_group_id){
+                var filter_group = this.filter_groups[filter_group_id];
+                filter_group.on('change:filters', function(){
+                    filters = [];
+                    _.each(filter_group.getFilters(), function(filter){
+                        filters = filters.concat(filter.filters);
+                    });
+                    model.set('filters', filters);
+                });
+            }, this);
 
 			summary_bar_model.getData = function(){
 				var _this =  summary_bar_model;

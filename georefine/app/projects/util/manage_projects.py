@@ -2,8 +2,7 @@ from georefine.app.projects.models import Project
 from georefine.app import db
 from sqlalchemy import Float, Integer
 from geoalchemy import Geometry, WKTSpatialElement, WKBSpatialElement
-import os
-import csv
+import os, shutil, csv
 
 def getProjectSchema(project):
     schema_file = os.path.join(project.dir, 'schema.py')
@@ -96,9 +95,20 @@ def setUpData(project):
         db.session.commit()
 
 
-def tearDownSchema(project): 
-    schema = project.schema
+def tearDownSchema(schema): 
     schema['metadata'].drop_all(bind=db.session.bind)
+
+def deleteProject(project_id, delete_project_dir=True):
+    project = db.session.query(Project).filter(Project.id == project_id).one()
+    schema = getProjectSchema(project)
+    tearDownSchema(schema)
+
+    if delete_project_dir:
+        shutil.rmtree(project.dir)
+
+    db.session.delete(project)
+    db.session.commit()
+
 
 
 

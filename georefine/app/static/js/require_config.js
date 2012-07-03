@@ -118,7 +118,12 @@ var require = {
 		{
 		  "name": "GeoRefineClient",
 		  "location": CONTEXT_BASE + "/static/js/GeoRefineClient/src"
-		}
+		},
+
+        {
+            "name": "uiExtras",
+            "location": ASSETS_BASEURL + "/js/jquery.ui.extras"
+        }
 	]
 
 };
