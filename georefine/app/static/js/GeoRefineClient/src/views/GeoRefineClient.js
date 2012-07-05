@@ -310,7 +310,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
             timeSliderFacetFormatFilters = function(selected_value){
                 var formatted_filters = [{'entity': {expression: this.model.get('grouping_entity').expression}, op: '==', value: selected_value}];
-                console.log("tsfff, ff is: ", formatted_filters);
                 return formatted_filters;
             };
 
@@ -361,7 +360,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                                 keep_filters = keep_filters.concat(filter.filters);
                             }
                         });
-                        console.log("model is: ", model.cid, model, " keep filters is: ", keep_filters);
                         model.set('query_filters', keep_filters);
                     });
                 }, this);
@@ -435,8 +433,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				url_params = [];
 				_.each(params, function(p){
 					url_params.push(_s.sprintf("%s=%s", p[0], JSON.stringify(p[1])));
-					this.set('service_url', map_endpoint + '?' + url_params.join('&') + '&');
 				},this);
+                this.set('service_url', map_endpoint + '?' + url_params.join('&') + '&');
 			};
 
 			var processed_layers = {};
