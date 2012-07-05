@@ -112,7 +112,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			w.on("dragStop", function(){data_view.trigger('pagePositionChange');});
 			w.on("minimize", function(){data_view.trigger('deactivate');});
 			w.on("cascade", function(){data_view.trigger('activate');});
-			w.on("close", function(){data_view.trigger('remove');});
+			w.on("close", function(){
+                data_view.trigger('remove');
+                w.model = null;
+                w.remove();
+            });
 
 			$(w.getBody()).append(data_view.el);
 			w.resize();
@@ -184,7 +188,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 			numericFacetGetData = function() {
 				var data = {
-					'filters': JSON.stringify(this.get('filters')),
+					'filters': JSON.stringify(this.get('query_filters')),
 					'data_entities': JSON.stringify([this.get('count_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 					'with_unfiltered': true,
@@ -257,7 +261,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                 }
 
                 var data = {
-					'filters': JSON.stringify(this.get('filters')),
+					'filters': JSON.stringify(this.get('query_filters')),
 					'data_entities': JSON.stringify([this.get('grouping_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 					'sorting_entities': JSON.stringify([this.get('sorting_entity')])
@@ -306,6 +310,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
             timeSliderFacetFormatFilters = function(selected_value){
                 var formatted_filters = [{'entity': {expression: this.model.get('grouping_entity').expression}, op: '==', value: selected_value}];
+                console.log("tsfff, ff is: ", formatted_filters);
                 return formatted_filters;
             };
 
@@ -356,6 +361,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                                 keep_filters = keep_filters.concat(filter.filters);
                             }
                         });
+                        console.log("model is: ", model.cid, model, " keep filters is: ", keep_filters);
                         model.set('query_filters', keep_filters);
                     });
                 }, this);
