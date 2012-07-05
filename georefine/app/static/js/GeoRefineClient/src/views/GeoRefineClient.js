@@ -146,7 +146,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			var facets = {};
 			var lji = new Util.util.LumberjackInterpreter();
 
-			var endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+			var query_endpoint = _s.sprintf('%s/projects/query_data/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 			// The 'getData' functions will be called with a facet model as 'this'.
 			var listFacetGetData = function(){
@@ -157,7 +158,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				};
 				var _this = this;
 				$.ajax({
-					url: endpoint,
+					url: aggregates_endpoint,
 					type: 'GET',
 					data: data,
 					error: Backbone.wrapError(function(){}, _this, {}),
@@ -191,7 +192,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				};
 				var _this = this;
 				$.ajax({
-					url: endpoint,
+					url: aggregates_endpoint,
 					type: 'GET',
 					data: data,
 					error: Backbone.wrapError(function(){}, _this, {}),
@@ -239,6 +240,52 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}
 				});
 			};
+
+            // @TODO: GENERALIZE THIS? IS THIS SASI-SPECIFIC?
+            timeSliderFacetGetData = function(){
+
+                // Assign label to grouping entity and use it as default choice label.
+                var grouping_entity = this.get('grouping_entity');
+                grouping_entity['label'] = 'grouping_entity';
+                var choice_label_entity = grouping_entity;
+
+                // If there is a label entity, use it as the choice label.
+                var label_entity = grouping_entity['label_entity'];
+                if (label_entity){
+                    label_entity['label'] = 'label_entity';
+                    choice_label_entity = label_entity;
+                }
+
+                var data = {
+					'filters': JSON.stringify(this.get('filters')),
+					'data_entities': JSON.stringify([this.get('grouping_entity')]),
+					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
+                }
+
+
+				var _this = this;
+				$.ajax({
+					url: query_endpoint,
+					type: 'GET',
+					data: data,
+					error: Backbone.wrapError(function(){}, _this, {}),
+					success: function(data, status, xhr){
+                        var choices = [];
+
+						// Parse data into list of choices.
+                        var results = data.result;
+						_.each(results, function(result){
+                            choices.push({
+                                'id': result[grouping_entity['label']],
+                                'value': result[grouping_entity['label']],
+                                'label': result[choice_label_entity['label']],
+                            });
+                        }, _this);
+
+						_this.set('choices', choices);
+					}
+				});
+            };
 
             // The 'formatFilter' functions will be called with a facet view as 'this'.
             listFacetFormatFilters = function(selected_values){
@@ -289,8 +336,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				else if (facet.type == 'time-slider'){
 					model = new Facets.models.FacetModel(_.extend({}, facet, {
 					}));
-                    model.formatFilters = timeSliderFacetFormatFilters;
+					model.getData = timeSliderFacetGetData;
 					view = new Facets.views.TimeSliderFacetView({ model: model });
+                    view.formatFilters = timeSliderFacetFormatFilters;
                 }
                 
                 // Setup the facet's filter group config.
