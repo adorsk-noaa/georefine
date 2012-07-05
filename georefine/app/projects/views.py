@@ -92,6 +92,24 @@ def create_project():
 	
 	return render_template("projects/create_project.html", form=form)
 
+@bp.route('/query_data/<int:project_id>/', methods=['GET', 'POST'])
+def query_data(project_id):
+	project = Project.query.get(project_id)
+	project.schema = projects_manage.getProjectSchema(project)
+
+	# Parse request parameters.
+	data_entities = json.loads(request.args.get('data_entities', '[]'))
+	grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
+	filters = json.loads(request.args.get('filters', '[]'))
+
+	results = projects_services.query_data(
+			project, 
+			data_entities = data_entities, 
+			grouping_entities = grouping_entities, 
+			filters = filters
+			)
+	return jsonify(results)
+
 @bp.route('/get_aggregates/<int:project_id>/', methods=['GET', 'POST'])
 def get_aggregates(project_id):
 	project = Project.query.get(project_id)

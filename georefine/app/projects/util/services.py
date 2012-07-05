@@ -16,10 +16,11 @@ def get_entities(project):
 
 # @TODO: Better name for this??
 # Just executes a regular non-aggregate query.
-def query(project, select_entities=[], grouping_entities=[], sorting_entities=[], filters=[]):
+def query_data(project, **kwargs):
     dao = get_dao(project)
-    results = dao.execute_query(dat
-    
+    rows = dao.execute_query(**kwargs)
+    dict_results = [dict(zip(row.keys(), row)) for row in rows]
+    return dict_results
 
 
 # @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
