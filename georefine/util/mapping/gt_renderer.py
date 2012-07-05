@@ -70,7 +70,7 @@ class GeoToolsMapRenderer(object):
 
         data_entities = [geom_id_entity, geom_entity, data_entity]
         grouping_entities.extend([geom_id_entity, geom_entity])
-        sql = dao.get_sql(select_entities=select_entities, grouping_entities=grouping_entities, filters=filters)
+        sql = dao.get_sql(data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
 
         # Create VirtualTable from query.
         vtable = VirtualTable("vtable", sql)

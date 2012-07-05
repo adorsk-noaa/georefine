@@ -20,6 +20,7 @@ def query_data(project, **kwargs):
     dao = get_dao(project)
     rows = dao.execute_query(**kwargs)
     dict_results = [dict(zip(row.keys(), row)) for row in rows]
+    print "rd: ", dict_results
     return dict_results
 
 

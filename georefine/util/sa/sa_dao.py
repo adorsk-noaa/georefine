@@ -46,7 +46,7 @@ class SA_DAO(object):
             q = self.register_entity_dependencies(q, q_registry, entity)
 
         # Add select entities to query.
-        for entity in select entities:
+        for entity in data_entities:
             mapped_entity = self.get_mapped_entity(q_registry, entity)
             q_entities.add(mapped_entity)
 
@@ -60,7 +60,6 @@ class SA_DAO(object):
 
             # Handle non-histogram fields.
             else:
-                q_entities.add(mapped_entity)
                 q = q.group_by(mapped_entity)
 
                 # If entity field has a label entity, add it.
@@ -173,7 +172,8 @@ class SA_DAO(object):
         q = q.join(subq, and_(*join_criteria))
 
         # Get aggregate results as dictionaries.
-        rows = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
+        # Include grouping entities as data entities, so that we can select them.
+        rows = self.get_query(data_entities=data_entities + grouping_entities, grouping_entities=grouping_entities, **kwargs).all()
         aggregates = [dict(zip(row.keys(), row)) for row in rows]
 
         # Initialize result tree with aggregates.
