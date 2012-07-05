@@ -364,9 +364,26 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                     });
                 }, this);
 
-                // Have the facet update when its query filters change.
+                // Setup the facet's base filter group config (if applicable).
+                _.each(facet.base_filter_groups, function(filter_group_id, key){
+                    var filter_group = this.filter_groups[filter_group_id];
+
+                    // When the filter group changes, change the facet's base filters.
+                    filter_group.on('change:filters', function(){
+                        var filters = []
+                        var all_filters = filter_group.getFilters();
+                        // A facet should not use its own selection in the filters.
+                        _.each(all_filters, function(filter){
+                            filters = filters.concat(filter.filters);
+                        });
+                        model.set('base_filters', filters);
+                    });
+                }, this);
+
+
+                // Have the facet update when its query or base filters change.
                 if (model.getData){
-                    model.on('change:query_filters', function(){
+                    model.on('change:query_filters change:base_filters', function(){
                         model.getData();
                     });
                 }
@@ -632,14 +649,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
             var summary_bar_config = GeoRefine.config.summary_bar;
 
-			var summary_bar_model = new Backbone.Model({
+			var model = new Backbone.Model({
 				"fields": summary_bar_config.quantity_fields,
 				"filters": [],
 				"selected_field": null,
 				"data": {}
 			});
 
-			// Listen for filter changes.
+			// Listen for primary filter changes.
             _.each(summary_bar_config.filter_groups, function(filter_group_id){
                 var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
@@ -651,10 +668,26 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                 });
             }, this);
 
-			summary_bar_model.getData = function(){
-				var _this =  summary_bar_model;
+            // Listen for base filter changes.
+            _.each(summary_bar_config.base_filter_groups, function(filter_group_id, key){
+                var filter_group = this.filter_groups[filter_group_id];
+
+                // When the filter group changes, change the facet's base filters.
+                filter_group.on('change:filters', function(){
+                    var filters = []
+                    var all_filters = filter_group.getFilters();
+                    _.each(all_filters, function(filter){
+                        filters = filters.concat(filter.filters);
+                    });
+                    model.set('base_filters', filters);
+                });
+            }, this);
+
+			model.getData = function(){
+				var _this =  model;
 				var data = {
 					'filters': JSON.stringify(_this.get('filters')),
+					'base_filters': JSON.stringify(_this.get('base_filters')),
 					'data_entities': JSON.stringify([_this.get('selected_field').entity]),
 					'with_unfiltered': true
 				};
@@ -686,7 +719,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					this.fields = {};
 					this.initialRender();
 					this.model.on('change:selected_field', this.onSelectedFieldChange, this);
-					this.model.on('change:filters', this.onFiltersChange, this);
+					this.model.on('change:filters change:base_filters', this.onFiltersChange, this);
 					this.model.on('change:data', this.onDataChange, this);
 				},
 				initialRender: function(){
@@ -737,7 +770,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			});
 
 			this.summary_bar = new SummaryBarView({
-				model: summary_bar_model,
+				model: model,
 				el: $(_s.sprintf("#%s-summary-bar", this.model.cid), this.el)
 			});
 		},
