@@ -30,7 +30,7 @@ class SA_DAO(object):
     def execute_query(self, **kwargs):
         return self.get_query(**kwargs).all()
 
-    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[], return_registry=False):
+    def get_query(self, primary_alias=None, select_entities=[], grouping_entities=[], filters=[], return_registry=False):
 
         # If no alias was given, registry with aliased primary class.
         if not primary_alias:
@@ -42,11 +42,11 @@ class SA_DAO(object):
         q = self.session.query(primary_alias.id)
 
         # Register entities.
-        for entity in data_entities + grouping_entities:
+        for entity in select_entities + grouping_entities:
             q = self.register_entity_dependencies(q, q_registry, entity)
 
-        # Add data entities to query.
-        for entity in data_entities:
+        # Add select entities to query.
+        for entity in select entities:
             mapped_entity = self.get_mapped_entity(q_registry, entity)
             q_entities.add(mapped_entity)
 
@@ -145,7 +145,7 @@ class SA_DAO(object):
 
         # Get base query and registry .
         bq_primary_alias = aliased(self.primary_class)
-        bq, bq_registry = self.get_query(primary_alias=bq_primary_alias, data_entities=data_entities, grouping_entities=grouping_entities, return_registry=True, **kwargs)
+        bq, bq_registry = self.get_query(primary_alias=bq_primary_alias, select_entities=data_entities, grouping_entities=grouping_entities, return_registry=True, **kwargs)
 
         # Add data entity parent keys.
         bq_parent_keys = []
@@ -157,7 +157,7 @@ class SA_DAO(object):
 
         # Create main query by joining on the base query and grouping by the grouping entities.
         subq = bq.subquery()
-        q, q_registry = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, return_registry=True)
+        q, q_registry = self.get_query(select_entities=data_entities, grouping_entities=grouping_entities, return_registry=True)
         q_parent_keys = []
         for entity in data_entities + grouping_entities:
             q_parent_keys.extend(self.get_entity_parent_keys(q_registry, entity))
@@ -173,7 +173,7 @@ class SA_DAO(object):
         q = q.join(subq, and_(*join_criteria))
 
         # Get aggregate results as dictionaries.
-        rows = self.get_query(data_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
+        rows = self.get_query(select_entities=data_entities, grouping_entities=grouping_entities, **kwargs).all()
         aggregates = [dict(zip(row.keys(), row)) for row in rows]
 
         # Initialize result tree with aggregates.

@@ -14,7 +14,16 @@ def get_entities(project):
 	dao = get_dao(project)
 	return dao.get_entities()
 
+# @TODO: Better name for this??
+# Just executes a regular non-aggregate query.
+def query(project, select_entities=[], grouping_entities=[], sorting_entities=[], filters=[]):
+    dao = get_dao(project)
+    results = dao.execute_query(dat
+    
 
+
+# @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
+# renderer shouldn't have to do that stuff.
 def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, grouping_entities=[], filters=[], map_parameters={}):
 	dao = get_dao(project)
 	renderer = GeoToolsMapRenderer()
