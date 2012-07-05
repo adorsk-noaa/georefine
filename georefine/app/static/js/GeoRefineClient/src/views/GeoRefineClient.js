@@ -260,8 +260,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					'filters': JSON.stringify(this.get('filters')),
 					'data_entities': JSON.stringify([this.get('grouping_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
-                }
-
+					'sorting_entities': JSON.stringify([this.get('sorting_entity')])
+                };
 
 				var _this = this;
 				$.ajax({

@@ -100,12 +100,14 @@ def query_data(project_id):
     # Parse request parameters.
     data_entities = json.loads(request.args.get('data_entities', '[]'))
     grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
+    sorting_entities = json.loads(request.args.get('sorting_entities', '[]'))
     filters = json.loads(request.args.get('filters', '[]'))
 
     results = projects_services.query_data(
             project, 
             data_entities = data_entities, 
             grouping_entities = grouping_entities, 
+            sorting_entities = sorting_entities, 
             filters = filters
             )
     return jsonify(result=results)

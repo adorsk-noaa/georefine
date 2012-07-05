@@ -20,13 +20,12 @@ def query_data(project, **kwargs):
     dao = get_dao(project)
     rows = dao.execute_query(**kwargs)
     dict_results = [dict(zip(row.keys(), row)) for row in rows]
-    print "rd: ", dict_results
     return dict_results
 
 
 # @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
 # renderer shouldn't have to do that stuff.
-def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, grouping_entities=[], filters=[], map_parameters={}):
+def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, grouping_entities=[], filters=[], map_parameters={}, **kwargs):
 	dao = get_dao(project)
 	renderer = GeoToolsMapRenderer()
 
@@ -38,10 +37,11 @@ def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, gr
 			geom_entity=geom_entity, 
             grouping_entities=grouping_entities,
 			filters=filters, 
-			map_parameters=map_parameters
+			map_parameters=map_parameters,
+            **kwargs
 			)
 
-def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], with_unfiltered=False, base_filters=[]):
+def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], with_unfiltered=False, base_filters=[], **kwargs):
 	dao = get_dao(project)
 
 	# Set default id/label.
@@ -53,7 +53,8 @@ def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], 
 	aggregates = dao.get_aggregates(
 			data_entities = data_entities,
 			grouping_entities = grouping_entities,
-			filters = filters
+			filters = filters,
+            **kwargs
 			)
 
 	# Add unfiltered aggregates if requested.
@@ -65,7 +66,8 @@ def get_aggregates(project, data_entities=[], grouping_entities=[], filters=[], 
 		unfiltered_aggregates = dao.get_aggregates(
 				data_entities = unfiltered_data_entities,
 				grouping_entities = grouping_entities,
-				filters = base_filters
+				filters = base_filters,
+                **kwargs
 				)
 
 		# Make path dicts for each tree.

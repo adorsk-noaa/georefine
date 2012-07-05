@@ -2,7 +2,7 @@ import sys
 from sqlalchemy.orm import aliased, class_mapper, join
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.orm.properties import RelationshipProperty
-from sqlalchemy.sql import func, asc, distinct, and_
+from sqlalchemy.sql import func, asc, desc, distinct, and_
 from sqlalchemy.sql.expression import column
 import copy
 import re
@@ -30,7 +30,7 @@ class SA_DAO(object):
     def execute_query(self, **kwargs):
         return self.get_query(**kwargs).all()
 
-    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], filters=[], return_registry=False):
+    def get_query(self, primary_alias=None, data_entities=[], grouping_entities=[], sorting_entities=[], filters=[], return_registry=False):
 
         # If no alias was given, registry with aliased primary class.
         if not primary_alias:
@@ -42,7 +42,7 @@ class SA_DAO(object):
         q = self.session.query(primary_alias.id)
 
         # Register entities.
-        for entity in data_entities + grouping_entities:
+        for entity in data_entities + grouping_entities + sorting_entities:
             q = self.register_entity_dependencies(q, q_registry, entity)
 
         # Add select entities to query.
@@ -89,6 +89,20 @@ class SA_DAO(object):
             # Handle all other operators.
             else:
                 q = q.filter(mapped_entity.op(f['op'])(f['value']))
+
+        # Process sorting entities.
+        for entity in sorting_entities:
+            mapped_entity = self.get_mapped_entity(q_registry, entity)
+
+            # Create order by entity.
+            if entity.get('direction') == 'desc':
+                order_entity = desc(mapped_entity)
+            else:
+                order_entity = asc(mapped_entity)
+
+            # Add ordering to query.
+            q = q.order_by(order_entity)
+
 
         # Only select required entities.
         q = q.with_entities(*q_entities)
