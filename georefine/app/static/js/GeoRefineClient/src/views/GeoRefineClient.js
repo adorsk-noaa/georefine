@@ -637,8 +637,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
             var _app = this;
 			datasource.getData = function() {
-                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
+                var combined_query_filters = _app._filterObjectGroupsToArray(q.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(q.get('base_filters'));
 				var data = {
 					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
 					'base_filters': JSON.stringify(combined_base_filters),
@@ -663,18 +663,20 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 			// Listen for primary filter changes.
             _.each(charts_config.filter_groups, function(filter_group_id){
+                var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
-                    var filters = _.clone(q.get('filters')) || {};
-                    filters[filter_group_id] = filter_groups[filter_group_id].getFilters();
+                    var filters = _.clone(q.get('query_filters')) || {};
+                    filters[filter_group_id] = filter_group.getFilters();
                     q.set('query_filters', filters);
                 });
             }, this);
 
             // Listen for base filter changes.
             _.each(charts_config.base_filter_groups, function(filter_group_id, key){
+                var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
                     var base_filters = _.clone(q.get('base_filters')) || {};
-                    base_filters[filter_group_id] = filter_groups[filter_group_id].getFilters();
+                    base_filters[filter_group_id] = filter_group.getFilters();
                     q.set('base_filters', base_filters);
                 });
             }, this);
