@@ -362,8 +362,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                         var count_entity = this.model.get('count_entity');
                         _.each(choices, function(choice){
                             var label = "";
-                            if (count_entity){
-                                label = _s.sprintf(count_entity.labelFormat, choice['count']);
+                            if (count_entity && count_entity.format){
+                                label = _s.sprintf(count_entity.format, choice['count']);
                             }
                             else{
                                 label = choice['count'];
@@ -825,12 +825,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 						this.model.getData();
 					}
 				},
-
+                
 				onDataChange: function(){
-					var formatter = this.model.get('selected_field').formatter || function(value){return value};
+					var format = this.model.get('selected_field').format || "%s";
 					var data = this.model.get('data');
-					var formatted_selected = formatter(data.filtered);
-					var formatted_unfiltered = formatter(data.unfiltered);
+					var formatted_selected = _s.sprintf(format, data.filtered);
+					var formatted_unfiltered = _s.sprintf(format, data.unfiltered);
 					var percentage = 100.0 * data.filtered/data.unfiltered;
 
 					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_unfiltered));
