@@ -355,6 +355,24 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					}));
 					model.getData = listFacetGetData;
 					view = new Facets.views.ListFacetView({ model: model });
+
+                    // This function will be called with the view as 'this'.
+                    view.formatChoiceCountLabels = function(choices){
+                        var labels = [];
+                        var count_entity = this.model.get('count_entity');
+                        _.each(choices, function(choice){
+                            var label = "";
+                            if (count_entity){
+                                label = _s.sprintf(count_entity.labelFormat, choice['count']);
+                            }
+                            else{
+                                label = choice['count'];
+                            }
+                            labels.push(label);
+                        });
+                        return labels;
+                    };
+
                     view.formatFilters = listFacetFormatFilters;
 				}
 
@@ -836,8 +854,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			this.summary_bar.setSelectedField(initial_state.summary_bar.selected);
 
 			// Initialize Data Views.
-			_.each(initial_state.data_views, function(data_view){
-			//_.each([], function(data_view){
+			_.each(initial_state.data_views, function(data_view, i){
+
+                // TESTING!
+                if (i != 1){
+                    return;
+                }
 
 				// Handle map data views.
 				if (data_view.type == 'map'){
@@ -883,7 +905,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		}
 
 	});
-
 
 	return GeoRefineClientView;
 
