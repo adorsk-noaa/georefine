@@ -532,7 +532,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                         _.each(map_config.filter_groups, function(filter_group_id){
                             var filter_group = this.filter_groups[filter_group_id];
                             filter_group.on('change:filters', function(){
-                                var filters = _.clone(model.get('filters')) || {};
+                                var filters = _.clone(model.get('query_filters')) || {};
                                 filters[filter_group_id] = filter_group.getFilters();
                                 model.set('query_filters', filters);
                             });
@@ -711,7 +711,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             _.each(summary_bar_config.filter_groups, function(filter_group_id){
                 var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
-                    var filters = _.clone(model.get('filters')) || {};
+                    var filters = _.clone(model.get('query_filters')) || {};
                     filters[filter_group_id] = filter_group.getFilters();
                     model.set('query_filters', filters);
                 });
