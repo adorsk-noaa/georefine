@@ -83,6 +83,27 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             }, this);
         },
 
+
+        // Helper function for merging a set of grouped filter objects into a list.
+        // filter objects are keyed by filter group id.
+        _filterObjectGroupsToArray: function(groups){
+            filters_hash = {};
+            _.each(groups, function(group){
+                _.each(group, function(filter_obj){
+                    var key = JSON.stringify(filter_obj.filters);
+                    filters_hash[key] = filter_obj;
+                });
+            });
+            var combined_filters = [];
+            _.each(filters_hash, function(filter_obj){
+                if (filter_obj.filters){
+                    combined_filters = combined_filters.concat(filter_obj.filters);
+                }
+            });
+
+            return combined_filters;
+        },
+    
 		createDataViewWindow: function(data_view, opts){
 			opts = opts || {};
 			$data_views = $('.data-views', this.el);
@@ -153,14 +174,18 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 			var query_endpoint = _s.sprintf('%s/projects/query_data/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
+            var _app = this;
+
 			// The 'getData' functions will be called with a facet model as 'this'.
 			var listFacetGetData = function(){
+                var _this = this;
+                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
 				var data = {
-					'filters': JSON.stringify(this.get('query_filters')),
+					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
 					'data_entities': JSON.stringify([this.get('count_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 				};
-				var _this = this;
 				$.ajax({
 					url: aggregates_endpoint,
 					type: 'GET',
@@ -187,9 +212,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			};
 
 			numericFacetGetData = function() {
+                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
 				var data = {
-					'filters': JSON.stringify(this.get('query_filters')),
-					'data_entities': JSON.stringify([this.get('count_entity')]),
+					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
+					'base_filters': JSON.stringify(combined_base_filters),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 					'with_unfiltered': true,
 					'base_filters': JSON.stringify(this.get('base_filters'))
@@ -248,6 +275,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             // @TODO: GENERALIZE THIS? IS THIS SASI-SPECIFIC?
             timeSliderFacetGetData = function(){
 
+				var _this = this;
+
                 // Assign label to grouping entity and use it as default choice label.
                 var grouping_entity = this.get('grouping_entity');
                 grouping_entity['label'] = 'grouping_entity';
@@ -260,14 +289,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                     choice_label_entity = label_entity;
                 }
 
-                var data = {
-					'filters': JSON.stringify(this.get('query_filters')),
+                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
+				var data = {
+					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
+					'base_filters': JSON.stringify(combined_base_filters),
 					'data_entities': JSON.stringify([this.get('grouping_entity')]),
 					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
 					'sorting_entities': JSON.stringify([this.get('sorting_entity')])
                 };
 
-				var _this = this;
 				$.ajax({
 					url: query_endpoint,
 					type: 'GET',
@@ -345,41 +376,31 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                     view.formatFilters = timeSliderFacetFormatFilters;
                 }
                 
-                // Setup the facet's filter group config.
+                // Setup the facet's primary filter group config.
                 _.each(facet.filter_groups, function(filter_group_id, key){
                     var filter_group = this.filter_groups[filter_group_id];
                     filter_group.add(model);
 
                     // When the filter group changes, change the facet's query filters.
                     filter_group.on('change:filters', function(){
-                        var all_filters = filter_group.getFilters();
-                        var keep_filters = [];
+                        var query_filters = _.clone(model.get('query_filters')) || {} ;
                         // A facet should not use its own selection in the filters.
-                        _.each(all_filters, function(filter){
-                            if (filter.source.cid != model.cid){
-                                keep_filters = keep_filters.concat(filter.filters);
-                            }
+                        query_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
+                            return (filterObj.source.cid != model.cid);
                         });
-                        model.set('query_filters', keep_filters);
+                        model.set('query_filters', query_filters);
                     });
                 }, this);
 
-                // Setup the facet's base filter group config (if applicable).
+                // Setup the facet's base filter group config.
                 _.each(facet.base_filter_groups, function(filter_group_id, key){
                     var filter_group = this.filter_groups[filter_group_id];
-
-                    // When the filter group changes, change the facet's base filters.
                     filter_group.on('change:filters', function(){
-                        var filters = []
-                        var all_filters = filter_group.getFilters();
-                        // A facet should not use its own selection in the filters.
-                        _.each(all_filters, function(filter){
-                            filters = filters.concat(filter.filters);
-                        });
-                        model.set('base_filters', filters);
+                        var base_filters = _.clone(model.get('base_filters')) || {};
+                        base_filters[filter_group_id] = filter_group.getFilters();
+                        model.set('base_filters', base_filters);
                     });
                 }, this);
-
 
                 // Have the facet update when its query or base filters change.
                 if (model.getData){
@@ -437,9 +458,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			});
 
 			// This method will be called with a layer model as 'this'.
+            var _app = this;
 			updateServiceUrlLocalDataLayer = function(attr, options){
-				params = [
-					['filters', this.get('filters')]
+                var _this = this;
+                var combined_filters = _app._filterObjectGroupsToArray(_this.get('filters'));
+				var params = [
+					['filters', combined_filters]
 				];
                 _.each(['data_entity', 'geom_entity', 'geom_id_entity', 'grouping_entities'], function(entity_attr){
                     entity_model = this.get(entity_attr);
@@ -494,21 +518,32 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                             model.set('grouping_entities', grouping_entities_collection);
                         }
 
-                        // Have layer model listen for filter changes.
                         // @TODO: put filter groups in layers?
+                        // Have layer model listen for filter changes.
                         _.each(map_config.filter_groups, function(filter_group_id){
                             var filter_group = this.filter_groups[filter_group_id];
                             filter_group.on('change:filters', function(){
-                                var filters = [];
-                                _.each(filter_group.getFilters(), function(filter){
-                                    filters = filters.concat(filter.filters);
-                                });
-                                model.set('filters', filters);
+                                var filters = _.clone(model.get('filters')) || {};
+                                filters[filter_group_id] = filter_group.getFilters();
+                                model.set('query_filters', filters);
                             });
                         }, this);
 
+                        // Listen for base filter changes.
+                        _.each(map_config.base_filter_groups, function(filter_group_id, key){
+                            var filter_group = this.filter_groups[filter_group_id];
+                            filter_group.on('change:filters', function(){
+                                var base_filters = _.clone(model.get('base_filters')) || {};
+                                base_filters[filter_group_id] = filter_group.getFilters();
+                                model.set('base_filters', base_filters);
+                            });
+                        }, this);
+
+                        // Update service url when related model attributes change.
+                        model.on('change:data_entity change:geom_entity change:grouping_entities change:query_filters change:base_filters', updateServiceUrlLocalDataLayer, model);
+
+                        // Initialize service url.
                         updateServiceUrlLocalDataLayer.call(model);
-                        model.on('change:data_entity change:geom_entity change:grouping_entities change:filters', updateServiceUrlLocalDataLayer, model);
                     }
 
 					else if (proc_layer.source == 'local_geoserver'){
@@ -589,12 +624,18 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			// Create datasource.
 			var datasource = new Charts.models.DataSourceModel({'schema':  schema });
 
+            var q = datasource.get('query');
+
+            var _app = this;
 			datasource.getData = function() {
-				var q = datasource.get('query');
+                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
 				var data = {
-					'filters': JSON.stringify(q.get('filters')),
+					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
+					'base_filters': JSON.stringify(combined_base_filters),
 					'data_entities': JSON.stringify(q.get('data_entities')),
 					'grouping_entities': JSON.stringify(q.get('grouping_entities')),
+					'with_unfiltered': true
 				};
 				var _this = this;
 				$.ajax({
@@ -611,23 +652,23 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				});
 			};
 
-			// Set datasource query to listen to filter group changes.
+			// Listen for primary filter changes.
             _.each(charts_config.filter_groups, function(filter_group_id){
-                var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
-                    filters = [];
-                    _.each(filter_group.getFilters(), function(filter){
-                        filters = filters.concat(filter.filters);
-                    });
-                    model.set('filters', filters);
+                    var filters = _.clone(q.get('filters')) || {};
+                    filters[filter_group_id] = filter_groups[filter_group_id].getFilters();
+                    q.set('query_filters', filters);
                 });
             }, this);
 
-            // Change the query when filters change.
-			this.model.on('change:filters', function(){
-				var q = datasource.get("query");
-				q.set("filters", this.model.get("filters"));
-			}, this);
+            // Listen for base filter changes.
+            _.each(charts_config.base_filter_groups, function(filter_group_id, key){
+                filter_group.on('change:filters', function(){
+                    var base_filters = _.clone(q.get('base_filters')) || {};
+                    base_filters[filter_group_id] = filter_groups[filter_group_id].getFilters();
+                    q.set('base_filters', base_filters);
+                });
+            }, this);
 
 			// Create model.
 			var chart_model = new Charts.models.XYChartModel({});
@@ -651,7 +692,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 			var model = new Backbone.Model({
 				"fields": summary_bar_config.quantity_fields,
-				"filters": [],
+				"filters": {},
+				"base_filters": {},
 				"selected_field": null,
 				"data": {}
 			});
@@ -660,38 +702,36 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             _.each(summary_bar_config.filter_groups, function(filter_group_id){
                 var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
-                    filters = [];
-                    _.each(filter_group.getFilters(), function(filter){
-                        filters = filters.concat(filter.filters);
-                    });
-                    model.set('filters', filters);
+                    var filters = _.clone(model.get('filters')) || {};
+                    filters[filter_group_id] = filter_group.getFilters();
+                    model.set('query_filters', filters);
                 });
             }, this);
 
             // Listen for base filter changes.
             _.each(summary_bar_config.base_filter_groups, function(filter_group_id, key){
                 var filter_group = this.filter_groups[filter_group_id];
-
-                // When the filter group changes, change the facet's base filters.
                 filter_group.on('change:filters', function(){
-                    var filters = []
-                    var all_filters = filter_group.getFilters();
-                    _.each(all_filters, function(filter){
-                        filters = filters.concat(filter.filters);
-                    });
-                    model.set('base_filters', filters);
+                    var base_filters = _.clone(model.get('base_filters')) || {};
+                    base_filters[filter_group_id] = filter_group.getFilters();
+                    model.set('base_filters', base_filters);
                 });
             }, this);
 
+
+            var _app = this;
+            var _this = model;
 			model.getData = function(){
-				var _this =  model;
+				var _this = this;
+                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
+                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
 				var data = {
-					'filters': JSON.stringify(_this.get('filters')),
-					'base_filters': JSON.stringify(_this.get('base_filters')),
+					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
+					'base_filters': JSON.stringify(combined_base_filters),
 					'data_entities': JSON.stringify([_this.get('selected_field').entity]),
 					'with_unfiltered': true
 				};
-				var _this = this;
+
 				$.ajax({
 					url: aggregates_endpoint,
 					type: 'GET',
@@ -719,7 +759,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 					this.fields = {};
 					this.initialRender();
 					this.model.on('change:selected_field', this.onSelectedFieldChange, this);
-					this.model.on('change:filters change:base_filters', this.onFiltersChange, this);
+					this.model.on('change:query_filters change:base_filters', this.onFiltersChange, this);
 					this.model.on('change:data', this.onDataChange, this);
 				},
 				initialRender: function(){
@@ -752,7 +792,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				},
 
 				onFiltersChange: function(){
-					if (this.model.get('selected_field')){
+					if (this.model.get('selected_field') && this.model.getData){
 						this.model.getData();
 					}
 				},
@@ -785,7 +825,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			this.summary_bar.setSelectedField(initial_state.summary_bar.selected);
 
 			// Initialize Data Views.
-			_.each(initial_state.data_views, function(data_view){
+			//_.each(initial_state.data_views, function(data_view){
+			_.each([], function(data_view){
 
 				// Handle map data views.
 				if (data_view.type == 'map'){
