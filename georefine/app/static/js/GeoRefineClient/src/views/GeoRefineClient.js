@@ -9,10 +9,9 @@ define([
 	"Charts",
 	"Windows",
 	"Util",
-	"text!./templates/summary_bar.html",
 	"text!./templates/GeoRefineClient.html"
 		],
-function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary_bar_template, template){
+function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
 
 	var GeoRefineClientView = Backbone.View.extend({
 
@@ -36,8 +35,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			$(document).ready(function(){
 				_this.setUpWindows();
 				_this.setUpFilterGroups();
-				//_this.setUpSummaryBar();
 				_this.setUpFacets();
+                _this.setUpSummaryBar();
                 _this.setUpFiltersEditor();
 				_this.setUpInitialState();
 		        _this.resizeVerticalTab($('.filters-editor-tab', _this.el)); 
@@ -102,7 +101,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             }, this);
             $select.appendTo('.filters-editor .quantity-field', this.el);
 
-            // When the quantity field selector changes, update the facets.
+            // When the quantity field selector changes, update the facets and summary bar.
             var _this = this;
             $select.on('change', function(){
                 var val = $select.val();
@@ -110,6 +109,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                 _.each(_this.facets.models, function(facet){
                     facet.set('count_entity', selected_field.get('entity'));
                 }, _this);
+
+                _this.summary_bar.model.set('count_entity', selected_field.get('entity'));
             });
         },
 
@@ -754,7 +755,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 				"fields": summary_bar_config.quantity_fields,
 				"filters": {},
 				"base_filters": {},
-				"selected_field": null,
+				"count_entity": null,
 				"data": {}
 			});
 
@@ -783,12 +784,15 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             var _this = model;
 			model.getData = function(){
 				var _this = this;
+                if (! _this.get('count_entity')){
+                    return;
+                }
                 var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
                 var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
 				var data = {
 					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
 					'base_filters': JSON.stringify(combined_base_filters),
-					'data_entities': JSON.stringify([_this.get('selected_field').entity]),
+					'data_entities': JSON.stringify([_this.get('count_entity')]),
 					'with_unfiltered': true
 				};
 
@@ -812,66 +816,27 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			};
 
 			var SummaryBarView = Backbone.View.extend({
-				events: {
-					'change select': 'onSelectChange'
-				},
 				initialize: function(){
-					this.fields = {};
-					this.initialRender();
-					this.model.on('change:selected_field', this.onSelectedFieldChange, this);
-					this.model.on('change:query_filters change:base_filters', this.onFiltersChange, this);
+                    $(this.el).html('<span class="text">Currently selected: <span class="data"></span></span>');
 					this.model.on('change:data', this.onDataChange, this);
+                    // Get data when parameters change.
+                    if (this.model.getData){
+                        this.model.on('change:query_filters change:base_filters change:count_entity', this.model.getData, this.model);
+                    }
 				},
-				initialRender: function(){
-					$(this.el).html(summary_bar_template, {});
-					this.$select = $('select', this.el);
-					_.each(this.model.get('fields'), function(field){
-						this.$select.append($(_s.sprintf('<option value="%s">%s</option>', field.id, field.label )));
-						this.fields[field.id] = field;
-					}, this);
-
-				},
-				render: function(){
-				},
-
-				setSelectedField: function(field_id){
-					this.$select.val(field_id);
-					this.model.set('selected_field', this.fields[field_id]);
-				},
-
-				onSelectChange: function(e){
-					if (! this.selectInitialized){
-						this.$select.children('option:first').remove();
-						this.selectInitialized = true;
-					}
-					this.model.set('selected_field', this.fields[this.$select.val()]);
-				},
-				
-				onSelectedFieldChange: function(){
-					this.model.getData();
-				},
-
-				onFiltersChange: function(){
-					if (this.model.get('selected_field') && this.model.getData){
-						this.model.getData();
-					}
-				},
-                
 				onDataChange: function(){
-					var format = this.model.get('selected_field').format || "%s";
+					var format = this.model.get('count_entity').format || "%s";
 					var data = this.model.get('data');
 					var formatted_selected = _s.sprintf(format, data.filtered);
 					var formatted_unfiltered = _s.sprintf(format, data.unfiltered);
 					var percentage = 100.0 * data.filtered/data.unfiltered;
-
 					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_unfiltered));
 				}
-
 			});
 
 			this.summary_bar = new SummaryBarView({
 				model: model,
-				el: $(_s.sprintf("#%s-summary-bar", this.model.cid), this.el)
+				el: $(".filters-editor .summary-bar", this.el)
 			});
 		},
 
