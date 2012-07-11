@@ -85,7 +85,7 @@ class GeoToolsMapRenderer(object):
         # Add styling classes if there was a data entity.
         if data_entity:
             # Generate class bounds.
-            num_classes = data_entity.get('num_classes', 10)
+            num_classes = data_entity.get('num_classes', 25)
             vmin = float(data_entity.get('min', 0))
             vmax = float(data_entity.get('max', 1))
             vrange = vmax - vmin
@@ -158,10 +158,12 @@ class GeoToolsMapRenderer(object):
         gt_filter = CQL.toFilter(cql)
         rule.setFilter(gt_filter)
         if local_min == None:
-            brightness = 0
+            brightness = 1.0
         else:
-            brightness = (local_min - global_min)/global_range
+            brightness = 1.0 - (local_min - global_min)/global_range
+
         color = Color.HSBtoRGB(0.0, 0.0, brightness)
+
         fill = self.style_factory.createFill(
                 self.filter_factory.literal(color),
                 self.filter_factory.literal(1)
