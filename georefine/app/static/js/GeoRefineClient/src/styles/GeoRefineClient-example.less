@@ -2,6 +2,7 @@
 @import url("mapview-styles/mapview-example.less");
 @import url("windows-styles/windows-example.less");
 @import url("charts-styles/charts-example.less");
+@import url("filters-editor.less");
 
 .georefine-client{
 
@@ -26,60 +27,6 @@
 			top: 0px;
 			bottom: 0px;
 			width: 300px;
-
-			> .tabs {
-				height: 100%;
-
-				> .tabs-nav {
-					padding: 5px 7px 0px 7px;
-					margin: 0px;
-					height: 27px;
-					background-color: #e3e9ff;
-
-					> .tabs-nav-tab  {
-						height: 100%;
-						display: inline-block;
-						margin: 0em .2em 0em 0;
-						padding: 0px;
-						border-color: @chrome_primary;
-						border-style: solid;
-						border-width: thin thin 0 thin;
-						background-color: white;
-
-						.text {
-							display: block;
-							color: inherit;
-							margin-bottom: 0px;
-							height: 14px;
-							padding: 4px 10px 0 10px;
-							font-family: Verdana, Arial, sans-serif;
-							font-weight: bold;
-							font-size: 11px;
-							text-decoration: none;
-						}
-					}
-				}
-
-				> .tabs-content {
-					border-color: @chrome_primary;
-					border-style: solid;
-					border-width: 1px 0px 0px 0px;
-
-					> .tabs-content-container {
-						padding: 0;
-					}
-				}
-			}
-
-			.facets {
-				width: 100%;
-				height: 100%;
-				overflow-y: scroll;
-				overflow-x: scroll;
-			}
-
-			.ui-resizable-handle{
-			}
 
 		}
 	}

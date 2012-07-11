@@ -1,0 +1,167 @@
+@import "rounded-corners.less";
+@import "button.less";
+
+@link_primary: #11c;
+@link_secondary: #4272db;
+@chrome_primary: #bcf;
+@chrome_secondary: #e3e9ff;
+@chrome_dark: #828eb2;
+@fill_primary: #ebeef8;
+@fill_secondary: #f2f2f2;
+@fill_editable: #ffffd6;
+@selected_primary: #68e;
+@selected_highlight: #FF6A00;
+@green_primary: #282;
+@green_secondary: #3d3;
+@notification_primary: #fe8;
+@faint_grey: #ddd;
+@light_grey: #999;
+@metadata_grey: #777;
+@near_black: #444;
+@dialog_frame: #3a5774;
+@dialog_border: #c1d9ff;
+@dialog_header: #e0edfe;
+@dialog_footer: #eee;
+
+@padding_tighter: 3px;
+@padding_tight: 5px;
+@padding_normal: 7px;
+@padding_loose: 10px;
+@padding_looser: 15px;
+
+.filters-editor {
+
+    @tab_h: 40px;
+    @tab_bw: 1px;
+    @tab_corner_radius: 7px;
+
+    position: relative;
+    display: inline-block;
+
+    > .table {
+        border-spacing: 0;
+        border-collapse: collapse;
+        width: 100%;
+        height: 100%;
+
+        > .row {
+            height: 100%;
+        }
+
+        .middle-row .left-column {
+            width: @tab_h;
+        }
+
+        .filters-editor-tab {
+            background: @chrome_primary;
+
+            > .title-container {
+                text-align: center;
+
+                .title {
+                    .button;
+                    display: inline-block;
+                    .rounded_corners(@tab_corner_radius);
+                    margin: @padding_tight;
+                    font-size: 18px;
+                    padding: 1px @padding_looser;
+
+                    button.toggle {
+                        .button;
+                    }
+                }
+            }
+
+            > .body-container{
+                border-color: @chrome_primary;
+                border-style: solid;
+                font-size: 14px;
+
+                > .body{
+                    overflow-y: auto;
+
+                    > .inner{
+                        padding: @padding_normal;
+                    }
+                }
+
+            }
+        }
+
+        .filters-editor-container{
+            @body_w: 200px;
+            min-width: @tab_h;
+            max-width: @tab_h + @body_w + @tab_bw + 2 * @padding_normal;
+            width: @tab_h;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+
+            > .tab{
+                .rounded_corners_left(@tab_corner_radius);
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 0;
+                bottom: 0;
+
+                > .title-container{
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: @field_tab_h;				
+                    height: 100%;
+
+                    > .rotate-container{
+                        position: absolute;
+                        left: 0;
+                        bottom: 0;
+                        overflow: hidden;
+
+                    }
+                }
+
+                .body-container{
+                    position: absolute;
+                    left: @tab_h;
+                    right: @tab_bw;
+                    top: @tab_bw;
+                    bottom: @tab_bw;
+                    padding-left: 5px;
+                    border-width: 0;
+                    overflow: hidden;
+
+                    > .body{
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: @body_w + 2 * @padding_normal;
+                        height: 100%;
+                        background: white;
+                    }
+                }
+            }
+        }
+
+
+    }
+
+    .rotate-270{
+        -moz-transform: rotate(270deg) translate(0,100%);
+        -moz-transform-origin: 0% 100%;
+        -o-transform: rotate(270deg) translate(0, 100%);
+        -o-transform-origin: 0% 100%;
+        -webkit-transform: rotate(270deg) translate(0, 100%);
+        -webkit-transform-origin: 0% 100%;
+    }
+
+
+    .facets {
+        width: 100%;
+        height: 100%;
+        overflow-y: scroll;
+        overflow-x: scroll;
+    }
+}
+
+

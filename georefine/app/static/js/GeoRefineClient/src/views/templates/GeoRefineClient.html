@@ -3,33 +3,63 @@
 	<div class="left-panel panel">
 		<div class="inner">
 
-			<div class="tabs">
-				<div class="tabs-nav">
-					<div class="tabs-nav-tab">
-						<span class="text">Facet/Filter</span></li>
-					</div>
-				</div>
-				<div class="tabs-content">
-					<div class="tabs-content-container">
-						<div id="<%= model.cid %>-facets" class="facets">
-						</div>
-					</div>
-				</div>
-			</div>
+            <div class="filters-editor">
 
-		</div>
-	</div>
+                <table class="filters-editor-table table">
+
+                    <tr class="middle-row row">
+
+                        <td class="left-column cell">
+
+                            <div class="filters-editor-container">
+
+                                <div class="filters-editor-tab tab">
+                                    <div class="title-container">
+                                        <div class="rotate-container rotate-270">
+                                            <div class="title">
+                                                <span>Configure Filters</span>
+                                                <button class="toggle">&#x25B2;</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="body-container">
+                                        <div class="body">
+                                            <div class="inner">
+                                                <div class="quantity-field">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <td class="right-column cell">
+                            <div class="summary-bar-container">
+                                <div class="summary-bar">
+                                    Summary Bar
+                                </div>
+                            </div>
+                            <div class="filters-container">
+                                <div id="<%= model.cid %>-facets" class="facets">
+                                </div>
+                            </div>
+                        </td>
+
+                    </tr>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
 
 	<div class="right-panel panel">
 
 		<div class="inner">
-
-			<div class="top-bar">
-
-				<div id="<%= model.cid %>-summary-bar" class="summary-bar bar">
-				</div>
-
-			</div>
 
 			<div class="launchers">
 				<button class="button add-map-button">Add Map</button>

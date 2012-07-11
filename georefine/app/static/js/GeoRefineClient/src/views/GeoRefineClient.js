@@ -17,6 +17,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
+			'click .filters-editor-container .title': 'toggleFiltersEditor',
 			"click .add-map-button": "addMapView",
 			"click .add-chart-button": "addChartView"
 		},
@@ -35,9 +36,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			$(document).ready(function(){
 				_this.setUpWindows();
 				_this.setUpFilterGroups();
-				_this.setUpSummaryBar();
+				//_this.setUpSummaryBar();
 				_this.setUpFacets();
+                _this.setUpFiltersEditor();
 				_this.setUpInitialState();
+		        _this.resizeVerticalTab($('.filters-editor-tab', _this.el)); 
 			});
 
 			return this;
@@ -83,6 +86,32 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
             }, this);
         },
 
+        setUpFiltersEditor: function(){
+            // Generate quantity field collection from config.
+            var quantity_fields = new Backbone.Collection();
+            _.each(GeoRefine.config.facet_quantity_fields, function(field){
+                var model = new Backbone.Model(_.extend({}, field));
+                quantity_fields.add(model);
+            }, this);
+
+            // Setup quantity field selector.
+            var $select = $('<select></select>');
+            _.each(quantity_fields.models, function(model){
+                var $option = $(_s.sprintf('<option value="%s">%s</option>', model.cid, model.get('label')));
+                $option.appendTo($select);
+            }, this);
+            $select.appendTo('.filters-editor .quantity-field', this.el);
+
+            // When the quantity field selector changes, update the facets.
+            var _this = this;
+            $select.on('change', function(){
+                var val = $select.val();
+                var selected_field = quantity_fields.getByCid(val);
+                _.each(_this.facets.models, function(facet){
+                    facet.set('count_entity', selected_field.get('entity'));
+                }, _this);
+            });
+        },
 
         // Helper function for merging a set of grouped filter objects into a list.
         // filter objects are keyed by filter group id.
@@ -420,9 +449,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                     });
                 }, this);
 
-                // Have the facet update when its query or base filters change.
+                // Have the facet update when its query or base filters or count entities change.
                 if (model.getData){
-                    model.on('change:query_filters change:base_filters', function(){
+                    model.on('change:query_filters change:base_filters change:count_entity', function(){
                         model.getData();
                     });
                 }
@@ -454,6 +483,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
                     model.getData();
                 }
             });
+
+            this.facets = facet_collection_model;
 
 		},
 
@@ -850,14 +881,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 		setUpInitialState: function(){
 			var initial_state = GeoRefine.config.initial_state;
 
-			// Initialize summary bar.
-			this.summary_bar.setSelectedField(initial_state.summary_bar.selected);
-
 			// Initialize Data Views.
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != 0){
+                if (i != -1){
                     return;
                 }
 
@@ -902,9 +930,82 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 
 			}, this);
 			
-		}
+		},
 
-	});
+        expandContractTab: function(opts){
+            var _this = this;
+            var expand = opts.expand;
+            var $tc = opts.tab_container;
+            var $table = opts.table;
+            var dim = opts.dimension;
+
+
+            // Calculate how much to change dimension.
+            var delta = parseInt($tc.css('max' + _s.capitalize(dim)), 10) - parseInt($tc.css('min' + _s.capitalize(dim)), 10);
+            if (! expand){
+                delta = -1 * delta;
+            }
+
+            // Animate field container dimension.
+            $tc.addClass('changing');
+
+            // Toggle button text
+            var button_text = ($('button.toggle', $tc).html() == '\u25B2') ? '\u25BC' : '\u25B2';
+            $('button.toggle', $tc).html(button_text);
+
+            // Execute the animation.
+            var tc_dim_opts = {};
+            tc_dim_opts[dim] = parseInt($tc.css(dim),10) + delta;
+            $tc.animate(
+                    tc_dim_opts,
+                    {
+                        complete: function(){
+                            $tc.removeClass('changing');
+
+                            if (expand){
+                                $tc.addClass('expanded')
+                            }
+                            else{
+                                $tc.removeClass('expanded');
+                                Util.util.fillParent($table);
+                                /*
+                                _this.resize();
+                                _this.resizeStop();
+                                */
+                            }
+                        }
+                    }
+                    );
+
+            // Animate cell dimension.
+            $tc.parent().animate(tc_dim_opts);
+
+
+            // Animate table dimension.
+            var table_dim_opts = {};
+            table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
+            $table.animate(table_dim_opts);
+        },
+
+        toggleFiltersEditor: function(){
+            var $filtersEditor = $('.filters-editor-container', this.el);
+            if (! $filtersEditor.hasClass('changing')){
+                this.expandContractTab({
+                    expand: ! $filtersEditor.hasClass('expanded'),
+                    tab_container: $filtersEditor,
+                    table: $('.filters-editor-table', $filtersEditor),
+                    dimension: 'width'
+                });
+            }
+        },
+
+		resizeVerticalTab: function($vt){
+			var $rc = $('.rotate-container', $vt);
+			$rc.css('width', $rc.parent().height());
+			$rc.css('height', $rc.parent().width());
+		},
+
+    });
 
 	return GeoRefineClientView;
 
