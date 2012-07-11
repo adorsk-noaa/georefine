@@ -857,7 +857,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, summary
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != 1){
+                if (i != 0){
                     return;
                 }
 
