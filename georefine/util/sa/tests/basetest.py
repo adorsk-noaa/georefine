@@ -7,13 +7,13 @@ class BaseTest(unittest.TestCase):
 	def setUp(self):
 		self.engine = db.engine
 		self.Session = sessionmaker()
-		connection = self.engine.connect()
+		self.connection = self.engine.connect()
 
 		# begin a non-ORM transaction
-		self.trans = connection.begin()
+		self.trans = self.connection.begin()
 
 		# bind an individual Session to the connection
-		self.session = self.Session(bind=connection)
+		self.session = self.Session(bind=self.connection)
 
 	def tearDown(self):
 		# rollback - everything that happened with the
