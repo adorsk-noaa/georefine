@@ -18,34 +18,34 @@ class SA_DAO_Test(BaseTest):
 
         """
         simple_q = {
-                'id': 'simple_q',
-                'select': [{'id': 't1_id', 'expression': '{test1.id}'}],
-                'from': ['test1'],
-                'where': [{'entity': 't1_id', 'op': '==', 'value': 1}],
-                'group_by': ['t1_id'],
-                'order_by': ['t1_id']
+                'ID': 'simple_q',
+                'SELECT': [{'ID': 't1_id', 'EXPRESSION': '{test1.id}'}],
+                'FROM': ['test1'],
+                'WHERE': [{'ENTITY': 't1_id', 'OP': '==', 'VALUE': 1}],
+                'GROUP_BY': ['t1_id'],
+                'ORDER_BY': ['t1_id']
                 }
         results = sa_dao.execute_queries(query_defs=[simple_q])
         print results
         """
 
         join_q = {
-                'id': 'join_q',
-                'as_dicts': True,
-                'select': [
-                    {'id': 't2_id', 'expression': 'func.count({test2.id})'},
-                    {'id': 't1_id', 'expression': '{test1.id}'}
+                'ID': 'join_q',
+                'AS_DICTS': True,
+                'SELECT': [
+                    {'ID': 't2_id', 'EXPRESSION': 'func.count({test2.id})'},
+                    {'ID': 't1_id', 'EXPRESSION': '{test1.id}'}
                     ],
-                'from': [{'id': 'test1', 'joins': ['test1_test2', 'test2']}],
-                'where': [{'entity': 't1_id', 'op': '==', 'value': 1}],
-                'group_by': ['t1_id'],
-                'order_by': ['t1_id']
+                'FROM': [{'ID': 'test1', 'JOINS': ['test1_test2', 'test2']}],
+                'WHERE': [{'ENTITY': 't1_id', 'OP': '==', 'VALUE': 1}],
+                'GROUP_BY': ['t1_id'],
+                'ORDER_BY': ['t1_id']
                 }
         results = sa_dao.execute_queries(query_defs=[join_q])
         #print results
 
-        sql = sa_dao.get_sql(query_def=join_q)
-        #print sql
+        sql = sa_dao.get_sql(**join_q)
+        print sql
 
     def setUp(self):
         super(SA_DAO_Test, self).setUp()
