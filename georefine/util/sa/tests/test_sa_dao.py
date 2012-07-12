@@ -27,6 +27,20 @@ class SA_DAO_Test(BaseTest):
         results = sa_dao.execute_queries(query_defs=[simple_q])
         print results
 
+        join_q = {
+                'id': 'join_q',
+                'select': [
+                    {'id': 't2_id', 'expression': '{test2.id}'}
+                    {'id': 't1_id', 'expression': '{test1.id}'}
+                    ],
+                'from': [{'table': 'test1', 'join': 'test2'}],
+                #'where': [{'entity': 't1_id', 'op': '==', 'value': 1}],
+                'group_by': ['t1_id'],
+                'order_by': ['t1_id']
+                }
+        results = sa_dao.execute_queries(query_defs=[join_q])
+        print results
+
     def setUp(self):
         super(SA_DAO_Test, self).setUp()
 
