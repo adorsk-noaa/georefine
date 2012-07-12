@@ -29,6 +29,7 @@ class SA_DAO_Test(BaseTest):
         print results
         """
 
+        """
         join_q = {
                 'ID': 'join_q',
                 'AS_DICTS': True,
@@ -42,10 +43,28 @@ class SA_DAO_Test(BaseTest):
                 'ORDER_BY': ['t1_id']
                 }
         results = sa_dao.execute_queries(query_defs=[join_q])
-        #print results
+        print results
+        """
 
+        """
         sql = sa_dao.get_sql(**join_q)
         print sql
+        """
+
+        aggs = sa_dao.get_aggregates(
+                SELECT = [
+                    {'ID': 't2_id', 'EXPRESSION': 'func.count({test2.id})'},
+                    ],
+                FROM = [{'ID': 'test1', 'JOINS': ['test1_test2', 'test2']}],
+                WHERE = [],
+                GROUP_BY = [
+                    #{'ID': 't1_id', 'EXPRESSION': '{test1.id}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True},
+                    {'ID': 't1_id', 'EXPRESSION': '{test1.id}', 'ALL_VALUES': True}
+                    ]
+                )
+        import simplejson as json
+        print json.dumps(aggs, indent=2)
+
 
     def setUp(self):
         super(SA_DAO_Test, self).setUp()
