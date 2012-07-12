@@ -154,10 +154,9 @@ class SA_DAO(object):
 
         # Recursively process joins.
         for join_def in table_def.get('joins', []):
-            # Conver to list if given as a string.
-            if isinstance(join_def, str):
+            # Convert to list if given as a non-list.
+            if not isinstance(join_def, list):
                 join_def = [join_def]
-            join_table_def = join_def[0]
 
             # Get onclause if given.
             if len(join_def) > 1:
