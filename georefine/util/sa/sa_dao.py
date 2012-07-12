@@ -3,6 +3,7 @@ import re
 import copy
 
 from sqlalchemy.sql import *
+from sqlalchemy.sql import compiler
 from sqlalchemy import cast, String, case
 
 class SA_DAO(object):
@@ -146,7 +147,6 @@ class SA_DAO(object):
 
     # Get or register a table in a table registry.
     def get_registered_table(self, table_registry, table_def):
-
         table_def = self.prepare_table_def(table_def)
 
         # Process table if it's not in the registry.
@@ -154,7 +154,7 @@ class SA_DAO(object):
 
             # If 'table' is not a string, we assume it's a query object and process it.
             if not isinstance(table_def['TABLE'], str):
-                table = self.get_query(table_def['TABLE'])
+                table = self.get_query(**table_def['TABLE']).alias(table_def['ID'])
 
             # Otherwise we lookup the table in the given schema.
             else:
