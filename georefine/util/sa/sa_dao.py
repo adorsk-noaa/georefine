@@ -26,7 +26,12 @@ class SA_DAO(object):
     def execute_queries(self, query_defs=[]):
         results = {}
         for query_def in query_defs:
-            results[query_def['id']] = self.connection.execute(self.get_query(query_def)).fetchall()
+            rows = self.connection.execute(self.get_query(query_def)).fetchall()
+            if query_def.get('as_dicts'):
+                q_results = [dict(zip(row.keys(), row)) for row in rows]
+            else:
+                q_results = rows
+            results[query_def['id']] = q_results
         return results
         
 

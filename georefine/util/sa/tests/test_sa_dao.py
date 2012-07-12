@@ -31,6 +31,7 @@ class SA_DAO_Test(BaseTest):
 
         join_q = {
                 'id': 'join_q',
+                'as_dicts': True,
                 'select': [
                     {'id': 't2_id', 'expression': 'func.count({test2.id})'},
                     {'id': 't1_id', 'expression': '{test1.id}'}
@@ -44,7 +45,7 @@ class SA_DAO_Test(BaseTest):
         #print results
 
         sql = sa_dao.get_sql(query_def=join_q)
-        print sql
+        #print sql
 
     def setUp(self):
         super(SA_DAO_Test, self).setUp()
