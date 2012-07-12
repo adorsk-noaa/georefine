@@ -31,7 +31,7 @@ class SA_DAO(object):
         
 
     # Return a query object for the given query definition. 
-    def get_query(self, query_def):
+    def get_query(self, query_def=None):
 
         # Initialize registries.
         table_registry = {}
@@ -204,6 +204,40 @@ class SA_DAO(object):
             entity_registry[entity_def['id']] = mapped_entity
 
         return entity_registry[entity_def['id']]
+
+    # Get raw sql for given query parameters.
+    def get_sql(self, query_def=None, dialect=None, **kwargs):
+        q = self.get_query(query_def=query_def, **kwargs)
+        return self.query_to_raw_sql(q, dialect=dialect)
+
+    # Compile a query into raw sql.
+    def query_to_raw_sql(self, q, dialect=None):
+
+        # Get dialect object.
+        if not dialect:
+            # If using jython w/ zxjdbc, need to get normal dialect
+            # for bind parameter substitution.
+            drivername = self.connection.engine.url.drivername
+            m = re.match("(.*)\+zxjdbc", drivername)
+            if m:
+                dialect = self.get_dialect(m.group(1))
+            # Otherwise use the normal session dialect.
+            else:
+                dialect = self.connection.dialect
+        else:
+            dialect = self.get_dialect(dialect)
+
+        comp = compiler.SQLCompiler(dialect, q)
+        enc = dialect.encoding
+        params = {}
+        for k,v in comp.params.iteritems():
+            if isinstance(v, unicode):
+                v = v.encode(enc)
+            if isinstance(v, str):
+                v = comp.render_literal_value(v, str)
+            params[k] = v
+        raw_sql = (comp.string.encode(enc) % params).decode(enc)
+        return raw_sql
         
     
     def get_dialect(self, dialect):

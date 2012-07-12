@@ -41,7 +41,10 @@ class SA_DAO_Test(BaseTest):
                 'order_by': ['t1_id']
                 }
         results = sa_dao.execute_queries(query_defs=[join_q])
-        print results
+        #print results
+
+        sql = sa_dao.get_sql(query_def=join_q)
+        print sql
 
     def setUp(self):
         super(SA_DAO_Test, self).setUp()
