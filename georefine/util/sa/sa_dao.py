@@ -138,10 +138,10 @@ class SA_DAO(object):
     def prepare_table_def(self, table_def):
         # If item is a string, we assume the string represents a table name.
         if isinstance(table_def, str):
-            table_def = {'ID': table_def}
+            table_def = {'TABLE': table_def}
 
-        # If table def has no 'table' attribute, we use the id by convention.
-        table_def.setdefault('TABLE', table_def['ID'])
+        # If table def has no 'ID' attribute, we use the TABLE by convention.
+        table_def.setdefault('ID', table_def['TABLE'])
 
         return table_def
 
@@ -158,7 +158,7 @@ class SA_DAO(object):
 
             # Otherwise we lookup the table in the given schema.
             else:
-                table = self.schema[table_def['TABLE']]
+                table = self.schema['tables'][table_def['TABLE']]
 
             # Save the aliased table to the registry.
             table_registry[table_def['ID']] = table.alias(table_def['ID'])
@@ -189,9 +189,11 @@ class SA_DAO(object):
         return table
 
     def prepare_entity_def(self, entity_def):
-        # If item is a string, we assume the string represents an entity id.
+        # If item is a string, we assume the string represents an entity expression.
         if isinstance(entity_def, str):
-            entity_def = {'ID': entity_def}
+            entity_def = {'EXPRESSION': entity_def}
+        # If item has no ID, assign an arbitrary id.
+        entity_def.setdefault('ID', str(id(entity_def)))
         return entity_def
 
 
@@ -210,7 +212,7 @@ class SA_DAO(object):
             def replace_token_with_mapped_entity(m):
                 token = m.group(1)
                 (table_id, column_id) = token.split('.')
-                table = table_registry[table_id]
+                table = self.get_registered_table(table_registry, table_id)
                 mapped_entities[token] = table.c[column_id]
                 return "mapped_entities['%s']" % token
 
@@ -228,6 +230,11 @@ class SA_DAO(object):
 
     # Get aggregates in tree form.
     def get_aggregates(self, SELECT=[], FROM=[], GROUP_BY=[], WHERE=[], ORDER_BY=[], BASE_WHERE=[], **kwargs):
+
+        # Prepare SELECT and GROUP_BY entities.
+        for entity_defs in [SELECT, GROUP_BY]:
+            for i in range(len(entity_defs)):
+                entity_defs[i] = self.prepare_entity_def(entity_defs[i])
 
         # Scan for histogram entities in GROUP_BY.
         histogram_entity_defs = []
@@ -271,7 +278,8 @@ class SA_DAO(object):
             # Add label entity to non-histogram fields, if not already provided.
             if not entity_def.get('AS_HISTOGRAM'):
                 entity_def.setdefault('LABEL_ENTITY', {'EXPRESSION': entity_def['EXPRESSION']})
-                entity_def['LABEL_ENTITY'].setdefault('ID', "%s--label" % entity_def['ID'])
+                entity_def['LABEL_ENTITY'] = self.prepare_entity_def(entity_def['LABEL_ENTITY'])
+                #entity_def['LABEL_ENTITY'].setdefault('ID', "%s--label" % entity_def['ID'])
 
                 # Save label entity to add to GROUP_BY.
                 # @TODO: Super kludgy.
