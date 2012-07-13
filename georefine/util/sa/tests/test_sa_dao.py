@@ -86,23 +86,32 @@ class SA_DAO_Test(BaseTest):
         print sa_dao.get_sql(**subq_q)
         """
 
+        bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
+
         key_def = {
-                "KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
-                "LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
+                #"KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
+                #"LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
+                "KEY_ENTITY" : bucket_entity
                 }
 
         primary_q = {
                 "AS_DICTS": True, 
                 "ID": "primary_q",
-                "SELECT" : [{'EXPRESSION': '{{test1.id}}'}],
+                "SELECT" : [
+                    {'ID': "t1id", 'EXPRESSION': '{{test1.id}}'},
+                    ],
+                "GROUP_BY": [
+                    {"ID": "t1id"},
+                    bucket_entity
+                    ]
                 }
 
         keyed_results = sa_dao.get_keyed_results(key_def, [primary_q])
-        print keyed_results
-        """
+        #print keyed_results
+        #"""
         import simplejson as json
         print json.dumps(keyed_results, indent=2)
-        """
+        #"""
 
 
     def setUp(self):

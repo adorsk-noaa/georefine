@@ -238,23 +238,18 @@ class SA_DAO(object):
         key_entity = key_def['KEY_ENTITY']
         key_entity = self.prepare_entity_def(key_entity)
 
+        # If there was no label entity, use the key entity as the label entity.
+        label_entity = key_def.setdefault('LABEL_ENTITY', copy.deepcopy(key_entity))
+
         # If all values should be selected for the key entity...
         if key_entity.get('ALL_VALUES'):
 
             # If key entity is histogram, then generate the keys and labels.
             if key_entity.get('AS_HISTOGRAM'):
-                # Generate the label entity.
-                label_entity = key_def.setdefault('LABEL_ENTITY', 
-                        {'ID': self.get_bucket_id_label(key_def['KEY_ENTITY'])})
                 keys_labels = self.get_all_histogram_keys(key_def)
 
             # Otherwise select the keys and labels per the key_def...
             else:
-
-                # If there was no label entity, use the key entity as the label entity.
-                label_entity = key_def.setdefault('LABEL_ENTITY', dict(
-                    key_def['KEY_ENTITY'].items() 
-                    + {'ID': key_entity['ID'] + "_label"}.items() ) )
                 
                 # Select keys and labels.
                 # We merge the key query attributes with our overrides.
@@ -281,17 +276,10 @@ class SA_DAO(object):
                         "data": {}
                         }
 
-        # Otherwise, if not all values for the key entity...
-        else:
-            # If there was no label entity, use the key entity as the label entity.
-            label_entity = key_def.setdefault('LABEL_ENTITY', dict(
-                key_def['KEY_ENTITY'].items() 
-                + {'ID': key_entity['ID'] + "_label"}.items() ) )
-
-        # Add key and label entities to primary queries.
+        # Modify query defs.
         for query_def in query_defs:
-            SELECT = query_def.get('SELECT', [])
-            SELECT.extend([key_def['KEY_ENTITY'], key_def['LABEL_ENTITY']])
+            query_def.setdefault("AS_DICTS", True)
+            query_def.setdefault("SELECT_GROUP_BY", True)
 
         # Execute primary queries.
         results = self.execute_queries(query_defs)
@@ -301,19 +289,22 @@ class SA_DAO(object):
             # For each result in the result set...
             for result in result_set:
 
-                # Get the result's key and label.
-                result_key = result[key_id]
-                result_label = result[label_id]
+                # Get the result's key.
+                result_key = result.get(key_id)
 
-                # Get or create the keyed result.
-                keyed_result = keyed_results.setdefault(result_key, {
-                    "key": result_key,
-                    "label": result_label,
-                    "data": {}
-                    })
-                
-                # Add the result to the keyed_result data.
-                keyed_result['data'][result_set_id] = result
+                # If there was a key...
+                if result_key:
+                    # Get the label.
+                    result_label = result.get(label_id)
+                    # Get or create the keyed result.
+                    keyed_result = keyed_results.setdefault(result_key, {
+                        "key": result_key,
+                        "label": result_label,
+                        "data": {}
+                        })
+
+                    # Add the result to the keyed_result data.
+                    keyed_result['data'][result_set_id] = result
 
         # Return the keyed results.
         return keyed_results.values()
@@ -343,7 +334,7 @@ class SA_DAO(object):
                 key_entity_def.setdefault(m, minmax[m])
 
         # Generate buckets.
-        return self.get_histogram_buckets(key_def)
+        return self.get_histogram_buckets(key_entity_def)
 
     # Get aggregates in tree form.
     def get_aggregates(self, SELECT=[], FROM=[], GROUP_BY=[], WHERE=[], ORDER_BY=[], BASE_WHERE=[], **kwargs):
