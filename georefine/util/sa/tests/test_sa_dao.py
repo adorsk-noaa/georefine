@@ -21,7 +21,7 @@ class SA_DAO_Test(BaseTest):
                 'ID': 'simple_q',
                 'SELECT': [{'ID': 't1_id', 'EXPRESSION': '{test1.id}'}],
                 'FROM': ['test1'],
-                'WHERE': [{'ENTITY': {'ID': 't1_id'}, 'OP': '==', 'VALUE': 1}],
+                'WHERE': [[{'ID': 't1_id'}, '==', 1}],
                 'GROUP_BY': [{'ID': 't1_id'}],
                 'ORDER_BY': [{'ENTITY': {'ID': 't1_id'}}]
                 }
@@ -38,7 +38,7 @@ class SA_DAO_Test(BaseTest):
                     {'ID': 't1_id', 'EXPRESSION': '{test1.id}'}
                     ],
                 'FROM': [{'ID': 'test1', 'JOINS': ['test1_test2', 'test2']}],
-                'WHERE': [{'ENTITY': 't1_id', 'OP': '==', 'VALUE': 1}],
+                'WHERE': [['t1_id', '==', 1]],
                 'GROUP_BY': [{'ID': 't1_id'}],
                 'ORDER_BY': [{'ENTITY': {'ID': 't1_id'}}]
                 }
@@ -73,7 +73,7 @@ class SA_DAO_Test(BaseTest):
                 'ID': 'nested_q',
                 'SELECT': [{'ID': 't2_id', 'EXPRESSION': '{test2.id}'}],
                 'FROM': [{'ID': 'test2', 'JOINS': ['test1_test2', 'test1']}],
-                'WHERE': [{'ENTITY': {'ID': 't1_id', 'EXPRESSION': '{test1.id}'}, 'OP': 'in', 'VALUE': [1,3]}],
+                'WHERE': [[{'ID': 't1_id', 'EXPRESSION': '{test1.id}'}, 'in', [1,3]]],
                 }
         subq_q = {
                 'ID': 'subq_q',
@@ -86,12 +86,15 @@ class SA_DAO_Test(BaseTest):
         print sa_dao.get_sql(**subq_q)
         """
 
-        bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
+        #bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
+        bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
+            "WHERE": [["{{test1.id}}", "in", [2,3]]]
+            }}
 
         key_def = {
                 #"KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
                 #"LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
-                "KEY_ENTITY" : bucket_entity
+                "KEY_ENTITY" : bucket_entity2
                 }
 
         primary_q = {
@@ -102,8 +105,9 @@ class SA_DAO_Test(BaseTest):
                     ],
                 "GROUP_BY": [
                     {"ID": "t1id"},
-                    bucket_entity
-                    ]
+                    bucket_entity2
+                    ],
+                "SELECT_GROUP_BY": True,
                 }
 
         keyed_results = sa_dao.get_keyed_results(key_def, [primary_q])
