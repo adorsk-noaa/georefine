@@ -216,7 +216,7 @@ class SA_DAO(object):
                 mapped_entities[token] = table.c[column_id]
                 return "mapped_entities['%s']" % token
 
-            entity_code = re.sub('{(.*?)}', replace_token_with_mapped_entity, entity_def['EXPRESSION'])
+            entity_code = re.sub('{{(.*?)}}', replace_token_with_mapped_entity, entity_def['EXPRESSION'])
 
             # Evaluate and label.
             mapped_entity = eval(entity_code)
