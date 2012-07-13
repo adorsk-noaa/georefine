@@ -124,6 +124,7 @@ class SA_DAO(object):
         if SELECT_GROUP_BY:
             columns.extend(group_by)
 
+
         # Return the query object.
         q = select(
                 columns=columns, 
@@ -227,6 +228,122 @@ class SA_DAO(object):
 
         return entity_registry[entity_def['ID']]
 
+    
+    def get_keyed_results(self, key_def, query_defs):
+        
+        # Initialize keyed results.
+        keyed_results = {}
+
+        # Shortcut for key entity.
+        key_entity = key_def['KEY_ENTITY']
+        key_entity = self.prepare_entity_def(key_entity)
+
+        # If all values should be selected for the key entity...
+        if key_entity.get('ALL_VALUES'):
+
+            # If key entity is histogram, then generate the keys and labels.
+            if key_entity.get('AS_HISTOGRAM'):
+                # Generate the label entity.
+                label_entity = key_def.setdefault('LABEL_ENTITY', 
+                        {'ID': self.get_bucket_id_label(key_def['KEY_ENTITY'])})
+                keys_labels = self.get_all_histogram_keys(key_def)
+
+            # Otherwise select the keys and labels per the key_def...
+            else:
+
+                # If there was no label entity, use the key entity as the label entity.
+                label_entity = key_def.setdefault('LABEL_ENTITY', dict(
+                    key_def['KEY_ENTITY'].items() 
+                    + {'ID': key_entity['ID'] + "_label"}.items() ) )
+                
+                # Select keys and labels.
+                # We merge the key query attributes with our overrides.
+                keys_labels = self.execute_queries([
+                    dict(key_def.items() + {
+                        'ID': 'keylabel_q', 
+                        'AS_DICTS': True, 
+                        'SELECT': [key_entity, label_entity],
+                        }.items() )
+                    ]).values()[0]
+
+            # Shortcuts to key and label ids.
+            key_id = key_entity['ID']
+            label_id = label_entity['ID']
+
+            # Pre-seed keyed results with keys and labels.
+            for key_label in keys_labels:
+                key = key_label[key_id]
+                label = key_label[label_id]
+
+                keyed_results[key] = {
+                        "key": key,
+                        "label": label,
+                        "data": {}
+                        }
+
+        # Otherwise, if not all values for the key entity...
+        else:
+            # If there was no label entity, use the key entity as the label entity.
+            label_entity = key_def.setdefault('LABEL_ENTITY', dict(
+                key_def['KEY_ENTITY'].items() 
+                + {'ID': key_entity['ID'] + "_label"}.items() ) )
+
+        # Add key and label entities to primary queries.
+        for query_def in query_defs:
+            SELECT = query_def.get('SELECT', [])
+            SELECT.extend([key_def['KEY_ENTITY'], key_def['LABEL_ENTITY']])
+
+        # Execute primary queries.
+        results = self.execute_queries(query_defs)
+
+        # For each result set...
+        for result_set_id, result_set in results.items():
+            # For each result in the result set...
+            for result in result_set:
+
+                # Get the result's key and label.
+                result_key = result[key_id]
+                result_label = result[label_id]
+
+                # Get or create the keyed result.
+                keyed_result = keyed_results.setdefault(result_key, {
+                    "key": result_key,
+                    "label": result_label,
+                    "data": {}
+                    })
+                
+                # Add the result to the keyed_result data.
+                keyed_result['data'][result_set_id] = result
+
+        # Return the keyed results.
+        return keyed_results.values()
+                
+
+    def get_all_histogram_keys(self, key_def):
+
+        # Get min/max for key entity if not provided.
+        key_entity_def = key_def['KEY_ENTITY']
+        if key_entity_def.get('MIN') == None or key_entity_def.get('MAX') == None:
+            SELECT = []
+            for m in ['MIN', 'MAX']:
+                minmax_entity_def = {'ID': m, 'EXPRESSION': "func.%s(%s)" % (m.lower(), key_entity_def.get('EXPRESSION'))}
+                SELECT.append(minmax_entity_def)
+
+            # We merge the key query attributes with our overrides.
+            minmax = self.execute_queries([
+                dict(key_def.items() + {
+                    'ID': 'stats_q', 
+                    'AS_DICTS': True, 
+                    'SELECT': SELECT}.items()
+                    ) 
+                ]).values()[0][0]
+
+            # set MIN and MAX only if not provided.
+            for m in ['MIN', 'MAX']:
+                key_entity_def.setdefault(m, minmax[m])
+
+        # Generate buckets.
+        return self.get_histogram_buckets(key_def)
 
     # Get aggregates in tree form.
     def get_aggregates(self, SELECT=[], FROM=[], GROUP_BY=[], WHERE=[], ORDER_BY=[], BASE_WHERE=[], **kwargs):
@@ -502,7 +619,7 @@ class SA_DAO(object):
 
     def get_bucket_id_label(self, entity_def):
         return "%s--bucket-id" % entity_def['ID']
-        
+
     
     def get_dialect(self, dialect):
         try:

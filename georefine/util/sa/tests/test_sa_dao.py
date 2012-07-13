@@ -3,8 +3,8 @@ from georefine.util.sa.tests.basetest import BaseTest
 from georefine.util.sa.sa_dao import SA_DAO
 
 from sqlalchemy import Table, Column, ForeignKey, ForeignKeyConstraint, Integer, String, Float
-from sqlalchemy.orm import relationship, mapper
 from sqlalchemy import MetaData
+from sqlalchemy.sql import *
 from geoalchemy import *
 from geoalchemy.postgis import PGComparator
 from pprint import pprint
@@ -84,6 +84,24 @@ class SA_DAO_Test(BaseTest):
         results = sa_dao.execute_queries(query_defs=[subq_q])
         print results
         print sa_dao.get_sql(**subq_q)
+        """
+
+        key_def = {
+                "KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
+                "LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
+                }
+
+        primary_q = {
+                "AS_DICTS": True, 
+                "ID": "primary_q",
+                "SELECT" : [{'EXPRESSION': '{{test1.id}}'}],
+                }
+
+        keyed_results = sa_dao.get_keyed_results(key_def, [primary_q])
+        print keyed_results
+        """
+        import simplejson as json
+        print json.dumps(keyed_results, indent=2)
         """
 
 
