@@ -10,30 +10,104 @@ _basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Services_Test(BaseTest):
 
-	def setUp(self):
-		super(Services_Test, self).setUp()
-		project_dir = os.path.join(_basedir, 'test_manage_projects_project_dir')
-		self.project = Project(id=1, name='test', dir=project_dir)
-		self.project.schema = manage_projects.getProjectSchema(self.project)
-		manage_projects.setUpSchema(self.project)		
-		manage_projects.setUpData(self.project)
+    def setUp(self):
+        super(Services_Test, self).setUp()
+        db.session.bind = self.connection
+        self.schema = self.setUpSchemaAndData1()
+        #manage_projects.setUpSchema(self.project)      
+        #manage_projects.setUpData(self.project)
 
-	def test(self):
-		id_entity = {'expression': '{Test1.id}', 'id': 'id'}
-		name_entity = {'expression': '{Test1.name}', 'id': 'name'}
+    def testGetKeyedResults(self):
+        return #INACTIVE
+        project = Project(id=1, name='test')
+        project.schema = self.schema
 
-		# Test aggregates.
-		data_entities = [id_entity]
-		grouping_entities = [name_entity]
-		aggregates = services.get_aggregates(self.project, data_entities=data_entities, grouping_entities=grouping_entities)
-		#print aggregates
+        bucket_entity1 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
+        #bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
+            #"WHERE": [["{{test1.id}}", "in", [2,3]]]
+            #}}
 
-		map = services.get_map(self.project)
-		#print map
+        key = {
+                #"KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
+                #"LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
+                "KEY_ENTITY" : bucket_entity1
+                }
 
-	def tearDown(self):
-		manage_projects.tearDownSchema(self.project)
-		super(Services_Test, self).tearDown()
+        primary_q = {
+                "AS_DICTS": True, 
+                "ID": "primary_q",
+                "SELECT" : [
+                    {'ID': "t1id", 'EXPRESSION': '{{test1.id}}'},
+                    ],
+                "GROUP_BY": [
+                    {"ID": "t1id"},
+                    bucket_entity1
+                    ],
+                "SELECT_GROUP_BY": True,
+                }
+
+        results = services.get_keyed_results(project, key, [primary_q])
+        print results
+
+    def testProject30KeyedResults(self):
+        project = db.session.query(Project).filter(Project.id == 30).one()
+        project.schema = manage_projects.getProjectSchema(project)
+
+        key_def = {
+                "KEY_ENTITY":"{{result.substrate.id}}",
+                "LABEL_ENTITY":"{{result.substrate.name}}"
+                }
+
+        query_defs = [{
+            "SELECT":[
+                {
+                    "ID":"count_cell_id",
+                    "EXPRESSION":"func.count({{inner.cell_id}})"
+                    }
+                ],
+            "FROM":[
+                {
+                    "ID": "inner",
+                    "TABLE":{
+                        "SELECT":[
+                            {
+                                "ID":"cell_id",
+                                "EXPRESSION":"{{result.cell.id}}"
+                                },
+                            ],
+                        "FROM":[
+
+                            ],
+                        "GROUP_BY":[
+                            {
+                                "ID":"cell_id"
+                                }
+                            ],
+                        "WHERE":[
+
+                            ],
+                        "ORDER_BY":[
+
+                            ],
+                        "ID":"inner",
+                        "SELECT_GROUP_BY": True
+                        }
+                    }
+                ],
+            "GROUP_BY":[
+                ],
+            "WHERE":[
+
+                ],
+            "ORDER_BY":[
+
+                    ],
+            "ID":"outer" 
+            }]
+
+        results = services.get_keyed_results(project, key_def, query_defs)
+        print results
+
 
 if __name__ == '__main__':
-	unittest.main()
+    unittest.main()

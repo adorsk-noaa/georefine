@@ -37,7 +37,7 @@ def setUpData(project):
     schema = getProjectSchema(project)
 
     # Load data (in order defined by schema).
-    for t in schema['tables']:
+    for t in schema['ordered_tables']:
 
         table = t['table']
 

@@ -113,26 +113,44 @@ def query_data(project_id):
             )
     return jsonify(result=results)
 
+@bp.route('/get_keyed_results/<int:project_id>/', methods=['GET', 'POST'])
+def get_keyed_results(project_id):
+    project = Project.query.get(project_id)
+    project.schema = projects_manage.getProjectSchema(project)
+
+    # Parse request parameters.
+    key_def = json.loads(request.args.get('KEY', '{}'))
+    query_defs= json.loads(request.args.get('QUERIES', '[]'))
+
+    result = projects_services.get_keyed_results(
+            project = project,
+            key_def=key_def,
+            query_defs = query_defs
+            )
+
+    return jsonify(result)
+
 @bp.route('/get_aggregates/<int:project_id>/', methods=['GET', 'POST'])
 def get_aggregates(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
-    data_entities = json.loads(request.args.get('data_entities', '[]'))
-    grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
-    filters = json.loads(request.args.get('filters', '[]'))
-    with_unfiltered = json.loads(request.args.get('with_unfiltered', 'false'))
-    base_filters = json.loads(request.args.get('base_filters', '[]'))
+    SELECT = json.loads(request.args.get('SELECT', '[]'))
+    GROUP_BY = json.loads(request.args.get('GROUP_BY', '[]'))
+    WHERE = json.loads(request.args.get('WHERE', '[]'))
+    WITH_BASE = json.loads(request.args.get('WITH_BASE', 'false'))
+    BASE_WHERE = json.loads(request.args.get('BASE_WHERE', '[]'))
 
     result = projects_services.get_aggregates(
             project, 
-            data_entities = data_entities, 
-            grouping_entities = grouping_entities, 
-            filters = filters,
-            with_unfiltered = with_unfiltered,
-            base_filters = base_filters
+            SELECT = SELECT,
+            GROUP_BY = GROUP_BY,
+            WHERE = WHERE,
+            WITH_BASE = WITH_BASE,
+            BASE_WHERE = BASE_WHERE
             )
+
     return jsonify(result)
 
 @bp.route('/get_map/<int:project_id>/', methods=['GET'])
