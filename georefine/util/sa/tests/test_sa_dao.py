@@ -47,28 +47,12 @@ class SA_DAO_Test(BaseTest):
         """
 
         """
-        sql = sa_dao.get_sql(**join_q)
+        sql = sa_dao.get_sql(join_q)
         print sql
         """
 
         """
-        aggs = sa_dao.get_aggregates(
-                SELECT = [
-                    {'ID': 't2_id', 'EXPRESSION': 'func.count({test2.id})'},
-                    ],
-                FROM = [{'TABLE': 'test1', 'JOINS': ['test1_test2', 'test2']}],
-                WHERE = [],
-                GROUP_BY = [
-                    #{'ID': 't1_id', 'EXPRESSION': '{test1.id}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True},
-                    {'EXPRESSION': '{test1.id}', 'ALL_VALUES': True, 'LABEL_ENTITY': '{test1.id}'}
-                    ]
-                )
-        import simplejson as json
-        print json.dumps(aggs, indent=2)
-        """
-
         # Test nested subquery in from clause.
-        """
         nested_q = {
                 'ID': 'nested_q',
                 'SELECT': [{'ID': 't2_id', 'EXPRESSION': '{test2.id}'}],
@@ -83,12 +67,12 @@ class SA_DAO_Test(BaseTest):
                 }
         results = sa_dao.execute_queries(query_defs=[subq_q])
         print results
-        print sa_dao.get_sql(**subq_q)
+        print sa_dao.get_sql(subq_q)
         """
 
-        #bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
+        bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
         bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
-            "WHERE": [["{{test1.id}}", "in", [2,3]]]
+            #"WHERE": [["{{test1.id}}", "in", [2,3]]]
             }}
 
         key_def = {

@@ -27,7 +27,7 @@ class SA_DAO(object):
     def execute_queries(self, query_defs=[]):
         results = {}
         for query_def in query_defs:
-            rows = self.connection.execute(self.get_query(**query_def)).fetchall()
+            rows = self.connection.execute(self.get_query(query_def)).fetchall()
             if query_def.get('AS_DICTS'):
                 q_results = [dict(zip(row.keys(), row)) for row in rows]
             else:
@@ -37,7 +37,7 @@ class SA_DAO(object):
         
 
     # Return a query object for the given query definition. 
-    def get_query(self, FROM=[], SELECT=[], WHERE=[], GROUP_BY=[], ORDER_BY=[], SELECT_GROUP_BY=False, **kwargs):
+    def get_query(self, query_def, **kwargs):
 
         # Initialize registries.
         table_registry = {}
@@ -45,14 +45,16 @@ class SA_DAO(object):
 
         # Process 'from'.
         from_obj = []
-        for table_def in FROM:
+        for table_def in query_def.get('FROM', []):
+            if not table_def: continue
             # Process any joins the table has and add to from obj.
             table = self.add_joins(table_registry, table_def)
             from_obj.append(table)
 
         # Process 'select'.
         columns = []
-        for entity_def in SELECT:
+        for entity_def in query_def.get('SELECT', []):
+            if not entity_def: continue
             entity = self.get_registered_entity(table_registry, entity_registry, entity_def)
             columns.append(entity)
 
@@ -60,7 +62,7 @@ class SA_DAO(object):
         # Where def is assumed to be a list with three parts:
         # entity, op, value.
         wheres = []
-        for where_def in WHERE:
+        for where_def in query_def.get('WHERE', []):
             if not where_def: continue
 
             # Get registered entity.
@@ -84,7 +86,7 @@ class SA_DAO(object):
             
         # Process 'group_by'.
         group_by = []
-        for entity_def in GROUP_BY:
+        for entity_def in query_def.get('GROUP_BY', []):
             if not entity_def: continue
 
             entity_def = self.prepare_entity_def(entity_def)
@@ -103,7 +105,7 @@ class SA_DAO(object):
 
         # Process 'order_by'.
         order_by = []
-        for order_by_def in ORDER_BY:
+        for order_by_def in query_def.get('ORDER_BY', []):
             if not order_by_def: continue
             # If def is a string, we assume it's an entity id.
             if isinstance(order_by_def, str):
@@ -120,7 +122,7 @@ class SA_DAO(object):
             order_by.append(order_by_entity)
 
         # If 'select_group_by' is true, add group_by entities to select.
-        if SELECT_GROUP_BY:
+        if query_def.get('SELECT_GROUP_BY'):
             columns.extend(group_by)
 
 
@@ -154,7 +156,7 @@ class SA_DAO(object):
 
             # If 'table' is not a string, we assume it's a query object and process it.
             if not isinstance(table_def['TABLE'], str):
-                table = self.get_query(**table_def['TABLE']).alias(table_def['ID'])
+                table = self.get_query(table_def['TABLE']).alias(table_def['ID'])
 
             # Otherwise we lookup the table in the given schema.
             else:
@@ -309,8 +311,8 @@ class SA_DAO(object):
                 
 
     # Get raw sql for given query parameters.
-    def get_sql(self, dialect=None, **kwargs):
-        q = self.get_query(**kwargs)
+    def get_sql(self, query_def, dialect=None, **kwargs):
+        q = self.get_query(query_def, **kwargs)
         return self.query_to_raw_sql(q, dialect=dialect)
 
     # Compile a query into raw sql.
