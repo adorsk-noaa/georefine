@@ -107,8 +107,8 @@ class SA_DAO(object):
         order_by = []
         for order_by_def in query_def.get('ORDER_BY', []):
             if not order_by_def: continue
-            # If def is a string, we assume it's an entity id.
-            if isinstance(order_by_def, str):
+            # If def is not a dict , we assume it represents an entity id.
+            if not isinstance(order_by_def, dict):
                 order_by_def = {'ENTITY': order_by_def}
             # Get registered entity.
             entity = self.get_registered_entity(table_registry, entity_registry, order_by_def['ENTITY'])
@@ -138,8 +138,8 @@ class SA_DAO(object):
 
     # Prepare a table definition for use.
     def prepare_table_def(self, table_def):
-        # If item is a string, we assume the string represents a table name.
-        if isinstance(table_def, str):
+        # If item is not a dict, we assume it represents a table name.
+        if not isinstance(table_def, dict):
             table_def = {'TABLE': table_def}
 
         # If table def has no 'ID' attribute, we use the TABLE by convention.
@@ -150,12 +150,12 @@ class SA_DAO(object):
     # Get or register a table in a table registry.
     def get_registered_table(self, table_registry, table_def):
         table_def = self.prepare_table_def(table_def)
-
+        
         # Process table if it's not in the registry.
         if not table_registry.has_key(table_def['ID']):
 
-            # If 'table' is not a string, we assume it's a query object and process it.
-            if not isinstance(table_def['TABLE'], str):
+            # If 'table' is a dict , we assume it's a query object and process it.
+            if isinstance(table_def['TABLE'], dict):
                 table = self.get_query(table_def['TABLE']).alias(table_def['ID'])
 
             # Otherwise we lookup the table in the given schema.
@@ -191,8 +191,8 @@ class SA_DAO(object):
         return table
 
     def prepare_entity_def(self, entity_def):
-        # If item is a string, we assume the string represents an entity expression.
-        if isinstance(entity_def, str):
+        # If item is not a dict, we assume it's a string-like object representing an entity expression.
+        if not isinstance(entity_def, dict):
             entity_def = {'EXPRESSION': entity_def}
         # If item has no ID, assign an arbitrary id.
         entity_def.setdefault('ID', str(id(entity_def)))
