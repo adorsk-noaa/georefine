@@ -50,6 +50,7 @@ class Services_Test(BaseTest):
         print results
 
     def testProject30KeyedResults(self):
+        return #INACTIVE
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 
@@ -118,6 +119,31 @@ class Services_Test(BaseTest):
         params = json.loads(json_params)
         results = services.get_keyed_results(project, params['KEY'], params['QUERIES'])
         print results
+
+
+
+    def testProjects30Histogram(self):
+        project = db.session.query(Project).filter(Project.id == 30).one()
+        project.schema = manage_projects.getProjectSchema(project)
+
+        requests_json = '''
+        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}},"QUERIES":[{"ID":"base","SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}],"FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"FROM":[],"WHERE":[["{{result.t}}","==",2008]],"GROUP_BY":[{"ID":"cell_id"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"ORDER_BY":[]}}],"WHERE":[],"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"ORDER_BY":[],"SELECT_GROUP_BY":true},{"ID":"primary","SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}],"FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"FROM":[],"WHERE":[["{{result.t}}","==",2008]],"GROUP_BY":[{"ID":"cell_id"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"ORDER_BY":[]}}],"WHERE":[],"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"ORDER_BY":[],"SELECT_GROUP_BY":true}]}}]
+        '''
+        import simplejson as json
+        request_defs = json.loads(requests_json)
+
+        results = {}
+        for request_def in request_defs:
+            if request_def['REQUEST'] == 'execute_keyed_queries':
+                formatted_parms = {}
+                for k, v in request_def['PARAMETERS'].items():
+                    formatted_parms[str(k)] = v
+                    
+                results[request_def['ID']] = services.execute_keyed_queries(
+                        project = project,
+                        **formatted_parms
+                        )
+        print "r is: ", json.dumps(results, indent=2)
 
 
 if __name__ == '__main__':
