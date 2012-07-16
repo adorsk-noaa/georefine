@@ -86,10 +86,7 @@ class SA_DAO(object):
         # Combine wheres into one clause.
         whereclause = None
         if len(wheres) > 0:
-            whereclause = wheres[0]
-            if len(wheres) > 1:
-                for where in wheres[1:]: 
-                    whereclause = whereclause.and_(where)
+            whereclause = and_(*wheres)
             
         # Process 'group_by'.
         group_by = []

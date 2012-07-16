@@ -197,17 +197,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			});
 		},
 
-        makeFacetKeyedQueryRequest: function(facet_model){
-            // This function assembles two sets of queries:
-            // The inner query selects a data set, and optionally groups it.
-            // That query uses the filters.
-            // In some cases we will make separate queries for base filters, and for primary filters.
-            // The outer query does a secondary grouping and aggregation.
-            // This allows us to do things like:
-            // 'select sum(dataset.xy) group by dataset.category from
-            // (select data.x * data.y where data.x > 7 group by data.category) as dataset
+        makeFacetInnerQuery: function(facet_model, include_filter_attrs){
+            // Set include filters to primary and base by default.
+            include_filter_attrs = include_filter_attrs || ['primary_filters', 'base_filters'];
 
-            // Initialize the inner query.
+            // Initialize query definition.
             // Note: 'ID' must be 'inner' to conform to conventions.
             var inner_q = {
                 'ID': 'inner',
@@ -232,35 +226,77 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 inner_q['FROM'].push(frm);
             });
 
-            // Get the facet's inner query parameters.
-            var primary_filters = this._filterObjectGroupsToArray(facet_model.get('primary_filters'));
-            var base_filters = this._filterObjectGroupsToArray(facet_model.get('base_filters'));
-            var combined_filters = primary_filters.concat(base_filters);
-            _.each(combined_filters, function(f){
-                inner_q['WHERE'].push(f);
+            // Get the facet's inner query filters.
+            var _this = this;
+            _.each(include_filter_attrs, function(include_filter_attr){
+                facet_filters = facet_model.get(include_filter_attr);
+                filter_array = _this._filterObjectGroupsToArray(facet_filters);
+                _.each(filter_array, function(f){
+                    inner_q['WHERE'].push(f);
+                });
             });
+
+            // Get the facet's inner query group by paramters.
             inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
-            inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
+            if (key['LABEL_ENTITY']){
+                inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
+            }
+
+            return inner_q;
+        },
+
+        makeFacetOuterQuery: function(facet_model, inner_query, query_id){
+
+            // Shortcuts.
+            var key = facet_model.get('KEY');
+            var qfield  = facet_model.get('quantity_field');
 
             // Initialize the outer query.
             var outer_q = {
-                'ID': 'outer',
-                'SELECT_GROUP_BY': true,
+                'ID': query_id || 'outer',
                 'SELECT': [],
-                'FROM': [{'ID': 'inner', 'TABLE': inner_q}],
+                'FROM': [{'ID': 'inner', 'TABLE': inner_query}],
                 'WHERE': [],
                 'GROUP_BY': [],
-                'ORDER_BY': []
+                'ORDER_BY': [],
+                'SELECT_GROUP_BY': true,
             };
 
             // Add the quantity field's outer query parameters.
             outer_q['SELECT'].push(qfield.get('outer_query_entity'));
-            _.each(['KEY_ENTITY', 'LABEL_ENTITY'], function(attr){
+            gb_attrs = ['KEY_ENTITY'];
+            if (key['LABEL_ENTITY']){
+                gb_attrs.push('LABEL_ENTITY');
+            }
+            _.each(gb_attrs, function(attr){
                 outer_q['GROUP_BY'].push({
                     'ID': key[attr]['ID'],
                     'EXPRESSION': _s.sprintf("{{inner.%s}}", key[attr]['ID'])
                 });
             });
+
+            return outer_q;
+        },
+
+        makeFacetKeyedQueryRequest: function(facet_model, include_filter_attrs){
+            // This function assembles two sets of queries:
+            // The inner query selects a data set, and optionally groups it.
+            // That query uses the filters.
+            // In some cases we will make separate queries for base filters, and for primary filters.
+            // The outer query does a secondary grouping and aggregation.
+            // This allows us to do things like:
+            // 'select sum(dataset.xy) group by dataset.category from
+            // (select data.x * data.y where data.x > 7 group by data.category) as dataset
+
+            // Shortcuts.
+            var key = facet_model.get('KEY');
+            var qfield  = facet_model.get('quantity_field');
+
+            // Get the inner query.
+            var inner_q = this.makeFacetInnerQuery(facet_model, include_filter_attrs);
+
+            // Get the outer query.
+            var outer_q = this.makeFacetOuterQuery(facet_model, inner_q, 'outer');
 
             // Assemble the keyed result parameters.
             var keyed_results_parameters = {
@@ -288,13 +324,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 			// The 'getData' functions will be called with a facet model as 'this'.
 			var listFacetGetData = function(){
-                console.log("lfgd");
-
                 var _this = this;
-                qfield = this.get('quantity_field');
-                keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
+                var qfield = this.get('quantity_field');
+                var keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
 
-                outer_q = keyed_query_req['PARAMETERS']['QUERIES'][0];
+                var outer_q = keyed_query_req['PARAMETERS']['QUERIES'][0];
 
                 // Assemble totals query.
                 var totals_q = _.extend({}, outer_q, {
@@ -346,30 +380,76 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			};
 
 			numericFacetGetData = function() {
-                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
-				var data = {
-					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
-					'base_filters': JSON.stringify(combined_base_filters),
-					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
-					'with_unfiltered': true,
-					'base_filters': JSON.stringify(this.get('base_filters'))
-				};
-				var _this = this;
+                var facet_model = this;
+
+                // Shortcuts.
+                var key = facet_model.get('KEY');
+                var qfield  = facet_model.get('quantity_field');
+
+                // Set base filters on key entity context.
+                if (! key['KEY_ENTITY']['CONTEXT']){
+                    key['KEY_ENTITY']['CONTEXT'] = {};
+                }
+                var key_context = key['KEY_ENTITY']['CONTEXT'];
+                if (! key_context['WHERE']){
+                    key_context['WHERE'] = [];
+                }
+                var base_filters = facet_model.get('base_filters');
+                if (base_filters){
+                    filter_array = _app._filterObjectGroupsToArray(base_filters);
+                    _.each(filter_array, function(f){
+                        key_context['WHERE'].push(f);
+                    });
+                }
+
+                // Get the base query.
+                var base_inner_q = _app.makeFacetInnerQuery(facet_model, ['base_filters']);
+                var base_outer_q = _app.makeFacetOuterQuery(facet_model, base_inner_q, 'base');
+
+                // Get the primary query.
+                var primary_inner_q = _app.makeFacetInnerQuery(facet_model, ['base_filters', 'primary_filters']);
+                var primary_outer_q = _app.makeFacetOuterQuery(facet_model, primary_inner_q, 'primary');
+
+                // Assemble the keyed result parameters.
+                var keyed_results_parameters = {
+                    "KEY": key,
+                    "QUERIES": [base_outer_q, primary_outer_q]
+                };
+
+                // Assemble keyed query request.
+                var keyed_query_request = {
+                    'ID': 'keyed_results',
+                    'REQUEST': 'execute_keyed_queries',
+                    'PARAMETERS': keyed_results_parameters
+                };
+
+                var _this = this;
+
+                // Assemble request.
+                var requests = [];
+                requests.push(keyed_query_request);
+
+                // Execute the requests.
 				$.ajax({
-					url: aggregates_endpoint,
-					type: 'GET',
-					data: data,
+					url: requests_endpoint,
+					type: 'POST',
+					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
 
+                        console.log("numeric, data is: ", data);
+
+                        var results = data.results;
+                        var count_entity = qfield.get('outer_query_entity');
+
 						// Parse data into histograms.
 						var base_histogram = [];
-						var filtered_histogram = [];
+						var primary_histogram = [];
 
-						var leafs = lji.parse(data);
-						_.each(leafs, function(leaf){
-							bucket_label = leaf.label;
+						// Generate choices from data.
+						var choices = [];
+						_.each(results['keyed_results'], function(result){
+							bucket_label = result['label'];
 							var minmax_regex = /(-?\d+(\.\d*)?)\s*,\s*(-?\d+(\.\d*)?)/;
 							var match = minmax_regex.exec(bucket_label);
 							var bmin, bmax;
@@ -381,26 +461,28 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 								return;
 							}
 
-							var unfiltered_bucket = {
-								bucket: leaf.label,
-								min: bmin,
-								max: bmax,
-								count: leaf.data[1].value
-							};
-							base_histogram.push(unfiltered_bucket);
+                            if (result['data']['base'] && result['data']['primary']){
+                                var base_bucket = {
+                                    bucket: bucket_label,
+                                    min: bmin,
+                                    max: bmax,
+                                    count: result['data']['base'][count_entity['ID']]
+                                };
+                                base_histogram.push(base_bucket);
 
-							var filtered_bucket = _.extend({}, unfiltered_bucket);
-							filtered_bucket.count = leaf.data[0].value;
-							filtered_histogram.push(filtered_bucket);
-
+                                var primary_bucket = _.extend({}, base_bucket, {
+                                    count: result['data']['primary'][count_entity['ID']]
+                                });
+                                primary_histogram.push(primary_bucket);
+                            }
 						});
 
 						base_histogram = _.sortBy(base_histogram, function(b){return b.count});
-						filtered_histogram = _.sortBy(filtered_histogram, function(b){return b.count;});
+						primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
 
 						_this.set({
-							base_histogram: base_histogram,
-							filtered_histogram: filtered_histogram
+                            base_histogram: base_histogram,
+                            filtered_histogram: primary_histogram
 						});
 					}
 				});
@@ -410,8 +492,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             timeSliderFacetGetData = function(){
 				var _this = this;
 
-                qfield = this.get('quantity_field');
-                keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
+                var qfield = this.get('quantity_field');
+                var keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
 
                 // Assemble request.
                 var requests = [];
@@ -461,8 +543,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
             numericFacetFormatFilters = function(selected_values){
                 var formatted_filters = [
-                    { 'entity': {'expression': this.model.get('grouping_entity').expression}, 'op': '>=', 'value': selected_values['selection_min']},
-                    { 'entity': {'expression': this.model.get('grouping_entity').expression}, 'op': '<=', 'value': selected_values['selection_max']}
+                    [this.model.get('filter_entity'), '>=', selected_values['selection_min']],
+                    [this.model.get('filter_entity'), '<=', selected_values['selection_max']],
                 ];
                 return formatted_filters;
             };
