@@ -454,7 +454,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             listFacetFormatFilters = function(selected_values){
                 var formatted_filters = [];
                 if (selected_values.length > 0){
-                    formatted_filters = [{entity: {expression: this.model.get('grouping_entity').expression}, op: 'in', value: selected_values}];
+                    formatted_filters = [
+                        [this.model.get('filter_entity'), 'in', selected_values]
+                        ];
                 }
                 return formatted_filters;
             };
@@ -531,10 +533,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     filter_group.on('change:filters', function(){
                         var primary_filters = _.clone(model.get('primary_filters')) || {} ;
                         // A facet should not use its own selection in the filters.
-                        query_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
+                        primary_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
                             return (filterObj.source.cid != model.cid);
                         });
-                        model.set('primary_filters', query_filters);
+                        model.set('primary_filters', primary_filters);
                     });
                 }, this);
 
