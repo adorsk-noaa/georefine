@@ -1,6 +1,7 @@
 import sys
 import re
 import copy
+import platform
 
 from sqlalchemy.sql import *
 from sqlalchemy.sql import compiler
@@ -27,7 +28,12 @@ class SA_DAO(object):
     def execute_queries(self, query_defs=[]):
         results = {}
         for query_def in query_defs:
-            rows = self.connection.execute(self.get_query(query_def)).fetchall()
+            q = self.get_query(query_def)
+            # If using jython, compile first.  Sometimes
+            # there are issues w/ using width_buckets.
+            if platform.system() == 'Java':
+                q = self.query_to_raw_sql(q)
+            rows = self.connection.execute(q).fetchall()
             # By default, return results as dictionaries.
             if query_def.get('AS_DICTS', True):
                 q_results = [dict(zip(row.keys(), row)) for row in rows]
