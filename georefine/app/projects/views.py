@@ -93,23 +93,23 @@ def create_project():
     
     return render_template("projects/create_project.html", form=form)
 
-@bp.route('/execute_queries/<int:project_id>/', methods=['GET', 'POST'])
-def execute_queries(project_id):
+@bp.route('/execute_querys/<int:project_id>/', methods=['GET', 'POST'])
+def execute_querys(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    results = projects_services.execute_keyed_queries(
+    results = projects_services.execute_keyed_querys(
             project = project,
             query_defs = query_defs
             )
 
     return jsonify(results=results)
 
-@bp.route('/execute_keyed_queries/<int:project_id>/', methods=['GET', 'POST'])
-def execute_keyed_queries(project_id):
+@bp.route('/execute_keyed_querys//<int:project_id>/', methods=['GET', 'POST'])
+def execute_keyed_querys(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
@@ -124,6 +124,32 @@ def execute_keyed_queries(project_id):
             )
 
     return jsonify(results=results)
+
+
+# @TODO: Kludge to get stuff working for now, clean this up later.
+@bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
+def execute_requests(project_id):
+    project = Project.query.get(project_id)
+    project.schema = projects_manage.getProjectSchema(project)
+
+    if request.method == 'POST':
+        request_defs = json.loads(request.form.get('requests'), '[]')
+
+    results = {}
+    for request_def in request_defs:
+        if request_def['REQUEST'] == 'execute_keyed_querys':
+            results[request_def['ID']] = projects_services.execute_keyed_querys(
+                    project = project,
+                    **request_def['PARAMETERS']
+                    )
+
+        elif request_def['REQUEST'] == 'execute_querys':
+            results[request_def['ID']] = projects_services.execute_querys(
+                    project = project,
+                    **request_def['PARAMETERS']) 
+    return jsonify(results=results)
+            
+
 
 @bp.route('/get_map/<int:project_id>/', methods=['GET'])
 def get_map(project_id):
@@ -155,30 +181,3 @@ def get_map(project_id):
             map_parameters=map_parameters
             )
     return Response(map_image, mimetype=map_parameters['FORMAT'])
-
-# @TODO: Kludge to get stuff working for now, clean this up later.
-@bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
-def execute_requests(project_id):
-    project = Project.query.get(project_id)
-    project.schema = projects_manage.getProjectSchema(project)
-
-    requests = json.loads(request.args.get('requests'), '[]')
-
-    results = {}
-    for request in requests:
-        if request['REQUEST'] == 'execute_keyed_queries':
-            results[request['ID']] = projects_services.execute_keyed_queries(
-                    project = project,
-                    **request['PARAMETERS']
-                    )
-
-        elif request['REQUEST'] == 'execute_queries':
-            results[request['ID']] = projects_services.execute_queries(
-                    project = project,
-                    **request['PARAMETERS']
-                    )
-
-    return jsonify(results=results)
-            
-
-
