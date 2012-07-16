@@ -201,8 +201,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			var facets = {};
 			var lji = new Util.util.LumberjackInterpreter();
 
-			var keyed_results_endpoint = _s.sprintf('%s/projects/get_keyed_results/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-			var query_endpoint = _s.sprintf('%s/projects/query_data/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+			var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
             var _app = this;
 
@@ -230,15 +229,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     'ORDER_BY': []
                 };
 
-                // Shortcut to facet key def.
+                // Shortcuts.
                 var key = _this.get('KEY');
+                var qfield  = _this.get('quantity_field');
 
                 // Get the quantity field's inner query parameters.
-                inner_q['SELECT'].push(_this.get('quantity_field').get('inner_query_entity'));
-                _.each(_this.get('quantity_field').get('inner_query_group_by'), function(gb){
+                inner_q['SELECT'].push(qfield.get('inner_query_entity'));
+                _.each(qfield.get('inner_query_group_by'), function(gb){
                     inner_q['GROUP_BY'].push(gb);
                 });
-                _.each(_this.get('quantity_field').get('inner_query_from'), function(frm){
+                _.each(qfield.get('inner_query_from'), function(frm){
                     inner_q['FROM'].push(frm);
                 });
 
@@ -264,7 +264,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 };
 
                 // Add the quantity field's outer query parameters.
-                outer_q['SELECT'].push(_this.get('quantity_field').get('outer_query_entity'));
+                outer_q['SELECT'].push(qfield.get('outer_query_entity'));
                 _.each(['KEY_ENTITY', 'LABEL_ENTITY'], function(attr){
                     outer_q['GROUP_BY'].push({
                         'ID': key[attr]['ID'],
@@ -278,37 +278,63 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     "QUERIES": [outer_q]
 				};
 
-                console.log("krp",  JSON.stringify(keyed_results_parameters));
+                // Assemble keyed result request.
+                execute_keyed_query_request = {
+                    'ID': 'keyed_results',
+                    'REQUEST': 'execute_keyed_queries',
+                    'PARAMETERS': keyed_results_parameters
+                };
 
-                _.each(keyed_results_parameters, function(v, k){
-                    keyed_results_parameters[k] = JSON.stringify(v);
+                // Assemble totals query.
+                var totals_q = _.extend({}, outer_q, {
+                    'ID': 'totals',
+                    'SELECT_GROUP_BY': false,
+                    'GROUP_BY': []
                 });
+            
+                // Assemble totals request.
+                var totals_request = {
+                    'ID': 'totals',
+                    'REQUEST': 'execute_queries',
+                    'PARAMETERS': {'QUERIES': [totals_q]}
+                };
 
-                // Execute the request.
+
+                // Assemble request.
+                var requests = [];
+                requests.push(execute_keyed_query_request);
+                requests.push(totals_request);
+
+                // Execute the requests.
 				$.ajax({
-					url: keyed_results_endpoint,
-					type: 'GET',
-					data: keyed_results_parameters,
+					url: requests_endpoint,
+					type: 'POST',
+					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
                         console.log("d: ", data);
-                        /*
+
+                        var results = data.results;
+
+                        var count_entity = qfield.get('outer_query_entity');
+
 						// Set total.
-						var total = data.data[0].value;
+						var total = results['totals']['totals'][0][count_entity['ID']];
+                        console.log("total is: ", total);
 						_this.set('total', total, {silent:true});
 
 						// Format choices.
 						var choices = [];
-						var leafs = lji.parse(data);
-						_.each(leafs, function(leaf){
+						_.each(results['keyed_results'], function(result){
+                            value = result['data']['outer'][count_entity['ID']];
 							choices.push({
-								id: leaf.id,
-								label: leaf.label,
-								count: leaf.data[0].value
+								id: result['key'],
+								label: result['label'],
+								count: value,
+                                count_label: _s.sprintf(qfield.get('format') || '%s', value)
 							});
 						});
 						_this.set('choices', choices);
-                        */
 					}
 				});
 			};

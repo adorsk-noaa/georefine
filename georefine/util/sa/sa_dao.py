@@ -28,7 +28,8 @@ class SA_DAO(object):
         results = {}
         for query_def in query_defs:
             rows = self.connection.execute(self.get_query(query_def)).fetchall()
-            if query_def.get('AS_DICTS'):
+            # By default, return results as dictionaries.
+            if query_def.get('AS_DICTS', True):
                 q_results = [dict(zip(row.keys(), row)) for row in rows]
             else:
                 q_results = rows

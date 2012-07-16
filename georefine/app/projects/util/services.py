@@ -29,11 +29,12 @@ def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, gr
             **kwargs
             )
 
-def execute_querys(project, QUERIES=[]):
+def execute_queries(project, QUERIES=[]):
     dao = get_dao(project)
-    return dao.execute_queries(QUERIES)
+    results = dao.execute_queries(QUERIES)
+    return results
 
-def execute_keyed_querys(project=None, KEY=None, QUERIES=[]):
+def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     dao = get_dao(project)
     keyed_results = dao.get_keyed_results(key_def=KEY, query_defs=QUERIES)
     return keyed_results

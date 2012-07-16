@@ -93,23 +93,23 @@ def create_project():
     
     return render_template("projects/create_project.html", form=form)
 
-@bp.route('/execute_querys/<int:project_id>/', methods=['GET', 'POST'])
-def execute_querys(project_id):
+@bp.route('/execute_queries/<int:project_id>/', methods=['GET', 'POST'])
+def execute_queries(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    results = projects_services.execute_keyed_querys(
+    results = projects_services.execute_keyed_queries(
             project = project,
             query_defs = query_defs
             )
 
     return jsonify(results=results)
 
-@bp.route('/execute_keyed_querys//<int:project_id>/', methods=['GET', 'POST'])
-def execute_keyed_querys(project_id):
+@bp.route('/execute_keyed_queries//<int:project_id>/', methods=['GET', 'POST'])
+def execute_keyed_queries(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
@@ -117,7 +117,7 @@ def execute_keyed_querys(project_id):
     key_def = json.loads(request.args.get('KEY', '{}'))
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    results = projects_services.execute_keyed_querys(
+    results = projects_services.execute_keyed_queries(
             project = project,
             key_def=key_def,
             query_defs = query_defs
@@ -137,16 +137,17 @@ def execute_requests(project_id):
 
     results = {}
     for request_def in request_defs:
-        if request_def['REQUEST'] == 'execute_keyed_querys':
-            results[request_def['ID']] = projects_services.execute_keyed_querys(
+        if request_def['REQUEST'] == 'execute_keyed_queries':
+            results[request_def['ID']] = projects_services.execute_keyed_queries(
                     project = project,
                     **request_def['PARAMETERS']
                     )
 
-        elif request_def['REQUEST'] == 'execute_querys':
-            results[request_def['ID']] = projects_services.execute_querys(
+        elif request_def['REQUEST'] == 'execute_queries':
+            results[request_def['ID']] = projects_services.execute_queries(
                     project = project,
                     **request_def['PARAMETERS']) 
+
     return jsonify(results=results)
             
 
