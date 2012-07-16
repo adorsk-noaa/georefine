@@ -35,5 +35,6 @@ def get_query_results(project, query_defs):
 
 def get_keyed_results(project=None, key_def=None, query_defs=None):
     dao = get_dao(project)
-    return dao.get_keyed_results(key_def=key_def, query_defs=query_defs)
+    keyed_results = dao.get_keyed_results(key_def=key_def, query_defs=query_defs)
+    return keyed_results
 

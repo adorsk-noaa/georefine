@@ -53,59 +53,70 @@ class Services_Test(BaseTest):
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 
-        key_def = {
-                "KEY_ENTITY":"{{result.substrate.id}}",
-                "LABEL_ENTITY":"{{result.substrate.name}}"
-                }
+        import simplejson as json
+        json_params = '''
+        {
+   "KEY":{
+      "KEY_ENTITY":{
+         "ID":"substrate_id",
+         "EXPRESSION":"{{result.substrate.id}}"
+      },
+      "LABEL_ENTITY":{
+         "ID":"substrate_name",
+         "EXPRESSION":"{{result.substrate.name}}"
+      }
+   },
+   "QUERIES":[
+      {
+         "SELECT":[
+            {
+               "ID":"count_cell_id",
+               "EXPRESSION":"func.count({{inner.cell_id}})"
+            }
+         ],
+         "FROM":[
+            {
+               "ID": "inner",
+               "TABLE":{
+                  "SELECT":[
+                     {
+                        "ID":"cell_id",
+                        "EXPRESSION":"{{result.cell.id}}"
+                     }
+                  ],
+                  "FROM":[],
+                  "GROUP_BY":[
+                     {"ID":"cell_id"},
+                     {"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}" }, 
+                     {"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}
+                  ],
+                  "WHERE":[
+                    ["{{result.t}}", "==", "2009"]
+                  ],
+                  "ORDER_BY":[
 
-        query_defs = [{
-            "SELECT":[
-                {
-                    "ID":"count_cell_id",
-                    "EXPRESSION":"func.count({{inner.cell_id}})"
-                    }
-                ],
-            "FROM":[
-                {
-                    "ID": "inner",
-                    "TABLE":{
-                        "SELECT":[
-                            {
-                                "ID":"cell_id",
-                                "EXPRESSION":"{{result.cell.id}}"
-                                },
-                            ],
-                        "FROM":[
+                  ],
+                  "ID":"inner",
+                  "SELECT_GROUP_BY":true
+               }
+            }
+         ],
+         "GROUP_BY":[
+                     {"ID":"substrate_id","EXPRESSION":"{{inner.substrate_id}}" }, 
+                     {"ID":"substrate_name","EXPRESSION":"{{inner.substrate_name}}"}
+         ],
+         "WHERE":[],
+         "ORDER_BY":[],
+         "ID":"outer",
+         "SELECT_GROUP_BY":true
+      }
+   ]
+}
+        '''
 
-                            ],
-                        "GROUP_BY":[
-                            {
-                                "ID":"cell_id"
-                                }
-                            ],
-                        "WHERE":[
 
-                            ],
-                        "ORDER_BY":[
-
-                            ],
-                        "ID":"inner",
-                        "SELECT_GROUP_BY": True
-                        }
-                    }
-                ],
-            "GROUP_BY":[
-                ],
-            "WHERE":[
-
-                ],
-            "ORDER_BY":[
-
-                    ],
-            "ID":"outer" 
-            }]
-
-        results = services.get_keyed_results(project, key_def, query_defs)
+        params = json.loads(json_params)
+        results = services.get_keyed_results(project, params['KEY'], params['QUERIES'])
         print results
 
 

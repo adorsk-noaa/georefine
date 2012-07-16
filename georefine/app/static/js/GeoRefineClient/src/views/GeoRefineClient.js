@@ -107,10 +107,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 var val = $select.val();
                 var selected_field = quantity_fields.getByCid(val);
                 _.each(_this.facets.models, function(facet){
-                    facet.set('count_entity', selected_field.get('entity'));
+                    facet.set('quantity_field', selected_field);
                 }, _this);
 
-                _this.summary_bar.model.set('count_entity', selected_field.get('entity'));
+                //_this.summary_bar.model.set('selected_field', selected_field);
             });
         },
 
@@ -201,7 +201,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			var facets = {};
 			var lji = new Util.util.LumberjackInterpreter();
 
-			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+			var keyed_results_endpoint = _s.sprintf('%s/projects/get_keyed_results/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 			var query_endpoint = _s.sprintf('%s/projects/query_data/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
             var _app = this;
@@ -209,19 +209,90 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			// The 'getData' functions will be called with a facet model as 'this'.
 			var listFacetGetData = function(){
                 var _this = this;
-                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
-				var data = {
-					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
-					'data_entities': JSON.stringify([this.get('count_entity')]),
-					'grouping_entities': JSON.stringify([this.get('grouping_entity')]),
+                // This function assembles two sets of queries:
+                // The inner query selects a data set, and optionally groups it.
+                // That query uses the filters.
+                // In some cases we will make separate queries for base filters, and for primary filters.
+                // The outer query does a secondary grouping and aggregation.
+                // This allows us to do things like:
+                // 'select sum(dataset.xy) group by dataset.category from
+                // (select data.x * data.y where data.x > 7 group by data.category) as dataset
+
+                // Initialize the inner query.
+                // Note: 'ID' must be 'inner' to conform to conventions.
+                var inner_q = {
+                    'ID': 'inner',
+                    'SELECT_GROUP_BY': true,
+                    'SELECT': [],
+                    'FROM': [],
+                    'WHERE': [],
+                    'GROUP_BY': [],
+                    'ORDER_BY': []
+                };
+
+                // Shortcut to facet key def.
+                var key = _this.get('KEY');
+
+                // Get the quantity field's inner query parameters.
+                inner_q['SELECT'].push(_this.get('quantity_field').get('inner_query_entity'));
+                _.each(_this.get('quantity_field').get('inner_query_group_by'), function(gb){
+                    inner_q['GROUP_BY'].push(gb);
+                });
+                _.each(_this.get('quantity_field').get('inner_query_from'), function(frm){
+                    inner_q['FROM'].push(frm);
+                });
+
+                // Get the facet's inner query parameters.
+                var primary_filters = _app._filterObjectGroupsToArray(_this.get('primary_filters'));
+                var base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
+                var combined_filters = primary_filters.concat(base_filters);
+                _.each(combined_filters, function(f){
+                    inner_q['WHERE'].push(f);
+                });
+                inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
+                inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
+
+                // Initialize the outer query.
+                var outer_q = {
+                    'ID': 'outer',
+                    'SELECT_GROUP_BY': true,
+                    'SELECT': [],
+                    'FROM': [{'ID': 'inner', 'TABLE': inner_q}],
+                    'WHERE': [],
+                    'GROUP_BY': [],
+                    'ORDER_BY': []
+                };
+
+                // Add the quantity field's outer query parameters.
+                outer_q['SELECT'].push(_this.get('quantity_field').get('outer_query_entity'));
+                _.each(['KEY_ENTITY', 'LABEL_ENTITY'], function(attr){
+                    outer_q['GROUP_BY'].push({
+                        'ID': key[attr]['ID'],
+                        'EXPRESSION': _s.sprintf("{{inner.%s}}", key[attr]['ID'])
+                    });
+                });
+
+                // Assemble the keyed result parameters.
+				var keyed_results_parameters = {
+                    "KEY": key,
+                    "QUERIES": [outer_q]
 				};
+
+                console.log("krp",  JSON.stringify(keyed_results_parameters));
+
+                _.each(keyed_results_parameters, function(v, k){
+                    keyed_results_parameters[k] = JSON.stringify(v);
+                });
+
+                // Execute the request.
 				$.ajax({
-					url: aggregates_endpoint,
+					url: keyed_results_endpoint,
 					type: 'GET',
-					data: data,
+					data: keyed_results_parameters,
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
+                        console.log("d: ", data);
+                        /*
 						// Set total.
 						var total = data.data[0].value;
 						_this.set('total', total, {silent:true});
@@ -237,6 +308,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 							});
 						});
 						_this.set('choices', choices);
+                        */
 					}
 				});
 			};
@@ -425,18 +497,18 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 }
                 
                 // Setup the facet's primary filter group config.
-                _.each(facet.filter_groups, function(filter_group_id, key){
+                _.each(facet.primary_filter_groups, function(filter_group_id, key){
                     var filter_group = this.filter_groups[filter_group_id];
                     filter_group.add(model);
 
-                    // When the filter group changes, change the facet's query filters.
+                    // When the filter group changes, change the facet's primary filters.
                     filter_group.on('change:filters', function(){
-                        var query_filters = _.clone(model.get('query_filters')) || {} ;
+                        var primary_filters = _.clone(model.get('primary_filters')) || {} ;
                         // A facet should not use its own selection in the filters.
                         query_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
                             return (filterObj.source.cid != model.cid);
                         });
-                        model.set('query_filters', query_filters);
+                        model.set('primary_filters', query_filters);
                     });
                 }, this);
 
@@ -452,7 +524,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                 // Have the facet update when its query or base filters or count entities change.
                 if (model.getData){
-                    model.on('change:query_filters change:base_filters change:count_entity', function(){
+                    model.on('change:primary_filters change:base_filters change:quantity_field', function(){
                         model.getData();
                     });
                 }
@@ -479,11 +551,13 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			});
 
             // Initialize the facets.
+            /*
 			_.each(facet_collection_model.models, function(model){
                 if (model.getData){
                     model.getData();
                 }
             });
+            */
 
             this.facets = facet_collection_model;
 

@@ -122,13 +122,13 @@ def get_keyed_results(project_id):
     key_def = json.loads(request.args.get('KEY', '{}'))
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    result = projects_services.get_keyed_results(
+    results = projects_services.get_keyed_results(
             project = project,
             key_def=key_def,
             query_defs = query_defs
             )
 
-    return jsonify(result)
+    return jsonify(results=results)
 
 @bp.route('/get_aggregates/<int:project_id>/', methods=['GET', 'POST'])
 def get_aggregates(project_id):
