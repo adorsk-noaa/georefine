@@ -150,7 +150,8 @@ class SA_DAO(object):
                 from_obj=from_obj,
                 whereclause=whereclause,
                 group_by=group_by,
-                order_by=order_by
+                order_by=order_by,
+                use_labels=True
                 )
         return q
 
@@ -301,13 +302,14 @@ class SA_DAO(object):
                 
                 # Select keys and labels.
                 # We merge the key query attributes with our overrides.
-                keys_labels = self.execute_queries([
-                    dict(key_def.items() + {
-                        'ID': 'keylabel_q', 
-                        'AS_DICTS': True, 
-                        'SELECT': [key_entity, label_entity],
-                        }.items() )
-                    ]).values()[0]
+                keys_labels = self.execute_queries(
+                    query_defs = [
+                        dict(key_def.items() + {
+                            'ID': 'keylabel_q', 
+                            'AS_DICTS': True, 
+                            'SELECT': [key_entity, label_entity],
+                            }.items() )
+                        ]).values()[0]
 
             # Pre-seed keyed results with keys and labels.
             for key_label in keys_labels:
@@ -397,7 +399,7 @@ class SA_DAO(object):
                 SELECT.append(minmax_entity_def)
 
             # We merge the context query attributes with our overrides.
-            minmax = self.execute_queries([
+            minmax = self.execute_queries(query_defs=[
                 dict(entity_def.get('CONTEXT', {}).items() + {
                     'ID': 'stats_q', 
                     'AS_DICTS': True, 
@@ -422,13 +424,18 @@ class SA_DAO(object):
 
         entity_min, entity_max, num_buckets, bucket_width = self.get_bucket_parameters(entity_def)
 
-        # Generate bucket values.
+        bucket_id_label = self.get_bucket_id_label(entity_def)
+
+        # Return dummy buckets if entity_min = entity_max
+        if entity_min == entity_max:
+            num_buckets = 1
+
         buckets = []
 
         # Add first bucket.
         buckets.append({
             entity_def['ID']: "[..., %s)" % entity_min,
-            self.get_bucket_id_label(entity_def): 0
+            bucket_id_label: 0
             })
 
         for b in range(1, num_buckets + 1):
@@ -437,13 +444,13 @@ class SA_DAO(object):
             bucket_name = "[%s, %s)" % (bucket_min, bucket_max)
             buckets.append({
                 entity_def['ID']: bucket_name,
-                self.get_bucket_id_label(entity_def): b
+                bucket_id_label: b
                 })
 
         # Add last bucket.
         buckets.append({
             entity_def['ID']: "[%s, ...)" % entity_max,
-            self.get_bucket_id_label(entity_def): num_buckets + 1
+            bucket_id_label: num_buckets + 1
             })
 
         return buckets
@@ -458,10 +465,16 @@ class SA_DAO(object):
         # Get or register entity.
         entity = self.get_registered_entity(table_registry, entity_registry, entity_def)
 
-        # Get bucket field entities.
-        # Can use the line below in case db doesn't have width_bucket function.
-        #bucket_id_entity = func.greatest(func.round( (((mapped_entity - entity_min)/entity_range) * num_buckets ) - .5) + 1, num_buckets).label(self.get_bucket_id_label(entity))
-        bucket_id_entity = func.width_bucket(entity, entity_min, entity_max, num_buckets).label(self.get_bucket_id_label(entity_def))
+        # Use dummy entity if entity_min == entity_max.
+        if entity_min == entity_max:
+            bucket_id_entity = case([(entity==entity, 0)]).label(self.get_bucket_id_label(entity_def))
+        # Otherwise get width_bucket entity.
+        else:
+            # Can use the line below in case db doesn't have width_bucket function.
+            #bucket_id_entity = func.greatest(func.round( (((mapped_entity - entity_min)/entity_range) * num_buckets ) - .5) + 1, num_buckets).label(self.get_bucket_id_label(entity))
+            bucket_id_entity = func.width_bucket(entity, entity_min, entity_max, num_buckets).label(self.get_bucket_id_label(entity_def))
+
+        # Get label entity.
         bucket_label_entity = case(
                 [
                     (
