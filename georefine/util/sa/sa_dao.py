@@ -40,7 +40,7 @@ class SA_DAO(object):
     def get_query(self, query_def, **kwargs):
 
         # Initialize registries.
-        table_registry = {}
+        table_registry = {'join_tree': {'children': {}}, 'nodes': {}}
         entity_registry = {}
 
         # Process 'from'.
@@ -126,6 +126,17 @@ class SA_DAO(object):
             columns.extend(group_by)
 
 
+        # Process joins and add them to the from obj.
+        for node_id, node in table_registry['join_tree']['children'].items():
+            joins = self.process_join_tree(table_registry['join_tree'])
+            if joins:
+                # Go from top to bottom.
+                joins.reverse()
+                table = joins[0]
+                for t in joins[1:]:
+                    table = table.join(t)
+                from_obj.append(table)
+
         # Return the query object.
         q = select(
                 columns=columns, 
@@ -134,7 +145,15 @@ class SA_DAO(object):
                 group_by=group_by,
                 order_by=order_by
                 )
+        print "q is: ", self.query_to_raw_sql(q)
         return q
+
+    def process_join_tree(self, join_tree):
+        joins = []
+        for node_id, node in join_tree['children'].items():
+            joins.extend(self.process_join_tree(node))
+            joins.append(node['table'])
+        return joins
 
     # Prepare a table definition for use.
     def prepare_table_def(self, table_def):
@@ -152,20 +171,34 @@ class SA_DAO(object):
         table_def = self.prepare_table_def(table_def)
         
         # Process table if it's not in the registry.
-        if not table_registry.has_key(table_def['ID']):
+        if not table_registry['nodes'].has_key(table_def['ID']):
 
             # If 'table' is a dict , we assume it's a query object and process it.
             if isinstance(table_def['TABLE'], dict):
                 table = self.get_query(table_def['TABLE']).alias(table_def['ID'])
-
-            # Otherwise we lookup the table in the given schema.
+            # Otherwise we process the table path...
             else:
-                table = self.schema['tables'][table_def['TABLE']]
+                parts = table_def['TABLE'].split('.')
+
+                # The table is the last part of the path.
+                table = self.schema['tables'][parts[-1]]
+
+                # Save the path to the join tree.
+                parent = table_registry['join_tree']
+                for part in parts:
+                    if not parent['children'].has_key(part):
+                        parent['children'][part] = {
+                                'table': self.schema['tables'][part],
+                                'children': {}
+                                }
+                    parent = parent['children'][part]
 
             # Save the aliased table to the registry.
-            table_registry[table_def['ID']] = table.alias(table_def['ID'])
+            table_registry['nodes'][table_def['ID']] = table
 
-        return table_registry[table_def['ID']]
+        return table_registry['nodes'][table_def['ID']]
+
+
 
     # Add joins to table.
     def add_joins(self, table_registry, table_def):
@@ -213,10 +246,13 @@ class SA_DAO(object):
             # This will be called for each token match.
             def replace_token_with_mapped_entity(m):
                 token = m.group(1)
-                (table_id, column_id) = token.split('.')
-                table = self.get_registered_table(table_registry, table_id)
-                mapped_entities[token] = table.c[column_id]
-                return "mapped_entities['%s']" % token
+                m = re.match('(.*)\.(.*)', token)
+                if m:
+                    table_def = m.group(1)
+                    column_id = m.group(2)
+                    table = self.get_registered_table(table_registry, table_def)
+                    mapped_entities[token] = table.c[column_id]
+                    return "mapped_entities['%s']" % token
 
             entity_code = re.sub('{{(.*?)}}', replace_token_with_mapped_entity, entity_def['EXPRESSION'])
 
@@ -230,8 +266,8 @@ class SA_DAO(object):
         return entity_registry[entity_def['ID']]
 
     
-    def get_keyed_results(self, key_def, query_defs):
-        
+    def get_keyed_results(self, key_def=None, query_defs=None):
+
         # Initialize keyed results.
         keyed_results = {}
 
