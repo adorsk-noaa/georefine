@@ -145,7 +145,6 @@ class SA_DAO(object):
                 group_by=group_by,
                 order_by=order_by
                 )
-        print "q is: ", self.query_to_raw_sql(q)
         return q
 
     def process_join_tree(self, join_tree):
