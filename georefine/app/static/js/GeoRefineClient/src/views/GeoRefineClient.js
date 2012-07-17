@@ -401,6 +401,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                 // Shortcuts.
                 var qfield  = facet_model.get('quantity_field');
+                if (! qfield){
+                    return;
+                }
 
                 // Set base filters on key entity context.
                 if (! key['KEY_ENTITY']['CONTEXT']){
@@ -444,6 +447,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
+
+                        console.log("d is: ", data);
 
                         var results = data.results;
                         var count_entity = qfield.get('outer_query')['SELECT'][0];
@@ -675,9 +680,27 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                 // Have the facet update when its query or base filters or count entities change.
                 if (model.getData){
+
+                    // helper function to get a timeout getData function.
+                    var _timeoutGetData = function(){
+                        var delay = 500;
+                        return setTimeout(function(){
+                            console.log("getData", model.id, arguments);
+                            model.getData();
+                            model.set('_fetch_timeout', null);
+                        }, delay);
+                    };
+
                     model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-                        console.log("getData", model.id, arguments);
-                        model.getData();
+                        // We delay the get data call a little, in case multiple things are changing.
+                        // The last change will get executed.
+                        var fetch_timeout = model.get('_fetch_timeout');
+                        // If we're fetching, clear the previous fetch.
+                        if (fetch_timeout){
+                            clearTimeout(fetch_timeout);
+                        }
+                        // Start a new fetch.
+                        model.set('_fetch_timeout', _timeoutGetData(arguments));
                     });
                 }
 
