@@ -95,7 +95,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
         setUpFiltersEditor: function(){
             // Generate quantity field collection from config.
             this.facet_quantity_fields = new Backbone.Collection();
-            _.each(GeoRefine.config.facet_quantity_fields, function(field){
+            _.each(GeoRefine.config.facets.quantity_fields, function(field){
                 var model = new Backbone.Model(_.extend({}, field));
                 this.facet_quantity_fields.add(model);
             }, this);
@@ -585,7 +585,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             };
 
 			// For each facet definition...
-			_.each(GeoRefine.config.facets, function(facet){
+			_.each(GeoRefine.config.facets.facets, function(facet){
 
 				var model, view;
 

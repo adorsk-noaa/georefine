@@ -25,7 +25,6 @@ def georefine_client(project_id):
         "project_id": project_id,
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
-        "facet_quantity_fields": project.app_config.get('facet_quantity_fields', {}),
         "charts": project.app_config.get('charts', {}),
         "map": project.app_config.get('map', {}),
         "summary_bar": project.app_config.get('summary_bar', {}),
