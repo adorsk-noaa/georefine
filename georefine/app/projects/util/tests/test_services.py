@@ -127,7 +127,7 @@ class Services_Test(BaseTest):
         project.schema = manage_projects.getProjectSchema(project)
 
         requests_json = '''
-        [{"ID":"totals","REQUEST":"execute_queries","PARAMETERS":{"QUERIES":[{"ID":"total","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}]}]}}]
+        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},"LABEL_ENTITY":{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}},"QUERIES":[{"ID":"outer","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"GROUP_BY":[{"ID":"cell_id"},{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}],"WHERE":[]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"substrate_id","EXPRESSION":"{{inner.substrate_id}}"},{"ID":"substrate_name","EXPRESSION":"{{inner.substrate_name}}"}],"SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}]}]}}]
         '''
         import simplejson as json
         request_defs = json.loads(requests_json)

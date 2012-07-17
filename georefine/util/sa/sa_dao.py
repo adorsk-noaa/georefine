@@ -304,7 +304,8 @@ class SA_DAO(object):
                         dict(key_def.items() + {
                             'ID': 'keylabel_q', 
                             'AS_DICTS': True, 
-                            'SELECT': [key_entity, label_entity],
+                            'GROUP_BY': [key_entity, label_entity],
+                            'SELECT_GROUP_BY': True
                             }.items() )
                         ]).values()[0]
 
