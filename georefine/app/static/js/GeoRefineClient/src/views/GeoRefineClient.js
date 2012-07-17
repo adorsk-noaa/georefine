@@ -946,7 +946,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				"primary_filters": {},
 				"base_filters": {},
 				"quantity_field": null,
-				"data": {}
+                "data": {}
 			});
 
 			// Listen for primary filter changes.
@@ -1030,12 +1030,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                         var selected = results['totals']['selected'][0][count_entity['ID']];
                         var total = results['totals']['total'][0][count_entity['ID']];
-						_this.set({
-							"data": {
-								"selected": selected,
-								"total": total
-							}
-						});
+                        model.set('data', {
+                            "selected": selected,
+                            "total": total
+                        });
 					}
 				});
 			};
@@ -1052,8 +1050,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     }
 				},
 				onDataChange: function(){
-					var format = this.model.get('quantity_field').format || "%s";
+					var format = this.model.get('quantity_field').get('format') || "%s";
 					var data = this.model.get('data');
+
+                    // Do nothing if data is incomplete.
+                    if (data.selected == null || data.total == null){
+                        return;
+                    }
+
 					var formatted_selected = _s.sprintf(format, data.selected);
 					var formatted_total = _s.sprintf(format, data.total);
 					var percentage = 100.0 * data.selected/data.total;
