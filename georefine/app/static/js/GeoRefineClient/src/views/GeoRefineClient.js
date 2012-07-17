@@ -647,6 +647,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         });
                         model.set('primary_filters', primary_filters);
                     });
+
+                    // Initialize primary filters.
+                    var primary_filters = _.clone(model.get('primary_filters')) || {} ;
+                    primary_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
+                        return (filterObj.source.cid != model.cid);
+                    });
+                    model.set('primary_filters', primary_filters);
+
                 }, this);
 
                 // Setup the facet's base filter group config.
@@ -657,6 +665,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         base_filters[filter_group_id] = filter_group.getFilters();
                         model.set('base_filters', base_filters);
                     });
+
+                    // Initialize base filters.
+                    var base_filters = _.clone(model.get('base_filters')) || {};
+                    base_filters[filter_group_id] = filter_group.getFilters();
+                    model.set('base_filters', base_filters);
+
                 }, this);
 
                 // Have the facet update when its query or base filters or count entities change.
@@ -962,6 +976,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var summary_bar_config = GeoRefine.config.summary_bar;
 
 			var model = new Backbone.Model({
+                "id": "summary_bar",
 				"primary_filters": {},
 				"base_filters": {},
 				"quantity_field": null,
@@ -1065,7 +1080,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                     // Get data when parameters change.
                     if (this.model.getData){
-                        this.model.on('change:primary_filters change:base_filters change:quantity_field', this.model.getData, this.model);
+                        this.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+                            console.log("getData", model.id, arguments);
+                            this.model.getData();
+                        }, this);
                     }
 				},
 				onDataChange: function(){
