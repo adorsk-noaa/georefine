@@ -94,15 +94,15 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
         setUpFiltersEditor: function(){
             // Generate quantity field collection from config.
-            var quantity_fields = new Backbone.Collection();
+            this.facet_quantity_fields = new Backbone.Collection();
             _.each(GeoRefine.config.facet_quantity_fields, function(field){
                 var model = new Backbone.Model(_.extend({}, field));
-                quantity_fields.add(model);
+                this.facet_quantity_fields.add(model);
             }, this);
 
             // Setup quantity field selector.
             var $select = $('<select></select>');
-            _.each(quantity_fields.models, function(model){
+            _.each(this.facet_quantity_fields.models, function(model){
                 var $option = $(_s.sprintf('<option value="%s">%s</option>', model.cid, model.get('label')));
                 $option.appendTo($select);
             }, this);
@@ -112,7 +112,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var _this = this;
             $select.on('change', function(){
                 var val = $select.val();
-                var selected_field = quantity_fields.getByCid(val);
+                var selected_field = _this.facet_quantity_fields.getByCid(val);
                 _.each(_this.facets.models, function(facet){
                     facet.set('quantity_field', selected_field);
                 }, _this);
@@ -1098,6 +1098,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 		setUpInitialState: function(){
 			var initial_state = GeoRefine.config.initial_state;
+
+            // Initialize facets.
+            if (initial_state.facets){
+                var initial_qfield_id = initial_state.facets.initial_quantity_field_id;
+                if (initial_qfield_id){
+                    var $qfield_select = $('.filters-editor .quantity-field select', this.el);
+                    var qfield = this.facet_quantity_fields.get(initial_qfield_id);
+                    $qfield_select.val(qfield.cid).change();
+                }
+            }
 
 			// Initialize Data Views.
 			_.each(initial_state.data_views, function(data_view, i){
