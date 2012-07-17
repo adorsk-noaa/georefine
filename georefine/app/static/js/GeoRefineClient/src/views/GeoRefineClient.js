@@ -358,24 +358,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                 var outer_q = keyed_query_req['PARAMETERS']['QUERIES'][0];
 
-                // Assemble totals query.
-                var totals_q = _.extend({}, outer_q, {
-                    'ID': 'totals',
-                    'SELECT_GROUP_BY': false,
-                    'GROUP_BY': []
-                });
-            
-                // Assemble totals request.
-                var totals_request = {
-                    'ID': 'totals',
-                    'REQUEST': 'execute_queries',
-                    'PARAMETERS': {'QUERIES': [totals_q]}
-                };
-
                 // Assemble request.
                 var requests = [];
                 requests.push(keyed_query_req);
-                requests.push(totals_request);
 
                 // Execute the requests.
 				$.ajax({
@@ -386,10 +371,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					success: function(data, status, xhr){
                         var results = data.results;
                         var count_entity = qfield.get('outer_query')['SELECT'][0];
-
-						// Set total.
-						var total = results['totals']['totals'][0][count_entity['ID']];
-						_this.set('total', total, {silent:true});
 
 						// Generate choices from data.
 						var choices = [];
@@ -1077,6 +1058,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					var formatted_total = _s.sprintf(format, data.total);
 					var percentage = 100.0 * data.selected/data.total;
 					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_total));
+
+                    // Set totals on facets.
+                    _.each(_app.facets.models, function(facet_model){
+                        facet_model.set('total', data.total);
+                    });
+
 				}
 			});
 
