@@ -251,12 +251,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             }, this)
         },
 
-        makeFacetInnerQuery: function(facet_model, key, filter_attrs){
+        makeKeyedInnerQuery: function(model, key, filter_attrs){
             // Set include filters to primary and base by default.
             filter_attrs = filter_attrs || ['primary_filters', 'base_filters'];
 
             // Shortcuts.
-            var qfield  = facet_model.get('quantity_field');
+            var qfield  = model.get('quantity_field');
 
             // Initialize query definition.
             // Note: 'ID' must be 'inner' to conform to conventions.
@@ -269,7 +269,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             this.extendQuery(inner_q, qfield.get('inner_query'));
 
             // Add the facet's filters.
-            this.addFiltersToQuery(facet_model, filter_attrs, inner_q);
+            this.addFiltersToQuery(model, filter_attrs, inner_q);
 
             // Add the facet's key entities as group_by paramters.
             inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
@@ -280,10 +280,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             return inner_q;
         },
 
-        makeFacetOuterQuery: function(facet_model, key, inner_query, query_id){
+        makeKeyedOuterQuery: function(model, key, inner_query, query_id){
 
             // Shortcuts.
-            var qfield  = facet_model.get('quantity_field');
+            var qfield  = model.get('quantity_field');
 
             // Initialize the outer query.
             var outer_q = {
@@ -296,7 +296,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // Add the quantity field's outer query parameters.
             this.extendQuery(outer_q, qfield.get('outer_query'));
 
-            // Add the facet's key entities as group_by paramters.
+            // Add key entities as group_by paramters.
             var gb_attrs = ['KEY_ENTITY'];
             if (key['LABEL_ENTITY']){
                 gb_attrs.push('LABEL_ENTITY');
@@ -311,7 +311,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             return outer_q;
         },
 
-        makeFacetKeyedQueryRequest: function(facet_model, filter_attrs){
+        makeKeyedQueryRequest: function(model, key, filter_attrs){
             // This function assembles two sets of queries:
             // The inner query selects a data set, and optionally groups it.
             // That query uses the filters.
@@ -322,16 +322,13 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // (select data.x * data.y where data.x > 7 group by data.category) as dataset
 
             // Shortcuts.
-            var qfield  = facet_model.get('quantity_field');
-
-            // Copy the key entity.
-            var key = JSON.parse(JSON.stringify(facet_model.get('KEY')));
+            var qfield  = model.get('quantity_field');
 
             // Get the inner query.
-            var inner_q = this.makeFacetInnerQuery(facet_model, key, filter_attrs);
+            var inner_q = this.makeKeyedInnerQuery(model, key, filter_attrs);
 
             // Get the outer query.
-            var outer_q = this.makeFacetOuterQuery(facet_model, key, inner_q, 'outer');
+            var outer_q = this.makeKeyedOuterQuery(model, key, inner_q, 'outer');
 
             // Assemble the keyed result parameters.
             var keyed_results_parameters = {
@@ -359,11 +356,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			var listFacetGetData = function(){
                 var _this = this;
                 var qfield = this.get('quantity_field');
-                var keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
 
-                var outer_q = keyed_query_req['PARAMETERS']['QUERIES'][0];
+                // Copy the key entity.
+                var key = JSON.parse(JSON.stringify(_this.get('KEY')));
 
                 // Assemble request.
+                var keyed_query_req = _app.makeKeyedQueryRequest(_this, key);
                 var requests = [];
                 requests.push(keyed_query_req);
 
@@ -414,12 +412,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 _app.addFiltersToQuery(facet_model, ['base_filters'], key_context);
 
                 // Get the base query.
-                var base_inner_q = _app.makeFacetInnerQuery(facet_model, key, ['base_filters']);
-                var base_outer_q = _app.makeFacetOuterQuery(facet_model, key, base_inner_q, 'base');
+                var base_inner_q = _app.makeKeyedInnerQuery(facet_model, key, ['base_filters']);
+                var base_outer_q = _app.makeKeyedOuterQuery(facet_model, key, base_inner_q, 'base');
 
                 // Get the primary query.
-                var primary_inner_q = _app.makeFacetInnerQuery(facet_model, key, ['base_filters', 'primary_filters']);
-                var primary_outer_q = _app.makeFacetOuterQuery(facet_model, key, primary_inner_q, 'primary');
+                var primary_inner_q = _app.makeKeyedInnerQuery(facet_model, key, ['base_filters', 'primary_filters']);
+                var primary_outer_q = _app.makeKeyedOuterQuery(facet_model, key, primary_inner_q, 'primary');
 
                 // Assemble the keyed result parameters.
                 var keyed_results_parameters = {
@@ -447,8 +445,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
-
-                        console.log("d is: ", data);
 
                         var results = data.results;
                         var count_entity = qfield.get('outer_query')['SELECT'][0];
@@ -521,9 +517,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				var _this = this;
 
                 var qfield = this.get('quantity_field');
-                var keyed_query_req = _app.makeFacetKeyedQueryRequest(_this);
+
+                // Copy the key entity.
+                var key = JSON.parse(JSON.stringify(_this.get('KEY')));
 
                 // Assemble request.
+                var keyed_query_req = _app.makeKeyedQueryRequest(_this, key);
                 var requests = [];
                 requests.push(keyed_query_req);
 
@@ -685,7 +684,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     var _timeoutGetData = function(){
                         var delay = 500;
                         return setTimeout(function(){
-                            console.log("getData", model.id, arguments);
+                            //console.log("getData", model.id, arguments);
                             model.getData();
                             model.set('_fetch_timeout', null);
                         }, delay);
@@ -725,17 +724,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				facet_collection_view.addFacetView(facet['view']);
 			});
 
-            // Initialize the facets.
-            /*
-			_.each(facet_collection_model.models, function(model){
-                if (model.getData){
-                    model.getData();
-                }
-            });
-            */
-
             this.facets = facet_collection_model;
-
 		},
 
 		createMapEditor: function(){
@@ -900,8 +889,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 
 		createChartEditor: function(){
-			var lji = new Util.util.LumberjackInterpreter();
-			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 			var charts_config = GeoRefine.config.charts;
 
 			// Generate models from fields.
@@ -910,10 +897,17 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				var fields = charts_config[_s.sprintf('%s_fields', field_type)] || [];
 				var field_models = [];
 				_.each(fields, function(field){
-					entity_model = new Backbone.Model(field['entity']);
+                    var entity_model = null;
+                    if (field_type == 'category'){
+					    entity_model = new Backbone.Model(field['KEY']['KEY_ENTITY']);
+                    }
+                    else if (field_type =='quantity'){
+                        var quantity_entity = field['outer_query']['SELECT'][0];
+					    entity_model = new Backbone.Model(quantity_entity);
+                    }
 					field_model = new Backbone.Model(_.extend({}, field, {
 						'field_type': field_type,
-								'entity': entity_model
+                        'entity': entity_model
 					}));
 
 					field_models.push(field_model);
@@ -936,18 +930,39 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
             var _app = this;
 			datasource.getData = function() {
-                var combined_query_filters = _app._filterObjectGroupsToArray(q.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(q.get('base_filters'));
-				var data = {
-					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
-					'base_filters': JSON.stringify(combined_base_filters),
-					'data_entities': JSON.stringify(q.get('data_entities')),
-					'grouping_entities': JSON.stringify(q.get('grouping_entities')),
-					'with_unfiltered': true
-				};
-				var _this = this;
+                console.log("datasource getData", arguments);
+
+                var cfield = q.get('category_field');
+                var qfield = q.get('quantity_field');
+
+                if (! cfield || ! qfield){
+                    return;
+                }
+
+                // Copy the key entity.
+                var key = JSON.parse(JSON.stringify(cfield.get('KEY')));
+
+                // Assemble request.
+                var keyed_query_req = _app.makeKeyedQueryRequest(q, key);
+                var requests = [];
+                requests.push(keyed_query_req);
+
 				$.ajax({
-					url: aggregates_endpoint,
+					url: requests_endpoint,
+					type: 'POST',
+					data: {'requests': JSON.stringify(requests)},
+					error: Backbone.wrapError(function(){
+                        console.log("error", arguments);
+                    }, q, {}),
+					success: function(data, status, xhr){
+                        var results = data.results;
+                        var count_entity = qfield.get('outer_query')['SELECT'][0];
+                        console.log("data is: ", data);
+					}
+				});
+                /*
+				$.ajax({
+					url: requests_endpoint,
 					type: 'GET',
 					data: data,
 					complete: function(xhr, status){
@@ -955,18 +970,19 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
-						datasource.set('data', lji.parse(data));
+						//datasource.set('data', lji.parse(data));
 					}
 				});
+                */
 			};
 
 			// Listen for primary filter changes.
-            _.each(charts_config.filter_groups, function(filter_group_id){
+            _.each(charts_config.primary_filter_groups, function(filter_group_id){
                 var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
-                    var filters = _.clone(q.get('query_filters')) || {};
+                    var filters = _.clone(q.get('primary_filters')) || {};
                     filters[filter_group_id] = filter_group.getFilters();
-                    q.set('query_filters', filters);
+                    q.set('primary_filters', filters);
                 });
             }, this);
 
@@ -1108,7 +1124,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         var _timeoutGetData = function(){
                             var delay = 500;
                             return setTimeout(function(){
-                                console.log("getData", model.id, arguments);
+                                //console.log("getData", model.id, arguments);
                                 model.getData();
                                 model.set('_fetch_timeout', null);
                             }, delay);
@@ -1174,7 +1190,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != -1){
+                if (i != 1){
                     return;
                 }
 
@@ -1201,16 +1217,20 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				// Handle chart data views.
 				else if (data_view.type == 'chart'){
 					var chart_editor = this.createChartEditor();
+
 					_.each(["category", "quantity"], function(field_type){
+
 						var field_attr = _s.sprintf("initial_%s_field", field_type);
+
 						if (data_view.hasOwnProperty(field_attr)){
 							var fields = chart_editor.model.get('datasource').get('schema').get(field_type + "_fields");
 							var field = fields.get(data_view[field_attr].id);
-							field.set(data_view[field_attr].attributes);
-							field.get('entity').set(data_view[field_attr].entity);
+
 							chart_editor[_s.sprintf("%s_field_selector", field_type)].model.set(_s.sprintf("selected_field", field_type), field);
+
 						}
 					}, this);
+
 					this.createDataViewWindow(chart_editor, {
 						"title": "Chart"
 					});
