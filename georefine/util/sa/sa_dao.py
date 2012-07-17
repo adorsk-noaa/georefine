@@ -406,6 +406,8 @@ class SA_DAO(object):
 
             # set MIN and MAX only if not provided.
             for m in ['MIN', 'MAX']:
+                # Set to 0 if None.
+                minmax.setdefault(m, 0)
                 entity_def.setdefault(m, minmax[m])
 
         entity_min = entity_def['MIN']
