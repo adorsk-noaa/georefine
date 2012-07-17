@@ -127,22 +127,33 @@ class Services_Test(BaseTest):
         project.schema = manage_projects.getProjectSchema(project)
 
         requests_json = '''
-        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008],["{{result.t}}","==",2008],["{{result.t}}","==",2009]]}}},"QUERIES":[{"ID":"base","SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}],"FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"FROM":[],"WHERE":[["{{result.t}}","==",2009]],"GROUP_BY":[{"ID":"cell_id"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008],["{{result.t}}","==",2008],["{{result.t}}","==",2009]]}}],"ORDER_BY":[]}}],"WHERE":[],"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"ORDER_BY":[],"SELECT_GROUP_BY":true},{"ID":"primary","SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}],"FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"FROM":[],"WHERE":[["{{result.t}}","==",2009],{}],"GROUP_BY":[{"ID":"cell_id"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008],["{{result.t}}","==",2008],["{{result.t}}","==",2009]]}}],"ORDER_BY":[]}}],"WHERE":[],"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"ORDER_BY":[],"SELECT_GROUP_BY":true}]}}]
+        [{"ID":"totals","REQUEST":"execute_queries","PARAMETERS":{"QUERIES":[{"ID":"total","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}]}]}}]
         '''
         import simplejson as json
         request_defs = json.loads(requests_json)
 
         results = {}
         for request_def in request_defs:
+
+            formatted_parms = {}
+            for k, v in request_def['PARAMETERS'].items():
+                formatted_parms[str(k)] = v
+
             if request_def['REQUEST'] == 'execute_keyed_queries':
-                formatted_parms = {}
-                for k, v in request_def['PARAMETERS'].items():
-                    formatted_parms[str(k)] = v
                     
-                results[request_def['ID']] = services.execute_keyed_queries(
+                r = services.execute_keyed_queries(
                         project = project,
                         **formatted_parms
                         )
+
+            elif request_def['REQUEST'] == 'execute_queries':
+                r = services.execute_queries(
+                    project = project,
+                    **formatted_parms
+                    )
+
+            results[request_def['ID']] = r
+
         print "r is: ", json.dumps(results, indent=2)
 
 

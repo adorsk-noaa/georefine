@@ -112,7 +112,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     facet.set('quantity_field', selected_field);
                 }, _this);
 
-                //_this.summary_bar.model.set('selected_field', selected_field);
+                _this.summary_bar.model.set('quantity_field', selected_field);
             });
         },
 
@@ -990,7 +990,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 
             var _app = this;
-            var _this = model;
 			model.getData = function(){
 				var _this = this;
 
@@ -1007,30 +1006,25 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     'ID': 'inner',
                     'SELECT_GROUP_BY': true,
                 };
-
-                // Get the quantity field's inner query parameters.
-                this.extendQuery(selected_inner_q, qfield.get('inner_query'));
-
-                // Add the filters.
+                _app.extendQuery(selected_inner_q, qfield.get('inner_query'));
                 _app.addFiltersToQuery(model, ['primary_filters', 'base_filters'], selected_inner_q);
-
                 var selected_q = {
                     'ID': 'selected',
-                    'FROM': [{'ID': 'inner', 'TABLE': selected_inner_query}],
+                    'FROM': [{'ID': 'inner', 'TABLE': selected_inner_q}],
                     'SELECT_GROUP_BY': true,
                 };
                 _app.extendQuery(selected_q, qfield.get('outer_query'));
 
                 // Get the 'total' query.
                 var total_inner_q = {
-                    'ID': 'total',
+                    'ID': 'inner',
                     'SELECT_GROUP_BY': true,
                 };
-                this.extendQuery(selected_inner_q, qfield.get('inner_query'));
+                _app.extendQuery(total_inner_q, qfield.get('inner_query'));
                 _app.addFiltersToQuery(model, ['base_filters'], total_inner_q);
                 var total_q = {
                     'ID': 'total',
-                    'FROM': [{'ID': 'inner', 'TABLE': total_inner_query}],
+                    'FROM': [{'ID': 'inner', 'TABLE': total_inner_q}],
                     'SELECT_GROUP_BY': true,
                 };
                 _app.extendQuery(total_q, qfield.get('outer_query'));
@@ -1050,15 +1044,17 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
-                        console.log("data is: ", data);
-                        /*
+                        var results = data.results;
+                        var count_entity = qfield.get('outer_query')['SELECT'][0];
+
+                        var selected = results['totals']['selected'][0][count_entity['ID']];
+                        var total = results['totals']['total'][0][count_entity['ID']];
 						_this.set({
 							"data": {
-								"filtered": parsed_data[0].data[0].value,
-								"unfiltered": parsed_data[0].data[1].value
+								"selected": selected,
+								"total": total
 							}
 						});
-                        */
 					}
 				});
 			};
@@ -1088,9 +1084,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				model: model,
 				el: $(".filters-editor .summary-bar", this.el)
 			});
-		},
-
-		onFiltersChange: function(){
 		},
 
 		setUpInitialState: function(){
