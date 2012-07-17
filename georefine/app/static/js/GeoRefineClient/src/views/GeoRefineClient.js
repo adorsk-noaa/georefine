@@ -13,6 +13,8 @@ define([
 		],
 function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
 
+    var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
@@ -197,45 +199,74 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			});
 		},
 
-        makeFacetInnerQuery: function(facet_model, key, include_filter_attrs){
+        // Extend a query by merging in other queries.
+        // Note: this modifies the target query in-place.
+        extendQuery: function(target_q){
+            var array_params = ['SELECT','FROM', 'WHERE', 'GROUP_BY', 'ORDER_BY'];
+            var boolean_params =['SELECT_GROUP_BY'];
+
+            _.each(Array.prototype.slice.call(arguments, 1), function(source_q) {
+                _.each(array_params, function(param){
+                    if (target_q.hasOwnProperty(param)){
+                        _.each(source_q[param], function(source_q_value){
+                            if (target_q[param].indexOf(source_q_value) != -1){
+                                target_q[param].push(source_q_value);
+                            }
+                        });
+                    }
+                    else{
+                        if (source_q.hasOwnProperty(param)){
+                            target_q[param] = JSON.parse(JSON.stringify(source_q[param]));
+                        }
+                    }
+                });
+
+                _.each(boolean_params, function(param){
+                    if (source_q.hasOwnProperty(param)){
+                        target_q[param] = source_q[param];
+                    }
+                });
+            });
+
+            return target_q;
+        },
+
+        // Add a model's filters to a query.
+        addFiltersToQuery: function(model, filter_attrs, q){
+            if (! (q['WHERE'] instanceof Array)){
+                q['WHERE'] = [];
+            }
+
+            _.each(filter_attrs, function(filter_attr){
+                filters = model.get(filter_attr);
+                filter_array = this._filterObjectGroupsToArray(filters);
+                _.each(filter_array, function(f){
+                    q['WHERE'].push(f);
+                }, this);
+            }, this)
+        },
+
+        makeFacetInnerQuery: function(facet_model, key, filter_attrs){
             // Set include filters to primary and base by default.
-            include_filter_attrs = include_filter_attrs || ['primary_filters', 'base_filters'];
+            filter_attrs = filter_attrs || ['primary_filters', 'base_filters'];
+
+            // Shortcuts.
+            var qfield  = facet_model.get('quantity_field');
 
             // Initialize query definition.
             // Note: 'ID' must be 'inner' to conform to conventions.
             var inner_q = {
                 'ID': 'inner',
                 'SELECT_GROUP_BY': true,
-                'SELECT': [],
-                'FROM': [],
-                'WHERE': [],
-                'GROUP_BY': [],
-                'ORDER_BY': []
             };
 
-            // Shortcuts.
-            var qfield  = facet_model.get('quantity_field');
+            // Merge the quantity field's inner query parameters.
+            this.extendQuery(inner_q, qfield.get('inner_query'));
 
-            // Get the quantity field's inner query parameters.
-            inner_q['SELECT'].push(qfield.get('inner_query_entity'));
-            _.each(qfield.get('inner_query_group_by'), function(gb){
-                inner_q['GROUP_BY'].push(gb);
-            });
-            _.each(qfield.get('inner_query_from'), function(frm){
-                inner_q['FROM'].push(frm);
-            });
+            // Add the facet's filters.
+            this.addFiltersToQuery(facet_model, filter_attrs, inner_q);
 
-            // Get the facet's inner query filters.
-            var _this = this;
-            _.each(include_filter_attrs, function(include_filter_attr){
-                facet_filters = facet_model.get(include_filter_attr);
-                filter_array = _this._filterObjectGroupsToArray(facet_filters);
-                _.each(filter_array, function(f){
-                    inner_q['WHERE'].push(f);
-                });
-            });
-
-            // Get the facet's inner query group by paramters.
+            // Add the facet's key entities as group_by paramters.
             inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
             if (key['LABEL_ENTITY']){
                 inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
@@ -252,31 +283,30 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // Initialize the outer query.
             var outer_q = {
                 'ID': query_id || 'outer',
-                'SELECT': [],
                 'FROM': [{'ID': 'inner', 'TABLE': inner_query}],
-                'WHERE': [],
-                'GROUP_BY': [],
-                'ORDER_BY': [],
                 'SELECT_GROUP_BY': true,
+                'GROUP_BY': []
             };
 
             // Add the quantity field's outer query parameters.
-            outer_q['SELECT'].push(qfield.get('outer_query_entity'));
-            gb_attrs = ['KEY_ENTITY'];
+            this.extendQuery(outer_q, qfield.get('outer_query'));
+
+            // Add the facet's key entities as group_by paramters.
+            var gb_attrs = ['KEY_ENTITY'];
             if (key['LABEL_ENTITY']){
                 gb_attrs.push('LABEL_ENTITY');
             }
-            _.each(gb_attrs, function(attr){
+            _.each(gb_attrs, function(gb_attr){
                 outer_q['GROUP_BY'].push({
-                    'ID': key[attr]['ID'],
-                    'EXPRESSION': _s.sprintf("{{inner.%s}}", key[attr]['ID'])
+                    'ID': key[gb_attr]['ID'],
+                    'EXPRESSION': _s.sprintf("{{inner.%s}}", key[gb_attr]['ID'])
                 });
             });
 
             return outer_q;
         },
 
-        makeFacetKeyedQueryRequest: function(facet_model, include_filter_attrs){
+        makeFacetKeyedQueryRequest: function(facet_model, filter_attrs){
             // This function assembles two sets of queries:
             // The inner query selects a data set, and optionally groups it.
             // That query uses the filters.
@@ -293,7 +323,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var key = JSON.parse(JSON.stringify(facet_model.get('KEY')));
 
             // Get the inner query.
-            var inner_q = this.makeFacetInnerQuery(facet_model, key, include_filter_attrs);
+            var inner_q = this.makeFacetInnerQuery(facet_model, key, filter_attrs);
 
             // Get the outer query.
             var outer_q = this.makeFacetOuterQuery(facet_model, key, inner_q, 'outer');
@@ -317,8 +347,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 		setUpFacets: function(){
 			var facets = {};
 			var lji = new Util.util.LumberjackInterpreter();
-
-			var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
             var _app = this;
 
@@ -357,7 +385,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
                         var results = data.results;
-                        var count_entity = qfield.get('outer_query_entity');
+                        var count_entity = qfield.get('outer_query')['SELECT'][0];
 
 						// Set total.
 						var total = results['totals']['totals'][0][count_entity['ID']];
@@ -393,16 +421,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     key['KEY_ENTITY']['CONTEXT'] = {};
                 }
                 var key_context = key['KEY_ENTITY']['CONTEXT'];
-                if (! key_context['WHERE']){
-                    key_context['WHERE'] = [];
-                }
-                var base_filters = facet_model.get('base_filters');
-                if (base_filters){
-                    filter_array = _app._filterObjectGroupsToArray(base_filters);
-                    _.each(filter_array, function(f){
-                        key_context['WHERE'].push(f);
-                    });
-                }
+
+                _app.addFiltersToQuery(facet_model, ['base_filters'], key_context);
 
                 // Get the base query.
                 var base_inner_q = _app.makeFacetInnerQuery(facet_model, key, ['base_filters']);
@@ -440,7 +460,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					success: function(data, status, xhr){
 
                         var results = data.results;
-                        var count_entity = qfield.get('outer_query_entity');
+                        var count_entity = qfield.get('outer_query')['SELECT'][0];
 
 						// Parse data into histograms.
 						var base_histogram = [];
@@ -461,7 +481,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 								return;
 							}
 
-                            if (result['data']['base'] && result['data']['primary']){
+                            if (result['data']['base']){
                                 var base_bucket = {
                                     bucket: bucket_label,
                                     min: bmin,
@@ -470,8 +490,13 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                                 };
                                 base_histogram.push(base_bucket);
 
+                                // Get primary count (if present).
+                                var primary_count = 0.0;
+                                if (result['data'].hasOwnProperty('primary')){
+                                    var primary_count = result['data']['primary'][count_entity['ID']];
+                                }
                                 var primary_bucket = _.extend({}, base_bucket, {
-                                    count: result['data']['primary'][count_entity['ID']]
+                                    count: primary_count
                                 });
                                 primary_histogram.push(primary_bucket);
                             }
@@ -507,7 +532,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					success: function(data, status, xhr){
 
                         var results = data.results;
-                        var count_entity = qfield.get('outer_query_entity');
+                        var count_entity = qfield.get('outer_query')['SELECT'][0];
 
 						// Generate choices from data.
                         var choices = [];
@@ -934,25 +959,22 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 		},
 
 		setUpSummaryBar: function(){
-			var lji = new Util.util.LumberjackInterpreter();
-			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
             var summary_bar_config = GeoRefine.config.summary_bar;
 
 			var model = new Backbone.Model({
-				"fields": summary_bar_config.quantity_fields,
-				"filters": {},
+				"primary_filters": {},
 				"base_filters": {},
-				"count_entity": null,
+				"quantity_field": null,
 				"data": {}
 			});
 
 			// Listen for primary filter changes.
-            _.each(summary_bar_config.filter_groups, function(filter_group_id){
+            _.each(summary_bar_config.primary_filter_groups, function(filter_group_id){
                 var filter_group = this.filter_groups[filter_group_id];
                 filter_group.on('change:filters', function(){
                     var filters = _.clone(model.get('query_filters')) || {};
                     filters[filter_group_id] = filter_group.getFilters();
-                    model.set('query_filters', filters);
+                    model.set('primary_filters', filters);
                 });
             }, this);
 
@@ -971,33 +993,72 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var _this = model;
 			model.getData = function(){
 				var _this = this;
-                if (! _this.get('count_entity')){
+
+                // Shortcuts.
+                var qfield = _this.get('quantity_field');
+
+                // If there's no quantity field don't do anything.
+                if (! qfield){
                     return;
                 }
-                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
-				var data = {
-					'filters': JSON.stringify(combined_query_filters.concat(combined_base_filters)),
-					'base_filters': JSON.stringify(combined_base_filters),
-					'data_entities': JSON.stringify([_this.get('count_entity')]),
-					'with_unfiltered': true
-				};
+
+                // Get the 'selected' query.
+                var selected_inner_q = {
+                    'ID': 'inner',
+                    'SELECT_GROUP_BY': true,
+                };
+
+                // Get the quantity field's inner query parameters.
+                this.extendQuery(selected_inner_q, qfield.get('inner_query'));
+
+                // Add the filters.
+                _app.addFiltersToQuery(model, ['primary_filters', 'base_filters'], selected_inner_q);
+
+                var selected_q = {
+                    'ID': 'selected',
+                    'FROM': [{'ID': 'inner', 'TABLE': selected_inner_query}],
+                    'SELECT_GROUP_BY': true,
+                };
+                _app.extendQuery(selected_q, qfield.get('outer_query'));
+
+                // Get the 'total' query.
+                var total_inner_q = {
+                    'ID': 'total',
+                    'SELECT_GROUP_BY': true,
+                };
+                this.extendQuery(selected_inner_q, qfield.get('inner_query'));
+                _app.addFiltersToQuery(model, ['base_filters'], total_inner_q);
+                var total_q = {
+                    'ID': 'total',
+                    'FROM': [{'ID': 'inner', 'TABLE': total_inner_query}],
+                    'SELECT_GROUP_BY': true,
+                };
+                _app.extendQuery(total_q, qfield.get('outer_query'));
+                
+                // Assemble request.
+                var totals_request = {
+                    'ID': 'totals',
+                    'REQUEST': 'execute_queries',
+                    'PARAMETERS': {'QUERIES': [selected_q, total_q]}
+                };
+
+                var requests = [totals_request];
 
 				$.ajax({
-					url: aggregates_endpoint,
-					type: 'GET',
-					data: data,
-					complete: function(xhr, status){
-					},
+					url: requests_endpoint,
+					type: 'POST',
+					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
-						var parsed_data = lji.parse(data);
+                        console.log("data is: ", data);
+                        /*
 						_this.set({
 							"data": {
 								"filtered": parsed_data[0].data[0].value,
 								"unfiltered": parsed_data[0].data[1].value
 							}
 						});
+                        */
 					}
 				});
 			};
@@ -1005,19 +1066,21 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			var SummaryBarView = Backbone.View.extend({
 				initialize: function(){
                     $(this.el).html('<span class="text">Currently selected: <span class="data"></span></span>');
+                    // Trigger update when model data changes.
 					this.model.on('change:data', this.onDataChange, this);
+
                     // Get data when parameters change.
                     if (this.model.getData){
-                        this.model.on('change:query_filters change:base_filters change:count_entity', this.model.getData, this.model);
+                        this.model.on('change:primary_filters change:base_filters change:quantity_field', this.model.getData, this.model);
                     }
 				},
 				onDataChange: function(){
-					var format = this.model.get('count_entity').format || "%s";
+					var format = this.model.get('quantity_field').format || "%s";
 					var data = this.model.get('data');
-					var formatted_selected = _s.sprintf(format, data.filtered);
-					var formatted_unfiltered = _s.sprintf(format, data.unfiltered);
-					var percentage = 100.0 * data.filtered/data.unfiltered;
-					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_unfiltered));
+					var formatted_selected = _s.sprintf(format, data.selected);
+					var formatted_total = _s.sprintf(format, data.total);
+					var percentage = 100.0 * data.selected/data.total;
+					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_total));
 				}
 			});
 
