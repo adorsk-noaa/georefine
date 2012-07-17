@@ -197,7 +197,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			});
 		},
 
-        makeFacetInnerQuery: function(facet_model, include_filter_attrs){
+        makeFacetInnerQuery: function(facet_model, key, include_filter_attrs){
             // Set include filters to primary and base by default.
             include_filter_attrs = include_filter_attrs || ['primary_filters', 'base_filters'];
 
@@ -214,7 +214,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             };
 
             // Shortcuts.
-            var key = facet_model.get('KEY');
             var qfield  = facet_model.get('quantity_field');
 
             // Get the quantity field's inner query parameters.
@@ -245,10 +244,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             return inner_q;
         },
 
-        makeFacetOuterQuery: function(facet_model, inner_query, query_id){
+        makeFacetOuterQuery: function(facet_model, key, inner_query, query_id){
 
             // Shortcuts.
-            var key = facet_model.get('KEY');
             var qfield  = facet_model.get('quantity_field');
 
             // Initialize the outer query.
@@ -289,14 +287,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // (select data.x * data.y where data.x > 7 group by data.category) as dataset
 
             // Shortcuts.
-            var key = facet_model.get('KEY');
             var qfield  = facet_model.get('quantity_field');
 
+            // Copy the key entity.
+            var key = JSON.parse(JSON.stringify(facet_model.get('KEY')));
+
             // Get the inner query.
-            var inner_q = this.makeFacetInnerQuery(facet_model, include_filter_attrs);
+            var inner_q = this.makeFacetInnerQuery(facet_model, key, include_filter_attrs);
 
             // Get the outer query.
-            var outer_q = this.makeFacetOuterQuery(facet_model, inner_q, 'outer');
+            var outer_q = this.makeFacetOuterQuery(facet_model, key, inner_q, 'outer');
 
             // Assemble the keyed result parameters.
             var keyed_results_parameters = {
@@ -382,8 +382,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			numericFacetGetData = function() {
                 var facet_model = this;
 
+                // Copy the key entity.
+                var key = JSON.parse(JSON.stringify(facet_model.get('KEY')));
+
                 // Shortcuts.
-                var key = facet_model.get('KEY');
                 var qfield  = facet_model.get('quantity_field');
 
                 // Set base filters on key entity context.
@@ -403,12 +405,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 }
 
                 // Get the base query.
-                var base_inner_q = _app.makeFacetInnerQuery(facet_model, ['base_filters']);
-                var base_outer_q = _app.makeFacetOuterQuery(facet_model, base_inner_q, 'base');
+                var base_inner_q = _app.makeFacetInnerQuery(facet_model, key, ['base_filters']);
+                var base_outer_q = _app.makeFacetOuterQuery(facet_model, key, base_inner_q, 'base');
 
                 // Get the primary query.
-                var primary_inner_q = _app.makeFacetInnerQuery(facet_model, ['base_filters', 'primary_filters']);
-                var primary_outer_q = _app.makeFacetOuterQuery(facet_model, primary_inner_q, 'primary');
+                var primary_inner_q = _app.makeFacetInnerQuery(facet_model, key, ['base_filters', 'primary_filters']);
+                var primary_outer_q = _app.makeFacetOuterQuery(facet_model, key, primary_inner_q, 'primary');
 
                 // Assemble the keyed result parameters.
                 var keyed_results_parameters = {
@@ -436,8 +438,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
-
-                        console.log("numeric, data is: ", data);
 
                         var results = data.results;
                         var count_entity = qfield.get('outer_query_entity');
