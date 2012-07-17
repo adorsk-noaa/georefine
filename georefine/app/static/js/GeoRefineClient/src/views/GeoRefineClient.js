@@ -85,6 +85,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     });
                 }, this);
             }, this);
+
+            _.each(this.filter_groups, function(fg, fg_id){
+                fg.on('change:filters', function(){
+                });
+            });
         },
 
         setUpFiltersEditor: function(){
@@ -447,7 +452,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 						var base_histogram = [];
 						var primary_histogram = [];
 
-						// Generate choices from data.
+						// Generate stats and choices from data.
+                        var range_min = null;
+                        var range_max = null;
 						var choices = [];
 						_.each(results['keyed_results'], function(result){
 							bucket_label = result['label'];
@@ -461,6 +468,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 							else{
 								return;
 							}
+
+                            if (! range_min <= bmin){
+                                range_min = bmin;
+                            }
+
+                            if (! range_max >= bmax){
+                               range_max = bmax; 
+                            }
 
                             if (result['data']['base']){
                                 var base_bucket = {
@@ -488,7 +503,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 						_this.set({
                             base_histogram: base_histogram,
-                            filtered_histogram: primary_histogram
+                            filtered_histogram: primary_histogram,
+                            range_min: range_min,
+                            range_max: range_max
 						});
 					}
 				});
@@ -600,11 +617,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				else if (facet.type == 'numeric'){
 					model = new Facets.models.FacetModel(_.extend({}, facet, {
 						filtered_histogram: [],
-						base_histogram: []
+						base_histogram: [],
 					}));
 					model.getData = numericFacetGetData;
 					view = new Facets.views.NumericFacetView({ model: model });
                     view.formatFilters = numericFacetFormatFilters;
+
 				}
 
 				else if (facet.type == 'time-slider'){
@@ -644,6 +662,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 // Have the facet update when its query or base filters or count entities change.
                 if (model.getData){
                     model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+                        console.log("getData", model.id, arguments);
                         model.getData();
                     });
                 }
@@ -1179,7 +1198,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // Animate cell dimension.
             $tc.parent().animate(tc_dim_opts);
 
-
             // Animate table dimension.
             var table_dim_opts = {};
             table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
@@ -1188,11 +1206,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
         toggleFiltersEditor: function(){
             var $filtersEditor = $('.filters-editor-container', this.el);
+            var $table = $('.filters-editor-table', this.el);
             if (! $filtersEditor.hasClass('changing')){
                 this.expandContractTab({
                     expand: ! $filtersEditor.hasClass('expanded'),
                     tab_container: $filtersEditor,
-                    table: $('.filters-editor-table', $filtersEditor),
+                    table: $table,
                     dimension: 'width'
                 });
             }

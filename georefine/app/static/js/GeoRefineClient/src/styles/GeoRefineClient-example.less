@@ -19,6 +19,8 @@
 		position: relative;
 	}
 
+    //@lp_w: 300px;
+    @lp_w: 600px;
 	.left-panel{
 
 		> .inner{
@@ -26,13 +28,14 @@
 			left: 0px;
 			top: 0px;
 			bottom: 0px;
-			width: 300px;
+			width: @lp_w;
+            overflow-x: scroll;
 
 		}
 	}
 	
 	.right-panel{
-		left: 300px;
+		left: @lp_w;
 		top: 0px;
 		right: 0px;
 		bottom: 0px;
