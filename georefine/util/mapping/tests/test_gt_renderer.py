@@ -1,33 +1,78 @@
 import unittest
+import sys
 from georefine.util.sa.tests.basetest import BaseTest
-from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer
+from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer, mapSqlAlchemyConnectionParameters
 from georefine.util.sa.sa_dao import SA_DAO
 
 from sqlalchemy import Table, Column, ForeignKey, ForeignKeyConstraint, Integer, String, Float
-from sqlalchemy.orm import relationship, mapper
 from sqlalchemy import MetaData
+from sqlalchemy.sql import select
 from geoalchemy import *
 from geoalchemy.postgis import PGComparator
 from pprint import pprint
 
 class GeoToolsMapRendererTest(BaseTest):
 
+    def setUp(self):
+        super(GeoToolsMapRendererTest, self).setUp()
+        self.schema = self.setUpSchemaAndData()
+        self.trans.commit()
+
+    def tearDown(self):
+        self.schema['metadata'].drop_all(self.connection)
+
     def testRendering(self):
-        schema = self.setUpSchemaAndData()
-        self.dao = SA_DAO(connection=self.connection, schema=schema)
+        dao = SA_DAO(connection=self.connection, schema=self.schema)
         renderer = GeoToolsMapRenderer()
 
+        # Get connection parameters.
+        sa_connection_parameters = dao.get_connection_parameters()
+        gt_connection_parameters = mapSqlAlchemyConnectionParameters(sa_connection_parameters)
+
+        # Define query.
+        q = {
+            "SELECT": [
+                {"ID": "geom", "EXPRESSION": 'RawColumn({{test1.geom}})'},
+                {"ID": "geom_id", "EXPRESSION": '{{test1.id}}'},
+                {"ID": "value", "EXPRESSION": '{{test1.id}}'},
+                ]
+        }
+
+        # Generate SQL.
+        sql = dao.get_sql(q)
+
         """
-        #data_entity = {"expression": "func.sum({TestClass1.id})", "num_classes": 5, "min": 1, "max": 5}
+        t1 = self.schema['tables']['test1']
+        g = RawColumn(t1.c.geom)
+        q = select([g, t1.c.id.label('value'), t1.c.id.label('geom_id')])
+        sql = dao.query_to_raw_sql(q)
+        """
+
+        print >> sys.stderr, "sql is: ", sql
+
+        # Define entities.
+        geom_id_entity = {"ID": "geom_id"}
+        geom_entity = {"ID": "geom"}
+        value_entity = {"ID": "value"}
+
+        # Define map parameters.
         map_parameters = {
-                "width": 600,
-                "height": 600,
-                "bbox": "-10,-10,10,10",
-                "format": "image/png",
-                "transparent": True
+                "WIDTH": 600,
+                "HEIGHT": 600,
+                "BBOX": "-10,-10,10,10",
+                "FORMAT": "image/png",
+                "TRANSPARENT": True
                 }
-        print renderer.renderMap(dao=self.dao, data_entity=data_entity, map_parameters=map_parameters)
-        """
+        img = renderer.renderMap(
+            connection_parameters = gt_connection_parameters,
+            sql = sql,
+            geom_id_entity = geom_id_entity,
+            geom_entity = geom_entity,
+            value_entity = value_entity,
+            map_parameters = map_parameters
+            )
+
+        print img
     
     def setUpSchemaAndData(self):
 
@@ -36,6 +81,7 @@ class GeoToolsMapRendererTest(BaseTest):
         ordered_tables = []
 
         metadata = MetaData()
+        schema['metadata'] = metadata
 
         tables['test1'] = Table('test1', metadata,
                 Column('id', Integer, primary_key=True),

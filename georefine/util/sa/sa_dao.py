@@ -6,6 +6,7 @@ import platform
 from sqlalchemy.sql import *
 from sqlalchemy.sql import compiler
 from sqlalchemy import cast, String, case
+from geoalchemy import *
 
 class SA_DAO(object):
 

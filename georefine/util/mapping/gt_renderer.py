@@ -29,52 +29,23 @@ class GeoToolsMapRenderer(object):
         self.style_factory = CommonFactoryFinder.getStyleFactory(None)
         self.filter_factory = CommonFactoryFinder.getFilterFactory(None)
 
-    def renderMap(self, dao=None, geom_id_entity=None, geom_entity=None, data_entity=None, grouping_entities=[], filters=[], map_parameters={}):
+    def renderMap(self, connection_parameters=None, sql=None, geom_id_entity=None, geom_entity=None, value_entity=None, map_parameters={}):
 
-        # Get connection parameters.
-        connection_parameters = dao.get_connection_parameters()
-        gt_to_sa_map = {
-                "dbtype": "drivername",
-                "host": "host",
-                "port": "port",
-                "database": "database",
-                "user": "username",
-                "passwd": "password"
-                }
-
-        gt_params = HashMap()
-        for gt_param, sa_param in gt_to_sa_map.items():
-            value = connection_parameters.get(sa_param)
+        # Put connection parameters into a java HashMap.
+        params_hashmap = HashMap()
+        for param, value in connection_parameters.items():
             if value:
+                params_hashmap.put(param, value)
 
-                # Handle postgres.
-                if sa_param == "drivername" and "postgresql" in value:
-                    value = "postgis"
-                    gt_params.put("schema", "public")
+        # Get data store.
+        data_store = DataStoreFinder.getDataStore(params_hashmap)
 
-                gt_params.put(gt_param, value)
-
-        data_store = DataStoreFinder.getDataStore(gt_params)
-
-        # Create raw sql query.
-        if geom_id_entity == None:
-            geom_id_entity = {'expression': "{%s.id}" % dao.primary_class.__name__}
-        if geom_entity == None:
-            geom_entity = {'expression': "{%s.geom}.RAW" % dao.primary_class.__name__}
-        if data_entity:
-            data_entity['label'] = '_value_'
-
-        # Set labels to agree with conventions used for vtable.
-        geom_entity['label'] = 'geom'
-        geom_id_entity['label'] = 'geom_id'
-
-        data_entities = [geom_id_entity, geom_entity, data_entity]
-        grouping_entities.extend([geom_id_entity, geom_entity])
-        sql = dao.get_sql(data_entities=data_entities, grouping_entities=grouping_entities, filters=filters)
-
-        # Create VirtualTable from query.
+        # Create VirtualTable from sql.
         vtable = VirtualTable("vtable", sql)
-        vtable.setPrimaryKeyColumns(["geom_id"])
+
+        # Set primary key.
+        vtable.setPrimaryKeyColumns([geom_id_entity['ID']])
+
         # metadatata = intententional typo. GT needs to fix the name.
         vtable.addGeometryMetadatata("geom", JPolygon, 4326)
 
@@ -82,12 +53,12 @@ class GeoToolsMapRenderer(object):
         data_store.addVirtualTable(vtable)
         feature_source = data_store.getFeatureSource("vtable")
 
-        # Add styling classes if there was a data entity.
-        if data_entity:
+        # Add styling classes if there was a value entity.
+        if value_entity:
             # Generate class bounds.
-            num_classes = data_entity.get('num_classes', 25)
-            vmin = float(data_entity.get('min', 0))
-            vmax = float(data_entity.get('max', 1))
+            num_classes = value_entity.get('num_classes', 25)
+            vmin = float(value_entity.get('min', 0))
+            vmax = float(value_entity.get('max', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
             classes = [(None, vmin)]
@@ -98,7 +69,7 @@ class GeoToolsMapRenderer(object):
             # Generate style rules for classes.
             rules = []
             for c in classes:
-                rule = self.create_rule(c[0], c[1], vmin, vrange, attr=data_entity['label'])
+                rule = self.create_rule(c[0], c[1], vmin, vrange, attr=value_entity['ID'])
                 rules.append(rule)
             feature_type_style = self.style_factory.createFeatureTypeStyle(rules)
             style = self.style_factory.createStyle()
@@ -171,6 +142,33 @@ class GeoToolsMapRenderer(object):
         symbolizer = self.style_factory.createPolygonSymbolizer(None, fill, None)
         rule.symbolizers().add(symbolizer)
         return rule
+
+
+# Helper function to map SqlAlchemy connection parameters 
+# to GeoTools parameters.
+def mapSqlAlchemyConnectionParameters(sa_params={}):
+    gt_to_sa_map = {
+            "dbtype": "drivername",
+            "host": "host",
+            "port": "port",
+            "database": "database",
+            "user": "username",
+            "passwd": "password"
+            }
+    gt_params = {}
+    for gt_param, sa_param in gt_to_sa_map.items():
+        value = sa_params.get(sa_param)
+        if value:
+            # Handle postgres.
+            if sa_param == "drivername" and "postgresql" in value:
+                value = "postgis"
+                gt_params["schema"] = "public"
+            gt_params[gt_param] = value
+
+    return gt_params
+
+    
+
 
 
         

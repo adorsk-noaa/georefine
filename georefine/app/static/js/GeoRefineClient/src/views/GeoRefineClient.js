@@ -512,7 +512,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				});
 			};
 
-            // @TODO: GENERALIZE THIS? IS THIS SASI-SPECIFIC?
             timeSliderFacetGetData = function(){
 				var _this = this;
 
@@ -729,7 +728,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 		createMapEditor: function(){
 
-			var aggregates_endpoint = _s.sprintf('%s/projects/get_aggregates/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 			var map_endpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 			var map_config = _.extend({}, GeoRefine.config.map);
@@ -750,21 +748,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			updateServiceUrlLocalDataLayer = function(attr, options){
                 var _this = this;
 
+                // Url needs to describe geom entity, geom id entity, value entity,
+                // filters.
+
                 // A list of parameters to be added to the service url.
 				var params = [];
-
-                // Add filters to the params.
-                var combined_query_filters = _app._filterObjectGroupsToArray(_this.get('query_filters'));
-                var combined_base_filters = _app._filterObjectGroupsToArray(_this.get('base_filters'));
-				params.push(['filters', combined_query_filters.concat(combined_base_filters)]);
-
-                // Add entity params to the url.
-                _.each(['data_entity', 'geom_entity', 'geom_id_entity', 'grouping_entities'], function(entity_attr){
-                    entity_model = this.get(entity_attr);
-                    if (entity_model){
-                        params.push([entity_attr, entity_model.toJSON()]);
-                    }
-                }, this);
 
                 // Convert params into url params.
 				url_params = [];
