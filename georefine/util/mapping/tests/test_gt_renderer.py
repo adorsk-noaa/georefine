@@ -30,23 +30,32 @@ class GeoToolsMapRendererTest(BaseTest):
         gt_connection_parameters = mapSqlAlchemyConnectionParameters(sa_connection_parameters)
 
         # Define query.
+        inner_q = {
+            "ID": "inner",
+            "SELECT": [
+                {"ID": "geom", "EXPRESSION": 'RawColumn({{test1.test1_test2.test2.geom}})'},
+                {"ID": "geom_id", "EXPRESSION": '{{test1.test1_test2.test2.id}}'},
+                {"ID": "value", "EXPRESSION": 'func.sum({{test1.test1_test2.test2.id}})'},
+                ],
+            "GROUP_BY": [
+                {"ID": "geom"},
+                {"ID": "geom_id"}
+                ],
+            "WHERE": [
+                ['{{test1.id}}', 'in', [3,4]]
+            ]
+        }
         q = {
             "SELECT": [
-                {"ID": "geom", "EXPRESSION": 'RawColumn({{test1.geom}})'},
-                {"ID": "geom_id", "EXPRESSION": '{{test1.id}}'},
-                {"ID": "value", "EXPRESSION": '{{test1.id}}'},
-                ]
+                {"ID": "geom", "EXPRESSION": 'RawColumn({{inner.geom}})'},
+                {"ID": "geom_id", "EXPRESSION": '{{inner.geom_id}}'},
+                {"ID": "value", "EXPRESSION": '{{inner.value}}'},
+                ],
+            "FROM": [{"ID": "inner", "TABLE": inner_q}]
         }
 
         # Generate SQL.
         sql = dao.get_sql(q)
-
-        """
-        t1 = self.schema['tables']['test1']
-        g = RawColumn(t1.c.geom)
-        q = select([g, t1.c.id.label('value'), t1.c.id.label('geom_id')])
-        sql = dao.query_to_raw_sql(q)
-        """
 
         print >> sys.stderr, "sql is: ", sql
 
@@ -93,8 +102,10 @@ class GeoToolsMapRendererTest(BaseTest):
 
         tables['test2'] = Table('test2', metadata,
                 Column('id', Integer, primary_key=True),
-                Column('name', String)
+                Column('name', String),
+                GeometryExtensionColumn('geom', Polygon(2)),
                 )
+        GeometryDDL(tables['test2'])
         ordered_tables.append(tables['test2'])
 
         tables['test1_test2'] = Table('test1_test2', metadata,
@@ -133,6 +144,7 @@ class GeoToolsMapRendererTest(BaseTest):
             t2 = {
                 "id": i,
                 "name": "t2_%s" % i,
+                "geom": WKTSpatialElement(wkt_geom)
             }
             t2s.append(t2)
             self.connection.execute(schema['tables']['test2'].insert().values(**t2))
