@@ -775,12 +775,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 };
 
                 // Convert to url params.
-                var url_params = ['PARAMS', JSON.stringify(params)];
+                var url_params = [_s.sprintf('PARAMS=%s', JSON.stringify(params))];
 
                 // Generate url by appending url params to map endpoint.
                 var service_url = map_endpoint + '?' + url_params.join('&') + '&';
-
-                //model.set('service_url', service_url);
+                
+                model.set('service_url', service_url);
 			};
 
 			var processed_layers = {};
@@ -1226,7 +1226,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != 1){
+                if (i != 0){
                     return;
                 }
 

@@ -29,14 +29,14 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None, GEOM_ENTITY=N
 
         # Render map image.
         img = gt_renderer.renderMap(
-                dao = dao, 
-                sql = sql,
-                data_entity = DATA_ENTITY, 
-                geom_id_entity = GEOM_ID_ENTITY, 
-                geom_entity = GEOM_ENTITY, 
-                map_parameters= MAP_PARAMETERS,
-                **kwargs
-                )
+            connection_parameters = gt_connection_parameters,
+            sql = sql,
+            data_entity = DATA_ENTITY, 
+            geom_id_entity = GEOM_ID_ENTITY, 
+            geom_entity = GEOM_ENTITY, 
+            map_parameters= MAP_PARAMETERS,
+            **kwargs
+            )
 
     # @TODO: Add normal python renderer.
     else:

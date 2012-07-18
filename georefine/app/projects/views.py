@@ -160,16 +160,16 @@ def get_map(project_id):
     params = json.loads(request.args.get('PARAMS', '{}'))
 
     # Parse WMS parameters.
-    map_parameters = {}
+    MAP_PARAMETERS = {}
     for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT', 'SRS']:
         value = request.args.get(wms_parameter)
         if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
             value = int(value)
-        map_parameters[wms_parameter] = value
+        MAP_PARAMETERS[wms_parameter] = value
 
     map_image = projects_services.get_map(
             project, 
-            map_parameters=map_parameters,
+            MAP_PARAMETERS = MAP_PARAMETERS,
             **params
             )
-    return Response(map_image, mimetype=map_parameters['FORMAT'])
+    return Response(map_image, mimetype=MAP_PARAMETERS['FORMAT'])
