@@ -26,7 +26,11 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 		initialize: function(){
 			$(this.el).addClass('georefine-client');
 
-            this.data_view_counter = 0;
+            this.data_view_counter = 1;
+            this.data_view_defaults = {
+                width: 500,
+                height: 500
+            };
 
 			this.render();
 			this.on('ready', this.onReady, this);
@@ -150,11 +154,18 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			$data_views = $('.data-views', this.el);
 			var dv_offset = $data_views.offset();
 
+            // Set default title.
+            opts.title = opts.title || 'Window';
+
+            // Add window number to title.
+            opts.title = _s.sprintf("%d &middot; %s", this.data_view_counter, opts.title);
+
+
 			var w =  new Windows.views.WindowView({
 				model: new Backbone.Model(_.extend({}, {
 					"inline-block": true,
-					"width": 500,
-					"height": 500,
+					"width": this.data_view_defaults.width,
+					"height": this.data_view_defaults.height,
 					"x": dv_offset.left + (this.data_view_counter % 5) * 20,
 					"y": dv_offset.top + (this.data_view_counter % 5) * 20,
 					"showFooter": false,
@@ -1234,7 +1245,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != -1){
+                if (i != i){
                     return;
                 }
 
