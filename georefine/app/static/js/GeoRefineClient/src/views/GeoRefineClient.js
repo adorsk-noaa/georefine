@@ -954,8 +954,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
             var _app = this;
 			datasource.getData = function() {
-                console.log("datasource getData", arguments);
-
                 var cfield = q.get('category_field');
                 var qfield = q.get('quantity_field');
 
@@ -1177,7 +1175,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 			var SummaryBarView = Backbone.View.extend({
 				initialize: function(){
-                    $(this.el).html('<span class="text">Currently selected: <span class="data"></span></span>');
+                    $(this.el).html('<div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div>');
                     // Trigger update when model data changes.
 					this.model.on('change:data', this.onDataChange, this);
 
@@ -1221,7 +1219,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					var formatted_selected = _s.sprintf(format, data.selected);
 					var formatted_total = _s.sprintf(format, data.total);
 					var percentage = 100.0 * data.selected/data.total;
-					$(".data", this.el).html(_s.sprintf('<span class="selected">%s</span> <span class="percentage">(%.1f%% of %s total)</span>', formatted_selected, percentage, formatted_total));
+					$(".text .field", this.el).html(_s.sprintf("'%s'", this.model.get('quantity_field').get('label')));
+					$(".text .selected", this.el).html(formatted_selected);
+					$(".text .total", this.el).html(_s.sprintf('(%.1f%% of %s total)', percentage, formatted_total));
 
                     // Set totals on facets.
                     _.each(_app.facets.models, function(facet_model){
