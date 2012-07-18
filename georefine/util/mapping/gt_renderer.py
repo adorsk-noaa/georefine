@@ -29,7 +29,7 @@ class GeoToolsMapRenderer(object):
         self.style_factory = CommonFactoryFinder.getStyleFactory(None)
         self.filter_factory = CommonFactoryFinder.getFilterFactory(None)
 
-    def renderMap(self, connection_parameters=None, sql=None, geom_id_entity=None, geom_entity=None, value_entity=None, map_parameters={}):
+    def renderMap(self, connection_parameters=None, sql=None, geom_id_entity=None, geom_entity=None, data_entity=None, map_parameters={}):
 
         # Put connection parameters into a java HashMap.
         params_hashmap = HashMap()
@@ -54,11 +54,11 @@ class GeoToolsMapRenderer(object):
         feature_source = data_store.getFeatureSource("vtable")
 
         # Add styling classes if there was a value entity.
-        if value_entity:
+        if data_entity:
             # Generate class bounds.
-            num_classes = value_entity.get('num_classes', 25)
-            vmin = float(value_entity.get('min', 0))
-            vmax = float(value_entity.get('max', 1))
+            num_classes = data_entity.get('num_classes', 25)
+            vmin = float(data_entity.get('min', 0))
+            vmax = float(data_entity.get('max', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
             classes = [(None, vmin)]
@@ -69,7 +69,7 @@ class GeoToolsMapRenderer(object):
             # Generate style rules for classes.
             rules = []
             for c in classes:
-                rule = self.create_rule(c[0], c[1], vmin, vrange, attr=value_entity['ID'])
+                rule = self.create_rule(c[0], c[1], vmin, vrange, attr=data_entity['ID'])
                 rules.append(rule)
             feature_type_style = self.style_factory.createFeatureTypeStyle(rules)
             style = self.style_factory.createStyle()

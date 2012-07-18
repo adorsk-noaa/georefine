@@ -35,7 +35,7 @@ class GeoToolsMapRendererTest(BaseTest):
             "SELECT": [
                 {"ID": "geom", "EXPRESSION": 'RawColumn({{test1.test1_test2.test2.geom}})'},
                 {"ID": "geom_id", "EXPRESSION": '{{test1.test1_test2.test2.id}}'},
-                {"ID": "value", "EXPRESSION": 'func.sum({{test1.test1_test2.test2.id}})'},
+                {"ID": "data", "EXPRESSION": 'func.sum({{test1.test1_test2.test2.id}})'},
                 ],
             "GROUP_BY": [
                 {"ID": "geom"},
@@ -49,7 +49,7 @@ class GeoToolsMapRendererTest(BaseTest):
             "SELECT": [
                 {"ID": "geom", "EXPRESSION": 'RawColumn({{inner.geom}})'},
                 {"ID": "geom_id", "EXPRESSION": '{{inner.geom_id}}'},
-                {"ID": "value", "EXPRESSION": '{{inner.value}}'},
+                {"ID": "data", "EXPRESSION": '{{inner.data}}'},
                 ],
             "FROM": [{"ID": "inner", "TABLE": inner_q}]
         }
@@ -62,7 +62,7 @@ class GeoToolsMapRendererTest(BaseTest):
         # Define entities.
         geom_id_entity = {"ID": "geom_id"}
         geom_entity = {"ID": "geom"}
-        value_entity = {"ID": "value"}
+        data_entity = {"ID": "data"}
 
         # Define map parameters.
         map_parameters = {
@@ -77,7 +77,7 @@ class GeoToolsMapRendererTest(BaseTest):
             sql = sql,
             geom_id_entity = geom_id_entity,
             geom_entity = geom_entity,
-            value_entity = value_entity,
+            data_entity = data_entity,
             map_parameters = map_parameters
             )
 

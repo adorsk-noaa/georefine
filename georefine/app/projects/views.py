@@ -26,7 +26,7 @@ def georefine_client(project_id):
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
         "charts": project.app_config.get('charts', {}),
-        "map": project.app_config.get('map', {}),
+        "maps": project.app_config.get('maps', {}),
         "summary_bar": project.app_config.get('summary_bar', {}),
         "initial_state": project.app_config.get('initial_state', {}),
     }
@@ -156,12 +156,8 @@ def get_map(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
-    # Parse request parameters.
-    data_entity = json.loads(request.args.get('data_entity', 'null'))
-    geom_id_entity = json.loads(request.args.get('geom_id_entity', 'null'))
-    geom_entity = json.loads(request.args.get('geom_entity', 'null'))
-    grouping_entities = json.loads(request.args.get('grouping_entities', '[]'))
-    filters = json.loads(request.args.get('filters', '[]'))
+    # Parse custom parameters.
+    params = json.loads(request.args.get('PARAMS', '{}'))
 
     # Parse WMS parameters.
     map_parameters = {}
@@ -173,11 +169,7 @@ def get_map(project_id):
 
     map_image = projects_services.get_map(
             project, 
-            data_entity=data_entity,
-            geom_id_entity=geom_id_entity, 
-            geom_entity=geom_entity,
-            grouping_entities=grouping_entities,
-            filters=filters,
-            map_parameters=map_parameters
+            map_parameters=map_parameters,
+            **params
             )
     return Response(map_image, mimetype=map_parameters['FORMAT'])

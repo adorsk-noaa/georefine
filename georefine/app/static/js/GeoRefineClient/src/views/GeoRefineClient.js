@@ -730,7 +730,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 			var map_endpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
-			var map_config = _.extend({}, GeoRefine.config.map);
+			var map_config = _.extend({}, GeoRefine.config.maps);
 
 			bboxToMaxExtent = function(bbox){
 				var extent_coords = _.map(bbox.split(','), function(coord){
@@ -746,21 +746,41 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			// This method will be called with a layer model as 'this'.
             var _app = this;
 			updateServiceUrlLocalDataLayer = function(attr, options){
-                var _this = this;
+                var model = this;
 
-                // Url needs to describe geom entity, geom id entity, value entity,
-                // filters.
+                // Url needs to include the query, geom entity, geom id entity, value entity,
 
                 // A list of parameters to be added to the service url.
 				var params = [];
 
-                // Convert params into url params.
-				url_params = [];
-				_.each(params, function(p){
-					url_params.push(_s.sprintf("%s=%s", p[0], JSON.stringify(p[1])));
-				},this);
+                // Get query.
+                var inner_q = {
+                    'ID': 'inner',
+                    'SELECT_GROUP_BY': true
+                };
+                _app.extendQuery(inner_q, model.get('inner_query'));
+                _app.addFiltersToQuery(model, ['primary_filters', 'base_filters'], inner_q);
+                var outer_q = {
+                    'ID': 'outer',
+                    'FROM': [{'ID': 'inner', 'TABLE': inner_q}]
+                };
+                _app.extendQuery(outer_q, model.get('outer_query'));
 
-                this.set('service_url', map_endpoint + '?' + url_params.join('&') + '&');
+                // Assemble parameters.
+                var params = {
+                    'QUERY': outer_q,
+                    'GEOM_ID_ENTITY': model.get('geom_id_entity'),
+                    'GEOM_ENTITY': model.get('geom_entity'),
+                    'DATA_ENTITY': model.get('data_entity'),
+                };
+
+                // Convert to url params.
+                var url_params = ['PARAMS', JSON.stringify(params)];
+
+                // Generate url by appending url params to map endpoint.
+                var service_url = map_endpoint + '?' + url_params.join('&') + '&';
+
+                //model.set('service_url', service_url);
 			};
 
 			var processed_layers = {};
@@ -794,23 +814,13 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                             }
                         });
 
-                        if (proc_layer['grouping_entities']){
-                            grouping_entities_collection = new Backbone.Collection();
-                            _.each(proc_layer['grouping_entities'], function(grouping_entity){
-                                var entity_model = new Backbone.Model(_.extend({}, grouping_entity, {}));
-                                grouping_entities_collection.add(entity_model);
-                            });
-                            model.set('grouping_entities', grouping_entities_collection);
-                        }
-
-                        // @TODO: put filter groups in layers?
                         // Have layer model listen for filter changes.
-                        _.each(map_config.filter_groups, function(filter_group_id){
+                        _.each(map_config.primary_filter_groups, function(filter_group_id){
                             var filter_group = this.filter_groups[filter_group_id];
                             filter_group.on('change:filters', function(){
-                                var filters = _.clone(model.get('query_filters')) || {};
+                                var filters = _.clone(model.get('primary_filters')) || {};
                                 filters[filter_group_id] = filter_group.getFilters();
-                                model.set('query_filters', filters);
+                                model.set('primary_filters', filters);
                             });
                         }, this);
 
@@ -818,14 +828,14 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         _.each(map_config.base_filter_groups, function(filter_group_id, key){
                             var filter_group = this.filter_groups[filter_group_id];
                             filter_group.on('change:filters', function(){
-                                var base_filters = _.clone(model.get('base_filters')) || {};
-                                base_filters[filter_group_id] = filter_group.getFilters();
-                                model.set('base_filters', base_filters);
+                                var filters = _.clone(model.get('base_filters')) || {};
+                                filters[filter_group_id] = filter_group.getFilters();
+                                model.set('base_filters', filters);
                             });
                         }, this);
 
                         // Update service url when related model attributes change.
-                        model.on('change:data_entity change:geom_entity change:grouping_entities change:query_filters change:base_filters', updateServiceUrlLocalDataLayer, model);
+                        model.on('change:data_entity change:primary_filters change:base_filters', updateServiceUrlLocalDataLayer, model);
 
                         // Initialize service url.
                         updateServiceUrlLocalDataLayer.call(model);

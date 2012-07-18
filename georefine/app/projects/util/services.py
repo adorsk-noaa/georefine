@@ -4,7 +4,7 @@ from georefine.app.projects.util import manage_projects
 from georefine.util.sa.sa_dao import SA_DAO
 import platform
 if platform.system() == 'Java':
-    from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer
+    from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer, mapSqlAlchemyConnectionParameters
 import copy
 
 def get_dao(project):
@@ -13,21 +13,38 @@ def get_dao(project):
 
 # @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
 # renderer shouldn't have to do that stuff.
-def get_map(project, data_entity=None, geom_id_entity=None, geom_entity=None, grouping_entities=[], filters=[], map_parameters={}, **kwargs):
+def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None, GEOM_ENTITY=None, MAP_PARAMETERS={}, **kwargs):
     dao = get_dao(project)
-    renderer = GeoToolsMapRenderer()
+
+    if platform.system() == 'Java':
+        # Initialize GeoTools Renderer.
+        gt_renderer = GeoToolsMapRenderer()
+
+        # Get connection parameters.
+        sa_connection_parameters = dao.get_connection_parameters()
+        gt_connection_parameters = mapSqlAlchemyConnectionParameters(sa_connection_parameters)
+
+        # Generate sql.
+        sql = dao.get_sql(QUERY)
+
+        # Render map image.
+        img = gt_renderer.renderMap(
+                dao = dao, 
+                sql = sql,
+                data_entity = DATA_ENTITY, 
+                geom_id_entity = GEOM_ID_ENTITY, 
+                geom_entity = GEOM_ENTITY, 
+                map_parameters= MAP_PARAMETERS,
+                **kwargs
+                )
+
+    # @TODO: Add normal python renderer.
+    else:
+        img = None
+
+    return img
 
     #return open('/data/burger.png').read()
-    return renderer.renderMap(
-            dao=dao, 
-            data_entity=data_entity, 
-            geom_id_entity=geom_id_entity, 
-            geom_entity=geom_entity, 
-            grouping_entities=grouping_entities,
-            filters=filters, 
-            map_parameters=map_parameters,
-            **kwargs
-            )
 
 def execute_queries(project, QUERIES=[]):
     dao = get_dao(project)
