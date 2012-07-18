@@ -160,17 +160,23 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             // Add window number to title.
             opts.title = _s.sprintf("%d &middot; %s", this.data_view_counter, opts.title);
 
+            // Merge with defaults.
+            var opts = _.extend({
+                "inline-block": true,
+                "width": this.data_view_defaults.width,
+                "height": this.data_view_defaults.height,
+                "x": (this.data_view_counter % 5) * 20,
+                "y": (this.data_view_counter % 5) * 20,
+                "showFooter": false,
+                "scrollable": false
+            }, opts);
+
+            // Add offset to x, y
+            opts.x += dv_offset.left;
+            opts.y += dv_offset.top;
 
 			var w =  new Windows.views.WindowView({
-				model: new Backbone.Model(_.extend({}, {
-					"inline-block": true,
-					"width": this.data_view_defaults.width,
-					"height": this.data_view_defaults.height,
-					"x": dv_offset.left + (this.data_view_counter % 5) * 20,
-					"y": dv_offset.top + (this.data_view_counter % 5) * 20,
-					"showFooter": false,
-					"scrollable": false
-				}, opts))
+				model: new Backbone.Model(opts)
 			});
 
 			w.on("resize", function(){
@@ -1241,13 +1247,29 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 }
             }
 
+
 			// Initialize Data Views.
+            
+            // Get the number of data views we can put per row in the data view container.
+            var views_per_row = Math.floor($('.data-views', this.el).width()/this.data_view_defaults.width);
+            var row = -1;
+            var column = 0;
 			_.each(initial_state.data_views, function(data_view, i){
+
 
                 // TESTING!
                 if (i != i){
                     return;
                 }
+
+                // Get the position for each view.
+                if (column == 0){
+                    row += 1;
+                }
+                var pos = {
+                    x: column * (this.data_view_defaults.width + 15),
+                    y: row * (this.data_view_defaults.height + 15)
+                };
 
 				// Handle map data views.
 				if (data_view.type == 'map'){
@@ -1264,9 +1286,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					});
 
 					// Create window.
-					this.createDataViewWindow(map_editor, {
-						"title": "Map"
-					});
+					this.createDataViewWindow(map_editor, _.extend({"title": "Map"}, pos));
 				}
 
 				// Handle chart data views.
@@ -1286,11 +1306,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 						}
 					}, this);
 
-					this.createDataViewWindow(chart_editor, {
-						"title": "Chart"
-					});
+					this.createDataViewWindow(chart_editor, _.extend({"title": "Chart"}, pos));
 				}
 
+                column = (column + 1) % views_per_row;
 
 			}, this);
 			
