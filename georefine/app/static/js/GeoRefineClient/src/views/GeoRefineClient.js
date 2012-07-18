@@ -127,6 +127,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
                 _this.summary_bar.model.set('quantity_field', selected_field);
             });
+
+            // Resize the filters editor.
+            $('.filters-editor', this.el).height();
         },
 
         // Helper function for merging a set of grouped filter objects into a list.
@@ -1351,10 +1354,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                             else{
                                 $tc.removeClass('expanded');
                                 Util.util.fillParent($table);
-                                /*
-                                _this.resize();
-                                _this.resizeStop();
-                                */
                             }
                         }
                     }
@@ -1383,6 +1382,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
         },
 
         resize: function(){
+            this.resizeFiltersEditor();
+        },
+
+        resizeFiltersEditor: function(){
+            var $table = $('.filters-editor-table', this.el);
+            Util.util.fillParent($table);
             this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
         },
 

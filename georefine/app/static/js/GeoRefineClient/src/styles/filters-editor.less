@@ -36,8 +36,8 @@
     @tab_corner_radius: 7px;
 
     position: relative;
-    display: inline-block;
-    overflow-y: scroll;
+    height: 100%;
+    width: 100%;
 
     > .table {
         border-spacing: 0;
@@ -51,6 +51,11 @@
 
         .middle-row .left-column {
             width: @tab_h;
+        }
+
+        .right-column.cell{
+            vertical-align: top;
+            position: relative;
         }
 
         .filters-editor-tab {
@@ -143,27 +148,37 @@
                 }
             }
         }
-
+        @summary_bar_h: 60px;
         .summary-bar-container {
-            margin-right: @padding_tight;
-            margin-left: @padding_tight;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: @summary_bar_h;
+            overflow-y: scroll;
 
             .summary-bar {
-                background-color: @faint_grey;
                 .rounded_corners(@padding_normal);
-
-                padding: @padding_normal;
-
+                background-color: @faint_grey;
+                margin: 0 5px; 
+                padding: 0 5px;
+                height: 100%;
                 .data {
                     .selected {
                         font-weight: bold;
                     }
                 }
-
             }
         }
 
-
+        .filters-container{
+            position: absolute;
+            top: @summary_bar_h + @padding_tight;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow-y: scroll;
+        }
     }
 
     .rotate-270{
