@@ -974,13 +974,15 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					url: requests_endpoint,
 					type: 'POST',
 					data: {'requests': JSON.stringify(requests)},
+                    complete: function(){
+                        datasource.set('loading', false);
+                    },
 					error: Backbone.wrapError(function(){
                         console.log("error", arguments);
                     }, q, {}),
 					success: function(data, status, xhr){
                         var results = data.results;
                         var count_entity = qfield.get('outer_query')['SELECT'][0];
-                        console.log("data is: ", data);
 
                         // Format data for chart.
                         var chart_data = [];
