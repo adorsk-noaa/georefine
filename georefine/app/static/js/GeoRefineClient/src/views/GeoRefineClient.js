@@ -41,7 +41,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 _this.setUpSummaryBar();
                 _this.setUpFiltersEditor();
 				_this.setUpInitialState();
-		        _this.resizeVerticalTab($('.filters-editor-tab', _this.el)); 
+                _this.resize();
 			});
 
 			return this;
@@ -1195,7 +1195,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 					var formatted_selected = _s.sprintf(format, data.selected);
 					var formatted_total = _s.sprintf(format, data.total);
 					var percentage = 100.0 * data.selected/data.total;
-					$(".data", this.el).html(_s.sprintf("%s (%.1f%% of %s total)", formatted_selected, percentage, formatted_total));
+					$(".data", this.el).html(_s.sprintf('<span class="selected">%s</span> <span class="percentage">(%.1f%% of %s total)</span>', formatted_selected, percentage, formatted_total));
 
                     // Set totals on facets.
                     _.each(_app.facets.models, function(facet_model){
@@ -1228,7 +1228,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			_.each(initial_state.data_views, function(data_view, i){
 
                 // TESTING!
-                if (i != 0){
+                if (i != -1){
                     return;
                 }
 
@@ -1344,6 +1344,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     dimension: 'width'
                 });
             }
+        },
+
+        resize: function(){
+            this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
         },
 
 		resizeVerticalTab: function($vt){

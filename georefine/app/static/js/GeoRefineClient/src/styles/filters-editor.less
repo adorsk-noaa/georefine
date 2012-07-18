@@ -37,6 +37,7 @@
 
     position: relative;
     display: inline-block;
+    overflow-y: scroll;
 
     > .table {
         border-spacing: 0;
@@ -143,6 +144,25 @@
             }
         }
 
+        .summary-bar-container {
+            margin-right: @padding_tight;
+            margin-left: @padding_tight;
+
+            .summary-bar {
+                background-color: @faint_grey;
+                .rounded_corners(@padding_normal);
+
+                padding: @padding_normal;
+
+                .data {
+                    .selected {
+                        font-weight: bold;
+                    }
+                }
+
+            }
+        }
+
 
     }
 
@@ -159,8 +179,6 @@
     .facets {
         width: 100%;
         height: 100%;
-        overflow-y: scroll;
-        overflow-x: scroll;
     }
 }
 
