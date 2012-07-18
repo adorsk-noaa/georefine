@@ -25,8 +25,12 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 
 		initialize: function(){
 			$(this.el).addClass('georefine-client');
+
+            this.data_view_counter = 0;
+
 			this.render();
 			this.on('ready', this.onReady, this);
+
 		},
 
 		render: function(){
@@ -149,10 +153,10 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			var w =  new Windows.views.WindowView({
 				model: new Backbone.Model(_.extend({}, {
 					"inline-block": true,
-					"width": $data_views.width(),
-					"height": $data_views.height(),
-					"x": dv_offset.left,
-					"y": dv_offset.top,
+					"width": 500,
+					"height": 500,
+					"x": dv_offset.left + (this.data_view_counter % 5) * 20,
+					"y": dv_offset.top + (this.data_view_counter % 5) * 20,
 					"showFooter": false,
 					"scrollable": false
 				}, opts))
@@ -180,6 +184,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 			w.resize();
 			w.resizeStop();
 			data_view.trigger('ready');
+
+            this.data_view_counter += 1;
 		},
 
 		addMapView: function(){
