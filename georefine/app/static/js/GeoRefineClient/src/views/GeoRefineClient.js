@@ -240,7 +240,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                 _.each(array_params, function(param){
                     if (target_q.hasOwnProperty(param)){
                         _.each(source_q[param], function(source_q_value){
-                            if (target_q[param].indexOf(source_q_value) != -1){
+                            if (target_q[param].indexOf(source_q_value) == -1){
                                 target_q[param].push(source_q_value);
                             }
                         });
@@ -289,6 +289,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var inner_q = {
                 'ID': 'inner',
                 'SELECT_GROUP_BY': true,
+                'GROUP_BY': []
             };
 
             // Merge the quantity field's inner query parameters.
@@ -709,7 +710,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     var _timeoutGetData = function(){
                         var delay = 500;
                         return setTimeout(function(){
-                            //console.log("getData", model.id, arguments);
                             model.getData();
                             model.set('_fetch_timeout', null);
                         }, delay);
@@ -816,7 +816,9 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 				_.each(layers, function(layer){
 
 					// Initialize processed layer.
-					var proc_layer = _.extend({}, layer);
+					var proc_layer = _.extend({
+                        options: {}
+                    }, layer);
 
 					// If Layer has maxextent, create OpenLayers bounds from it.
 					if (proc_layer.max_extent){
@@ -1186,7 +1188,6 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         var _timeoutGetData = function(){
                             var delay = 500;
                             return setTimeout(function(){
-                                //console.log("getData", model.id, arguments);
                                 model.getData();
                                 model.set('_fetch_timeout', null);
                             }, delay);
