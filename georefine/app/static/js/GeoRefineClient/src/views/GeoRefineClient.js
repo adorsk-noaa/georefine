@@ -13,6 +13,37 @@ define([
 		],
 function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
 
+    function friendlyNumber(number, decPlaces, use_long) {
+        decPlaces = Math.pow(10,decPlaces);
+        number = parseFloat(number);
+        var long_suffixes = ["", " thousand", " million", " billion", " trillion", " quadrillion", " quintillion"];
+        var short_suffixes = " kMGTPE";
+        var suffixes = use_long ? long_suffixes : short_suffixes;
+        var size = 0
+        var i = 0;
+        for (i=suffixes.length-1; i>=-1; i--) {
+            size = Math.pow(10,(i+1)*3);
+            if (size <= number) {
+                break;
+            }
+        }
+        number = Math.round(number*decPlaces/size)/decPlaces;
+        var suffix = (i == -2) ? suffixes[0] : suffixes[i+1];
+        return number.toString() + suffix;
+    };
+
+    var _grFormat = function(f, s){
+        var re = /%(\.(\d+))?(H|h)/;
+        var m = re.exec(f)
+        if (m){
+            f = f.replace(re, '%s');
+            var d = parseInt(m[2])|| 1;
+            var use_long = (m[3] == 'H');
+            s = friendlyNumber(s, d, use_long)
+        }
+        return _s.sprintf(f, s);
+    };
+
     var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
 	var GeoRefineClientView = Backbone.View.extend({
@@ -410,7 +441,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 								id: result['key'],
 								label: result['label'],
 								count: value,
-                                count_label: _s.sprintf(qfield.get('format') || '%s', value)
+                                count_label: _grFormat(qfield.get('format') || '%s', value)
 							});
 						});
 						_this.set('choices', choices);
@@ -631,7 +662,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         _.each(choices, function(choice){
                             var label = "";
                             if (count_entity && count_entity.format){
-                                label = _s.sprintf(count_entity.format, choice['count']);
+                                label = _grFormat(count_entity.format || '%s', choice['count']);
                             }
                             else{
                                 label = choice['count'];
@@ -1217,9 +1248,16 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                         return;
                     }
 
-					var formatted_selected = _s.sprintf(format, data.selected);
-					var formatted_total = _s.sprintf(format, data.total);
-					var percentage = 100.0 * data.selected/data.total;
+					var formatted_selected = _grFormat(format, data.selected);
+					var formatted_total = _grFormat(format, data.total);
+					var percentage ;
+                    if (data.total == 0 && data.selected == 0){
+                        percentage = 100.0;
+                    }
+                    else{
+                        percentage = 100.0 * data.selected/data.total;
+                    }
+
 					$(".text .field", this.el).html(_s.sprintf("'%s'", this.model.get('quantity_field').get('label')));
 					$(".text .selected", this.el).html(formatted_selected);
 					$(".text .total", this.el).html(_s.sprintf('(%.1f%% of %s total)', percentage, formatted_total));
@@ -1390,6 +1428,8 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
             var $table = $('.filters-editor-table', this.el);
             Util.util.fillParent($table);
             this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
+            var $sbc = $('.filters-editor-table .summary-bar-container');
+            $sbc.parent().css('height', $sbc.height());
         },
 
 		resizeVerticalTab: function($vt){
