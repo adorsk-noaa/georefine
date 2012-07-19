@@ -122,10 +122,40 @@ class Services_Test(BaseTest):
 
 
 
-    def testProjects30Histogram(self):
+    def testProjects30(self):
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 
+        request = {'args': {}}
+        import simplejson as json
+
+        json_parms = '''
+        {"QUERY":{"ID":"outer","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"x_data","EXPRESSION":"func.sum({{result.x}}/{{result.cell.area}})"}],"GROUP_BY":[{"ID":"x_cell_id","EXPRESSION":"{{result.cell.id}}"},{"ID":"x_cell_geom","EXPRESSION":"RawColumn({{result.cell.geom}})"}],"WHERE":[{},["{{result.x}}",">=",0],["{{result.x}}","<=",6254998.2334],["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"x_geom_id","EXPRESSION":"{{inner.x_cell_id}}"},{"ID":"x_geom","EXPRESSION":"RawColumn({{inner.x_cell_geom}})"},{"ID":"x_data","EXPRESSION":"{{inner.x_data}}"}]},"GEOM_ID_ENTITY":{"ID":"x_geom_id"},"GEOM_ENTITY":{"ID":"x_geom"},"DATA_ENTITY":{"ID":"x_data","max":0.25,"min":0}}
+        '''
+        params = json.loads(json_parms)
+
+        wms_parms = {}
+        raw_wms_parms = 'TRANSPARENT=TRUE&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&STYLES=&FORMAT=image/png&SRS=EPSG:4326&BBOX=-79,31,-72.6,37.4&WIDTH=256&HEIGHT=256'
+        kvs = raw_wms_parms.split('&')
+        for kv in kvs:
+            k, v = kv.split('=')
+            wms_parms[k] = v
+            
+        # Parse WMS parameters.
+        MAP_PARAMETERS = {}
+        for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT', 'SRS']:
+            value = wms_parms.get(wms_parameter)
+            if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
+                value = int(value)
+            MAP_PARAMETERS[wms_parameter] = value
+
+        map_image = services.get_map(
+                project, 
+                MAP_PARAMETERS = MAP_PARAMETERS,
+                **params
+                )
+
+        return
         requests_json = '''
         [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},"LABEL_ENTITY":{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}},"QUERIES":[{"ID":"outer","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"GROUP_BY":[{"ID":"cell_id"},{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}],"WHERE":[]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"substrate_id","EXPRESSION":"{{inner.substrate_id}}"},{"ID":"substrate_name","EXPRESSION":"{{inner.substrate_name}}"}],"SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}]}]}}]
         '''

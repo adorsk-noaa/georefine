@@ -47,7 +47,7 @@ class GeoToolsMapRenderer(object):
         vtable.setPrimaryKeyColumns([geom_id_entity['ID']])
 
         # metadatata = intententional typo. GT needs to fix the name.
-        vtable.addGeometryMetadatata("geom", JPolygon, 4326)
+        vtable.addGeometryMetadatata(geom_entity['ID'], JPolygon, 4326)
 
         # Create feature source from virtual table.
         data_store.addVirtualTable(vtable)
