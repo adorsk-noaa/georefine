@@ -23,3 +23,6 @@ def shutdown_session(exception=None):
 
 from georefine.app.projects.views import bp as projects_bp
 app.register_blueprint(projects_bp)
+
+from georefine.app.keyed_strings.views import bp as keyed_strings_bp
+app.register_blueprint(keyed_strings_bp)
