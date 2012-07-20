@@ -1,17 +1,17 @@
 from georefine.app import db 
-from sqlalchemy import Table, Column, Integer, Text
+from sqlalchemy import Table, Column, String, Text
 from sqlalchemy.orm import mapper
 
 class KeyedString(object):
-	query = db.session.query_property()
+    query = db.session.query_property()
 
-	def __init__(self, id=None, string=None):
-		self.id = id
-		self.string = string
+    def __init__(self, key=None, s=None):
+        self.key = key
+        self.s = s
 
 table = Table('keyed_string_data', db.metadata,
-		Column('id', Integer, primary_key=True),
-        Column('string', Text),
+        Column('key', String, primary_key=True),
+        Column('s', Text),
         )
 
 mapper(KeyedString, table)

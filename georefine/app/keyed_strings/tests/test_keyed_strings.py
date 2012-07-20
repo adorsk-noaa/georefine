@@ -1,5 +1,6 @@
 import unittest
 import georefine.app as gr
+from flask import json
 
 class ProjectsTest(unittest.TestCase):
 
@@ -9,17 +10,15 @@ class ProjectsTest(unittest.TestCase):
         self.base_path = '/ks'
 
     def test_getKey(self):
-        data = { 
-                "s" : "asdfasdfasdfasdf"
-                }
+        data = {"s" : "asdfasdfasdfasdf"}
         r = self.app.post(self.base_path + '/getKey/', data=data) 
-        print r.data
 
     def test_getString(self):
-        key = "asdfasdfasdfasdf"
+        data = {"s" : "asdfasdfasdfasdf" }
+        r = self.app.post(self.base_path + '/getKey/', data=data) 
+        key = json.loads(r.data).get('key')
         path = self.base_path + "/getString/" + key
         r = self.app.get(path, follow_redirects=True)
-        print r.data
 
 if __name__ == '__main__':
     unittest.main()
