@@ -8,6 +8,7 @@ from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
+from georefine.app.keyed_strings import util as ks_util
 import os
 import tarfile
 
@@ -156,8 +157,22 @@ def get_map(project_id):
     project = Project.query.get(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
-    # Parse custom parameters.
-    params = json.loads(request.args.get('PARAMS', '{}'))
+    # Parse parameters.
+    json_params = ""
+    # If params key was provided, load params string.
+    if request.args.get('PARAMS_KEY'):
+        json_params = ks_util.getString(request.args.get('PARAMS_KEY'))
+
+    # Parse custom parameters (overrides params key for testing purposes).
+    if request.args.get('PARAMS'):
+        json_params = request.args.get('PARAMS')
+
+    params = json.loads(json_params)
+    # Fix for unicode keys (py2.5 doesn't like them).
+    str_params = {}
+    for k,v in params.items():
+        str_params[str(k)] = v
+    params = str_params
 
     # Parse WMS parameters.
     MAP_PARAMETERS = {}
