@@ -12,7 +12,7 @@ class Project(object):
 
 project_table = Table('project_projects', db.metadata,
 		Column('id', Integer, primary_key=True),
-		Column('name', String, unique=True),
+		Column('name', String),
 		Column('dir', String),
 		)
 
