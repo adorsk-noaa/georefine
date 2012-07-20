@@ -45,6 +45,7 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
     };
 
     var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+    var keyed_strings_endpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.config.context_root);
 
 	var GeoRefineClientView = Backbone.View.extend({
 
@@ -831,13 +832,24 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
                     'DATA_ENTITY': model.get('data_entity'),
                 };
 
-                // Convert to url params.
-                var url_params = [_s.sprintf('PARAMS=%s', JSON.stringify(params))];
-
-                // Generate url by appending url params to map endpoint.
-                var service_url = map_endpoint + '?' + url_params.join('&') + '&';
-                
-                model.set('service_url', service_url);
+                // Get shortened parameters key.
+				$.ajax({
+					url: keyed_strings_endpoint,
+					type: 'POST',
+					data: {'s': JSON.stringify(params)},
+                    complete: function(){
+                    },
+					error: Backbone.wrapError(function(){
+                        console.log("error", arguments);
+                    }, model, {}),
+                    // After we get the key back, add it as a query parameter.
+                    // and set the service_url.
+					success: function(data, status, xhr){
+                        var url_params = [_s.sprintf('PARAMS_KEY=%s', data.key)];
+                        var service_url = map_endpoint + '?' + url_params.join('&') + '&';
+                        model.set('service_url', service_url);
+                    }
+                });
 			};
 
 			var processed_layers = {};
