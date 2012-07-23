@@ -673,7 +673,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 
                     // Add tooltips if flyout url template.
                     if (facet.flyout_url_template){
-                        $(view.el).on('click', '.facet-choice .info', function(event) {
+
+
+                        $(view.el).on('hover', '.facet-choice .info', function(event) {
+                            var $fb = $('.facet-body', view.el);
 
                             event.stopPropagation();
 
@@ -703,6 +706,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                                 content: {
                                     text: "Fish",
                                     ajax: {
+                                        once: true,
+                                        loading: false,
                                         url: flyout_url,
                                         type: 'GET',
                                         success: function(data, status){
@@ -722,35 +727,32 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 
                                             // Render as a flyout.
                                             var flyout_html = _.template(flyout_template, flyout_data);
+
                                             this.set('content.text', flyout_html);
+                                            //this.set('content.title.text', flyout_data['TITLE']);
                                         }
-                                    },
-                                    title: {
-                                        text: true,
-                                        button: true
                                     }
                                 },
                                 position: {
-                                    my: 'left center',
-                                    at: 'right center'
+                                    target: $fb,
+                                    my: 'left top',
+                                    at: 'right top',
+                                    effect: false
                                 },
-                                hide: false,
-                                events: {
-                                    render: function(event, api) {
-                                        api.elements.tooltip.draggable();
-                                        $('.ui-tooltip-titlebar', api.elements.tooltip).css('cursor', 'move');
-                                    }
+                                hide: {
+                                    fixed: true,
+                                    delay: 200
                                 },
+                                //hide: false,
                                 show: {
                                     event: event.type,
-                                    delay: 0,
+                                    delay: 400,
+                                    effect: false,
                                     ready: true
                                 },
                                 style: {
-                                    classes: 'ui-tooltip facet-choice-info',
-                                    tip: {
-                                        corner: false
-                                    }
+                                    classes: 'ui-tooltip facet-choice-flyout',
+                                    tip: { corner: false } 
                                 }
                             });
                         });
