@@ -3,15 +3,17 @@ define([
 	"use!backbone",
 	"use!underscore",
 	"use!ui",
+    "use!qtip",
 	"_s",
 	"Facets",
 	"MapView",
 	"Charts",
 	"Windows",
 	"Util",
-	"text!./templates/GeoRefineClient.html"
+	"text!./templates/GeoRefineClient.html",
+	"text!./templates/flyout_template.html"
 		],
-function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, template){
+function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, template, flyout_template){
 
     function friendlyNumber(number, decPlaces, use_long) {
         decPlaces = Math.pow(10,decPlaces);
@@ -654,7 +656,105 @@ function($, Backbone, _, ui, _s, Facets, MapView, Charts, Windows, Util, templat
 						choices: []
 					}));
 					model.getData = listFacetGetData;
-					view = new Facets.views.ListFacetView({ model: model });
+
+                    // Add info control if facet has a flyout url template.
+                    var controls = {
+                        'toggle': true
+                    };
+                    if (facet.flyout_url_template){
+                        controls['info'] = true;
+                    }
+
+					view = new Facets.views.ListFacetView({ 
+                        model: model,
+                        controls: controls
+                    });
+
+
+                    // Add tooltips if flyout url template.
+                    if (facet.flyout_url_template){
+                        $(view.el).on('click', '.facet-choice .info', function(event) {
+
+                            event.stopPropagation();
+
+                            // Get choice data.
+                            var choice_data = {};
+                            var $choice = $(this).closest('.facet-choice');
+                            var id_re = /.*choice-(.*)$/;
+                            var id_match = id_re.exec($choice.attr('id'));
+                            if (id_match){
+                                choice_data['ID'] = id_match[1];
+                            }
+
+                            // Replace tokens in flyout url template.
+                            var flyout_url = facet.flyout_url_template;
+                            var flyout_re = /({{(.*?)}})/;
+							var match = flyout_re.exec(facet.flyout_url_template);
+                            if (match){
+                                flyout_url = flyout_url.replace(flyout_re, choice_data[match[2]]);
+                            }
+
+                            // Get basedir for flyout url.
+                            var url_parts = flyout_url.split('/');
+                            var base_url = url_parts.slice(0,-1).join('/');
+
+                            $(this).qtip({
+                                overwrite: false,
+                                content: {
+                                    text: "Fish",
+                                    ajax: {
+                                        url: flyout_url,
+                                        type: 'GET',
+                                        success: function(data, status){
+                                            var flyout_data = {
+                                                "TITLE": "",
+                                                "DESCRIPTION": "",
+                                                "IMAGE_PATH": ""
+                                            };
+
+                                            // Merge data into flyout data.
+                                            _.extend(flyout_data, data);
+
+                                            // Set the image path.
+                                            if (data['IMAGE']){
+                                                flyout_data['IMAGE_PATH'] = base_url + '/' + data['IMAGE'];
+                                            }
+
+                                            // Render as a flyout.
+                                            var flyout_html = _.template(flyout_template, flyout_data);
+                                            this.set('content.text', flyout_html);
+                                        }
+                                    },
+                                    title: {
+                                        text: true,
+                                        button: true
+                                    }
+                                },
+                                position: {
+                                    my: 'left center',
+                                    at: 'right center'
+                                },
+                                hide: false,
+                                events: {
+                                    render: function(event, api) {
+                                        api.elements.tooltip.draggable();
+                                        $('.ui-tooltip-titlebar', api.elements.tooltip).css('cursor', 'move');
+                                    }
+                                },
+                                show: {
+                                    event: event.type,
+                                    delay: 0,
+                                    ready: true
+                                },
+                                style: {
+                                    classes: 'ui-tooltip facet-choice-info',
+                                    tip: {
+                                        corner: false
+                                    }
+                                }
+                            });
+                        });
+                    }
 
                     // This function will be called with the view as 'this'.
                     view.formatChoiceCountLabels = function(choices){
