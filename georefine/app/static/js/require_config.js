@@ -19,7 +19,8 @@ var require = {
 		jqp_cat_axis_renderer: ASSETS_BASEURL + JQPLOT_BASE + "/plugins/jqplot.categoryAxisRenderer.min",
 		jqp_log_axis_renderer: ASSETS_BASEURL + JQPLOT_BASE + "/plugins/jqplot.logAxisRenderer.min",
 		flot: ASSETS_BASEURL + "/js/flot/jquery.flot",
-		jqwindow: ASSETS_BASEURL + "/js/jquery.window/jquery.window"
+		jqwindow: ASSETS_BASEURL + "/js/jquery.window/jquery.window",
+		qtip: ASSETS_BASEURL + "/js/jquery.qtip/jquery.qtip"
 	},
 	
 	use: {
@@ -71,6 +72,10 @@ var require = {
 		jqwindow: {
 		  deps: ["jquery", "ui"]
 		},
+
+		qtip: {
+		  deps: ["jquery"]
+		}
 
 	},
 
