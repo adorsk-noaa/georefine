@@ -4,6 +4,7 @@
 @import url("charts-styles/charts-example.less");
 @import url("filters-editor.less");
 @import url("qtip-styles/jquery.qtip.css");
+@import "flyouts.less";
 @import "rounded-corners.less";
 
 @link_primary: #11c;
@@ -95,38 +96,3 @@
 
 }
 
-.qtip.facet-choice-flyout {
-    @h: 260px;
-    @w: 325px;
-    @image_w: 75px;
-
-    //.rounded_corners(7px);
-    border: thin solid @chrome_primary;
-
-    background-color: white;
-
-    height: @h;
-    width: @w;
-
-    .ui-tooltip-content{
-        position: absolute;
-        top: @padding_normal;
-        bottom: @padding_normal;
-        left: @padding_normal;
-        right: @padding_normal;
-        padding: 0;
-
-        .flyout{
-            height: 100%;
-            width: 100%;
-            background-color: #eeeeee;
-            h2 {
-                font-size: 100%;
-                color: #FF6A00;
-            }
-            img {
-                max-width: @image_w;
-            }
-        }
-    }
-}

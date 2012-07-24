@@ -661,9 +661,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                     var controls = {
                         'toggle': true
                     };
+                    /*
                     if (facet.flyout_url_template){
                         controls['info'] = true;
                     }
+                    */
 
 					view = new Facets.views.ListFacetView({ 
                         model: model,
@@ -675,7 +677,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                     if (facet.flyout_url_template){
 
 
-                        $(view.el).on('hover', '.facet-choice .info', function(event) {
+                        $(view.el).on('hover', '.facet-choice .title', function(event) {
                             var $fb = $('.facet-body', view.el);
 
                             event.stopPropagation();
@@ -734,10 +736,14 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                                     }
                                 },
                                 position: {
-                                    target: $fb,
+                                    //target: $fb,
+                                    target: this,
                                     my: 'left top',
-                                    at: 'right top',
-                                    effect: false
+                                    at: 'right center',
+                                    effect: false,
+                                    adjust: {
+                                        x: 2
+                                    }
                                 },
                                 hide: {
                                     fixed: true,
@@ -752,7 +758,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                                 },
                                 style: {
                                     classes: 'ui-tooltip facet-choice-flyout',
-                                    tip: { corner: false } 
+                                    tip: { 
+                                        corner: 'left top',
+                                        mimic: 'left center',
+                                        offset: $(this).height()/2,
+                                    } 
                                 }
                             });
                         });

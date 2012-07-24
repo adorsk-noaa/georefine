@@ -1,0 +1,38 @@
+.qtip.facet-choice-flyout {
+    @h: 260px;
+    @w: 325px;
+    @image_w: 75px;
+
+    //.rounded_corners(7px);
+    height: @h;
+    width: @w;
+
+    border: thin solid #666666;
+    background-color: white;
+
+    .ui-tooltip-tip {
+    }
+
+    .ui-tooltip-content{
+        position: absolute;
+        top: @padding_normal;
+        bottom: @padding_normal;
+        left: @padding_normal;
+        right: @padding_normal;
+        padding: 2px;
+
+        .flyout{
+            height: 100%;
+            width: 100%;
+            background-color: #fafbff;
+            border: thin solid #bcf;
+            h2 {
+                font-size: 100%;
+                color: #FF6A00;
+            }
+            img {
+                max-width: @image_w;
+            }
+        }
+    }
+}
