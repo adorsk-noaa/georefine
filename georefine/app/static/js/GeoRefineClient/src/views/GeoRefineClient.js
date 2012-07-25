@@ -526,17 +526,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                         var range_max = null;
 						var choices = [];
 						_.each(results['keyed_results'], function(result){
-							bucket_label = result['label'];
-							var minmax_regex = /(-?\d+(\.\d*)?)\s*,\s*(-?\d+(\.\d*)?)/;
-							var match = minmax_regex.exec(bucket_label);
-							var bmin, bmax;
-							if (match != null){
-								bmin = parseFloat(match[1]);
-								bmax = parseFloat(match[3]);
-							}
-							else{
-								return;
-							}
+							var bucket_label = result['label'];
+                            var bminmax = _app.getBucketMinMax(bucket_label);
+                            var bmin = bminmax.min;
+                            var bmax = bminmax.max;
 
                             if (! range_min <= bmin){
                                 range_min = bmin;
@@ -1020,6 +1013,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                 // Copy the key entity.
                 var key = JSON.parse(JSON.stringify(cfield.get('KEY')));
 
+                // Merge in values from the category field's entity model.
+                _.each(cfield.get('entity').toJSON(), function(v, k){
+                    key['KEY_ENTITY'][k.toUpperCase()] = v;
+                });
+
                 // Set base filters on key entity context.
                 if (! key['KEY_ENTITY']['CONTEXT']){
                     key['KEY_ENTITY']['CONTEXT'] = {};
@@ -1068,26 +1066,42 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                         var chart_data = [];
 
                         _.each(results['keyed_results'], function(result){
+                            var base_value = null;
                             if (result['data']['base']){
-
                                 var base_value = result['data']['base'][count_entity['ID']];
-                                var primary_value = 0;
-                                if (result['data']['primary']){
-                                    primary_value = result['data']['primary'][count_entity['ID']];
-                                }
-
-                                var chart_datum = {
-                                    id: result.key,
-                                    label: result.label,
-                                    data: {
-                                        'primary': {value: primary_value},
-                                        'base': {value: base_value}
-                                    }
-                                };
-
-                                chart_data.push(chart_datum);
                             }
+
+                            var primary_value = null;
+                            if (result['data']['primary']){
+                                primary_value = result['data']['primary'][count_entity['ID']];
+                            }
+
+                            var chart_datum = {
+                                id: result.key,
+                                label: result.label,
+                                data: {
+                                    'primary': {value: primary_value},
+                                    'base': {value: base_value}
+                                }
+                            };
+
+                            // If key is a histogram key, get min/max for the bucket.
+                            if (key['KEY_ENTITY']['AS_HISTOGRAM']){
+                                var bminmax = _app.getBucketMinMax(result['label']);
+                                chart_datum.min = bminmax.min;
+                                chart_datum.max = bminmax.max;
+                            }
+
+                            chart_data.push(chart_datum);
                         });
+
+                        // If key is histogram, sort data.
+                        if (key['KEY_ENTITY']['AS_HISTOGRAM']){
+                            chart_data = _.sortBy(chart_data, function(datum){
+                                return datum.min;
+                            });
+                        }
+
 
 						datasource.set('data', chart_data);
 					}
@@ -1459,6 +1473,25 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			$rc.css('width', $rc.parent().height());
 			$rc.css('height', $rc.parent().width());
 		},
+
+        getBucketMinMax: function(bucket_label){
+            var minmax_regex = /[\[(](.*?),(.*?)[\]|)]/;
+            var match = minmax_regex.exec(bucket_label);
+            var bmin, bmax;
+
+            if (match != null){
+                bmin = (match[1].indexOf('...') > -1) ? -Number.MAX_VALUE : parseFloat(match[1]);
+                bmax = (match[2].indexOf('...') > -1) ? Number.MAX_VALUE : parseFloat(match[2]);
+                return {
+                    min: bmin,
+                    max: bmax
+                };
+            }
+            else{
+                return null;
+            }
+
+        }
 
     });
 
