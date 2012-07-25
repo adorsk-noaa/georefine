@@ -73,7 +73,12 @@ class SA_DAO_Test(BaseTest):
         bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
         bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
             #"WHERE": [["{{test1.id}}", "in", [2,3]]]
-            }}
+            },
+            'MIN': -1,
+            'MINAUTO': True,
+            'MAX': 5,
+            'MAXAUTO': True,
+            }
 
         key_def = {
                 #"KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},

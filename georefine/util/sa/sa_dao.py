@@ -391,7 +391,8 @@ class SA_DAO(object):
     def get_bucket_parameters(self, entity_def):
 
         # Get min/max if not provided, via the 'context'.
-        if entity_def.get('MIN') == None or entity_def.get('MAX') == None:
+        if entity_def.get('MIN') == None or entity_def.get('MAX') == None \
+        or entity_def.get('MINAUTO') or entity_def.get('MAXAUTO'):
             SELECT = []
             for m in ['MIN', 'MAX']:
                 minmax_entity_def = {'ID': m, 'EXPRESSION': "func.%s(%s)" % (m.lower(), entity_def.get('EXPRESSION'))}
@@ -406,11 +407,17 @@ class SA_DAO(object):
                     ) 
                 ]).values()[0][0]
 
-            # set MIN and MAX only if not provided.
+            # set MIN and MAX only if not provided, or if *AUTO is true.
             for m in ['MIN', 'MAX']:
                 # Set to 0 if None.
                 minmax.setdefault(m, 0)
-                entity_def.setdefault(m, minmax[m])
+
+                # If auto, use minmax result.
+                if entity_def.get("%sAUTO" % m):
+                    entity_def[m] = minmax[m]
+                # Otherwise, only set if not already set.
+                else:
+                    entity_def.setdefault(m, minmax[m])
 
         entity_min = entity_def['MIN']
         entity_max = entity_def['MAX']
