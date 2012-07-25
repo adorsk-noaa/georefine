@@ -143,22 +143,29 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
             }, this);
 
             // Setup quantity field selector.
-            var $select = $('<select></select>');
+            var choices = [];
             _.each(this.facet_quantity_fields.models, function(model){
-                var $option = $(_s.sprintf('<option value="%s">%s</option>', model.cid, model.get('label')));
-                $option.appendTo($select);
-            }, this);
-            $select.appendTo('.filters-editor .quantity-field', this.el);
+                choices.push({
+                    value: model.cid,
+                    label: model.get('label'),
+                    info: model.get('info')
+                });
+            });
+            this.filters_qfield_select = new Util.views.InfoSelectView({
+                el : $('.quantity-field-info-select', this.el),
+                model: new Backbone.Model({
+                    "choices": choices
+                })
+            });
 
             // When the quantity field selector changes, update the facets and summary bar.
             var _this = this;
-            $select.on('change', function(){
-                var val = $select.val();
+            this.filters_qfield_select.model.on('change:selection', function(){
+                var val = _this.filters_qfield_select.model.get('selection');
                 var selected_field = _this.facet_quantity_fields.getByCid(val);
                 _.each(_this.facets.models, function(facet){
                     facet.set('quantity_field', selected_field);
                 }, _this);
-
                 _this.summary_bar.model.set('quantity_field', selected_field);
             });
 
@@ -938,9 +945,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				},
 				graticule_intervals: [2]
             }, 
-            map_config, {
-            })
-                    );
+            map_config
+            ));
 
 			var map_view = new MapView.views.MapViewView({
 				model: map_model
@@ -1300,9 +1306,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
             if (initial_state.facets){
                 var initial_qfield_id = initial_state.facets.initial_quantity_field_id;
                 if (initial_qfield_id){
-                    var $qfield_select = $('.filters-editor .quantity-field select', this.el);
                     var qfield = this.facet_quantity_fields.get(initial_qfield_id);
-                    $qfield_select.val(qfield.cid).change();
+                    this.filters_qfield_select.model.set('selection', qfield.cid);
                 }
             }
 
