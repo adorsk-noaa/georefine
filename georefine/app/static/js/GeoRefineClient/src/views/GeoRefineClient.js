@@ -441,7 +441,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				});
 			};
 
-			numericFacetGetData = function() {
+			numericFacetGetData = function(opts) {
+                var opts = opts || {updateRange: false};
                 var facet_model = this;
 
                 // Copy the key entity.
@@ -546,12 +547,19 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 						base_histogram = _.sortBy(base_histogram, function(b){return b.count});
 						primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
 
-						_this.set({
+                        var set_obj = {
                             base_histogram: base_histogram,
                             filtered_histogram: primary_histogram,
-                            range_min: range_min,
-                            range_max: range_max
-						});
+                        };
+
+                        if (opts.updateRange){
+                            _.extend(set_obj, {
+                                range_min: range_min,
+                                range_max: range_max
+                            });
+                        }
+
+						_this.set(set_obj);
 					}
 				});
 			};
@@ -730,15 +738,25 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                 if (model.getData){
 
                     // helper function to get a timeout getData function.
-                    var _timeoutGetData = function(){
+                    var _timeoutGetData = function(changes){
                         var delay = 500;
                         return setTimeout(function(){
-                            model.getData();
+                            var opts = {};
+                            // For numeric facet, add update range flag
+                            // for base_filter changes.
+                            if (model.get('type') == 'numeric' 
+                            && changes && changes.changes 
+                            && changes.changes['base_filters']){
+                                opts.updateRange = true;
+                            }
+                            model.getData(opts);
                             model.set('_fetch_timeout', null);
                         }, delay);
                     };
 
                     model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+
+                        var changes = arguments[2];
                         // We delay the get data call a little, in case multiple things are changing.
                         // The last change will get executed.
                         var fetch_timeout = model.get('_fetch_timeout');
@@ -747,7 +765,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                             clearTimeout(fetch_timeout);
                         }
                         // Start a new fetch.
-                        model.set('_fetch_timeout', _timeoutGetData(arguments));
+                        model.set('_fetch_timeout', _timeoutGetData(changes));
                     });
                 }
 
