@@ -671,6 +671,9 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 					}));
 					model.getData = numericFacetGetData;
 					view = new Facets.views.NumericFacetView({ model: model });
+                    view.formatter = function(format, value){
+                        return _grFormat(format, value);
+                    }
                     view.formatFilters = numericFacetFormatFilters;
 
 				}
@@ -955,11 +958,27 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				_.each(fields, function(field){
                     var entity_model = null;
                     if (field_type == 'category'){
-					    entity_model = new Backbone.Model(field['KEY']['KEY_ENTITY']);
+                        var entity_defaults = {};
+                        if (field.value_type == 'numeric'){
+                            _.extend(entity_defaults, {
+                                "num_classes": 5,
+                                "min": 0,
+                                "maxauto": true
+                            });
+                        }
+					    entity_model = new Backbone.Model(
+                            _.extend(entity_defaults, field['KEY']['KEY_ENTITY'])
+                        );
                     }
                     else if (field_type =='quantity'){
+                        var entity_defaults = {
+                            'min': 0,
+                            'maxauto': true
+                        };
                         var quantity_entity = field['outer_query']['SELECT'][0];
-					    entity_model = new Backbone.Model(quantity_entity);
+					    entity_model = new Backbone.Model(
+                            _.extend(entity_defaults, quantity_entity)
+                        );
                     }
 					field_model = new Backbone.Model(_.extend({}, field, {
 						'field_type': field_type,
@@ -1131,6 +1150,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			var chart_editor_view = new Charts.views.ChartEditorView({
 				'model': chart_editor_model
 			});
+
+            // Set number formatting on chart editor.
+            chart_editor_view.chart_view.formatQuantityLabel = function(formatString, value){
+                return Util.util.friendlyNumber(value,1);
+            };
 
 			return chart_editor_view;
 		},
