@@ -30,7 +30,7 @@ class SA_DAO(object):
         results = {}
         for query_def in query_defs:
             q = self.get_query(query_def)
-            print "q is: ", self.query_to_raw_sql(q)
+            #print "q is: ", self.query_to_raw_sql(q)
             # If using jython, compile first.  Sometimes
             # there are issues w/ using histograms.
             if platform.system() == 'Java':

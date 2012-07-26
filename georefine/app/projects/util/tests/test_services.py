@@ -18,12 +18,12 @@ class Services_Test(BaseTest):
         #manage_projects.setUpData(self.project)
 
     def testGetKeyedResults(self):
-        return #INACTIVE
+        #return #INACTIVE
         project = Project(id=1, name='test')
         project.schema = self.schema
 
-        bucket_entity1 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
-        #bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
+        bucket_entity1 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_CLASSES': 5}
+        #bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_CLASSES': 10, 'CONTEXT': {
             #"WHERE": [["{{test1.id}}", "in", [2,3]]]
             #}}
 
@@ -46,7 +46,7 @@ class Services_Test(BaseTest):
                 "SELECT_GROUP_BY": True,
                 }
 
-        results = services.get_keyed_results(project, key, [primary_q])
+        results = services.execute_keyed_queries(project, key, [primary_q])
         print results
 
     def testProject30KeyedResults(self):
@@ -159,11 +159,12 @@ class Services_Test(BaseTest):
         return
 
     def testProjects30(self):
+        #return #INACTIVE
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 
         requests_json = '''
-[{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}},"QUERIES":[{"ID":"base","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"},{"ID":"x_bucket_label","EXPRESSION":"{{inner.x_bucket_label}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]},{"ID":"primary","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"},{"ID":"x_bucket_label","EXPRESSION":"{{inner.x_bucket_label}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]}]}}]
+        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}},"QUERIES":[{"ID":"base","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]},{"ID":"primary","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2009],{},["{{result.x}}",">=",0],["{{result.x}}","<=",6254998.2334]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]}]}}]
         '''
         import simplejson as json
         request_defs = json.loads(requests_json)
