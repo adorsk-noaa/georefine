@@ -336,10 +336,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
             // Merge the quantity field's inner query parameters.
             this.extendQuery(inner_q, qfield.get('inner_query'));
 
-            // Add the facet's filters.
+            // Add the filters.
             this.addFiltersToQuery(model, filter_attrs, inner_q);
 
-            // Add the facet's key entities as group_by paramters.
+            // Add key entities as group_by paramters.
             inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
             if (key['LABEL_ENTITY']){
                 inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
@@ -349,6 +349,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
         },
 
         makeKeyedOuterQuery: function(model, key, inner_query, query_id){
+
+            key = JSON.parse(JSON.stringify(key));
 
             // Shortcuts.
             var qfield  = model.get('quantity_field');
@@ -363,6 +365,13 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 
             // Add the quantity field's outer query parameters.
             this.extendQuery(outer_q, qfield.get('outer_query'));
+
+            // If key is a histogram, add the bucket label
+            // as the label entity.
+            // Per backend convention, this will exist in the inner query already.
+            if (key['KEY_ENTITY']['AS_HISTOGRAM']){
+                key['LABEL_ENTITY'] = this.getBucketLabelEntity(key['KEY_ENTITY']);
+            }
 
             // Add key entities as group_by paramters.
             var gb_attrs = ['KEY_ENTITY'];
@@ -513,6 +522,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 					data: {'requests': JSON.stringify(requests)},
 					error: Backbone.wrapError(function(){}, _this, {}),
 					success: function(data, status, xhr){
+
+                        console.log("d is: ", data);
 
                         var results = data.results;
                         var count_entity = qfield.get('outer_query')['SELECT'][0];
@@ -1473,6 +1484,14 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			$rc.css('width', $rc.parent().height());
 			$rc.css('height', $rc.parent().width());
 		},
+
+        getBucketLabelEntity: function(key_entity){
+            // NOTE:
+            // This is per-convention w/ the backend.
+            // Kludgy.
+            var label_id = key_entity['ID'] + '_bucket_label';
+            return {'ID': label_id};
+        },
 
         getBucketMinMax: function(bucket_label){
             var minmax_regex = /[\[(](.*?),(.*?)[\]|)]/;

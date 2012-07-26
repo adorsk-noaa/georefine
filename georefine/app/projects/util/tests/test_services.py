@@ -122,7 +122,8 @@ class Services_Test(BaseTest):
 
 
 
-    def testProjects30(self):
+    def testProjects30Map(self):
+        return
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 
@@ -156,8 +157,13 @@ class Services_Test(BaseTest):
                 )
 
         return
+
+    def testProjects30(self):
+        project = db.session.query(Project).filter(Project.id == 30).one()
+        project.schema = manage_projects.getProjectSchema(project)
+
         requests_json = '''
-        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},"LABEL_ENTITY":{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}},"QUERIES":[{"ID":"outer","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"cell_id","EXPRESSION":"{{result.cell.id}}"}],"GROUP_BY":[{"ID":"cell_id"},{"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}","ALL_VALUES":true},{"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}],"WHERE":[]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"substrate_id","EXPRESSION":"{{inner.substrate_id}}"},{"ID":"substrate_name","EXPRESSION":"{{inner.substrate_name}}"}],"SELECT":[{"ID":"count_cell_id","EXPRESSION":"func.count({{inner.cell_id}})"}]}]}}]
+[{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}},"QUERIES":[{"ID":"base","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"},{"ID":"x_bucket_label","EXPRESSION":"{{inner.x_bucket_label}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]},{"ID":"primary","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":100,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2008]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"},{"ID":"x_bucket_label","EXPRESSION":"{{inner.x_bucket_label}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]}]}}]
         '''
         import simplejson as json
         request_defs = json.loads(requests_json)
@@ -184,7 +190,26 @@ class Services_Test(BaseTest):
 
             results[request_def['ID']] = r
 
-        print "r is: ", json.dumps(results, indent=2)
+        #print "r is: ", json.dumps(results, indent=2)
+        dstats = []
+        for d in r:
+            l = d['label'][1:]
+            l = l[:-1]
+            mn, mx = l.split(',')
+            stats = {'min': mn, 'max': mx, 'label': d['label']}
+            for k, v in stats.items():
+                v = v.strip()
+                if k == 'label': pass
+                elif v == '...':
+                    v = 1e20
+                    if k == 'min': v = v * -1
+                else:
+                    v = float(v)
+                stats[k] = v
+            dstats.append(stats)
+        sorted_stats = sorted(dstats, key=lambda s: s['min'])
+        for ss in sorted_stats: print ss['label']
+        #print len(r)
 
 
 if __name__ == '__main__':
