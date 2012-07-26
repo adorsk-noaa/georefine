@@ -15,25 +15,6 @@ define([
 		],
 function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, template, flyout_template){
 
-    function friendlyNumber(number, decPlaces, use_long) {
-        decPlaces = Math.pow(10,decPlaces);
-        number = parseFloat(number);
-        var long_suffixes = ["", " thousand", " million", " billion", " trillion", " quadrillion", " quintillion"];
-        var short_suffixes = " kMGTPE";
-        var suffixes = use_long ? long_suffixes : short_suffixes;
-        var size = 0
-        var i = 0;
-        for (i=suffixes.length-1; i>=-1; i--) {
-            size = Math.pow(10,(i+1)*3);
-            if (size <= number) {
-                break;
-            }
-        }
-        number = Math.round(number*decPlaces/size)/decPlaces;
-        var suffix = (i == -2) ? suffixes[0] : suffixes[i+1];
-        return number.toString() + suffix;
-    };
-
     var _grFormat = function(f, s){
         var re = /%(\.(\d+))?(H|h)/;
         var m = re.exec(f)
@@ -41,7 +22,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
             f = f.replace(re, '%s');
             var d = parseInt(m[2])|| 1;
             var use_long = (m[3] == 'H');
-            s = friendlyNumber(s, d, use_long)
+            s = Util.util.friendlyNumber(s, d, use_long)
         }
         return _s.sprintf(f, s);
     };
@@ -418,7 +399,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 
 		setUpFacets: function(){
 			var facets = {};
-			var lji = new Util.util.LumberjackInterpreter();
 
             var _app = this;
 
@@ -532,6 +512,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                             var bminmax = _app.getBucketMinMax(bucket_label);
                             var bmin = bminmax.min;
                             var bmax = bminmax.max;
+                            
 
                             if (! range_min <= bmin){
                                 range_min = bmin;
@@ -1087,11 +1068,20 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                                 }
                             };
 
-                            // If key is a histogram key, get min/max for the bucket.
+                            // If key is a histogram key...
                             if (key['KEY_ENTITY']['AS_HISTOGRAM']){
+                                // Get min/max for the bucket.
                                 var bminmax = _app.getBucketMinMax(result['label']);
                                 chart_datum.min = bminmax.min;
                                 chart_datum.max = bminmax.max;
+
+                                // Format the label.
+                                var f_minmax = {};
+                                _.each(['min', 'max'], function(minmax){
+                                    f_minmax[minmax] = Util.util.friendlyNumber(chart_datum[minmax], 1);
+                                });
+                                var formatted_label = _s.sprintf("[%s, %s)", f_minmax.min, f_minmax.max);
+                                chart_datum.label = formatted_label;
                             }
 
                             chart_data.push(chart_datum);
