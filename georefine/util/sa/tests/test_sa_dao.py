@@ -70,8 +70,8 @@ class SA_DAO_Test(BaseTest):
         print sa_dao.get_sql(subq_q)
         """
 
-        bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_BUCKETS': 5}
-        bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_BUCKETS': 10, 'CONTEXT': {
+        bucket_entity = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_CLASSES': 5}
+        bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_CLASSES': 10, 'ALL_VALUES': True, 'CONTEXT': {
             #"WHERE": [["{{test1.id}}", "in", [2,3]]]
             },
             'MIN': -1,

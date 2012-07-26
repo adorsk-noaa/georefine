@@ -30,9 +30,9 @@ class SA_DAO(object):
         results = {}
         for query_def in query_defs:
             q = self.get_query(query_def)
-            #print "q is: ", self.query_to_raw_sql(q), "\n\n"
+            print "q is: ", self.query_to_raw_sql(q)
             # If using jython, compile first.  Sometimes
-            # there are issues w/ using width_buckets.
+            # there are issues w/ using histograms.
             if platform.system() == 'Java':
                 q = self.query_to_raw_sql(q)
             rows = self.connection.execute(q).fetchall()
@@ -47,6 +47,7 @@ class SA_DAO(object):
 
     # Return a query object for the given query definition. 
     def get_query(self, query_def, **kwargs):
+
         # Initialize registries.
         table_registry = {'join_tree': {'children': {}}, 'nodes': {}}
         entity_registry = {}
@@ -98,8 +99,8 @@ class SA_DAO(object):
 
             # If entity is a histogram entity, get histogram entities for grouping.
             if entity_def.get('AS_HISTOGRAM'):
-                bucket_id_entity, bucket_label_entity = self.get_bucket_entities(table_registry, entity_registry, entity_def)
-                group_by.extend([bucket_id_entity, bucket_label_entity])
+                histogram_entity = self.get_histogram_entity(table_registry, entity_registry, entity_def)
+                group_by.extend([histogram_entity])
 
             # Otherwise just use the plain entity for grouping.
             else:
@@ -278,15 +279,9 @@ class SA_DAO(object):
         key_entity = key_def['KEY_ENTITY']
         key_entity = self.prepare_entity_def(key_entity)
 
-        # For histogram entities, use the bucket label as the label.
-        if key_entity.get('AS_HISTOGRAM'):
-            label_entity = {'ID': self.get_bucket_label_label(key_entity)}
-        # Otherwise, if there was no label entity
-        # then use the key entity as the label entity.
-        else:
-            label_entity = key_def.setdefault('LABEL_ENTITY', copy.deepcopy(key_entity))
-            label_entity = self.prepare_entity_def(label_entity)
-
+        # If there was no label entity, use the key entity as the label entity.
+        label_entity = key_def.setdefault('LABEL_ENTITY', copy.deepcopy(key_entity))
+        label_entity = self.prepare_entity_def(label_entity)
 
         # Shortcuts to key and label ids.
         key_id = key_entity['ID']
@@ -297,10 +292,16 @@ class SA_DAO(object):
 
             # If key entity is histogram, then generate the keys and labels.
             if key_entity.get('AS_HISTOGRAM'):
-                keys_labels = self.get_histogram_buckets(key_entity)
+                keys_labels = []
+                classes = self.get_histogram_classes(key_entity)
+                for c in classes:
+                    keys_labels.append({
+                        key_entity['ID']: self.get_histogram_class_label(c)
+                        })
 
             # Otherwise select the keys and labels per the key_def...
             else:
+                # Select keys and labels.
                 # We merge the key query attributes with our overrides.
                 keys_labels = self.execute_queries(
                     query_defs = [
@@ -390,124 +391,83 @@ class SA_DAO(object):
         raw_sql = (comp.string.encode(enc) % params).decode(enc)
         return raw_sql
 
-    def get_bucket_parameters(self, entity_def):
+    def get_histogram_classes(self, entity_def):
+        # Return classes if they were provided.
+        if entity_def.get('CLASSES'):
+            classes = entity_def['CLASSES']
+        # Otherwise generate classes from min/max, num_classes.
+        else:
+            # Get min/max if not provided, via the 'context'.
+            if entity_def.get('MIN') == None or entity_def.get('MAX') == None \
+            or entity_def.get('MINAUTO') or entity_def.get('MAXAUTO'):
+                SELECT = []
+                for m in ['MIN', 'MAX']:
+                    minmax_entity_def = {'ID': m, 'EXPRESSION': "func.%s(%s)" % (m.lower(), entity_def.get('EXPRESSION'))}
+                    SELECT.append(minmax_entity_def)
 
-        # Get min/max if not provided, via the 'context'.
-        if entity_def.get('MIN') == None or entity_def.get('MAX') == None \
-        or entity_def.get('MINAUTO') or entity_def.get('MAXAUTO'):
-            SELECT = []
-            for m in ['MIN', 'MAX']:
-                minmax_entity_def = {'ID': m, 'EXPRESSION': "func.%s(%s)" % (m.lower(), entity_def.get('EXPRESSION'))}
-                SELECT.append(minmax_entity_def)
+                # We merge the context query attributes with our overrides.
+                minmax = self.execute_queries(query_defs=[
+                    dict(entity_def.get('CONTEXT', {}).items() + {
+                        'ID': 'stats_q', 
+                        'AS_DICTS': True, 
+                        'SELECT': SELECT}.items()
+                        ) 
+                    ]).values()[0][0]
 
-            # We merge the context query attributes with our overrides.
-            minmax = self.execute_queries(query_defs=[
-                dict(entity_def.get('CONTEXT', {}).items() + {
-                    'ID': 'stats_q', 
-                    'AS_DICTS': True, 
-                    'SELECT': SELECT}.items()
-                    ) 
-                ]).values()[0][0]
+                # set MIN and MAX only if not provided, or if *AUTO is true.
+                for m in ['MIN', 'MAX']:
+                    # Set to 0 if None.
+                    minmax.setdefault(m, 0)
 
-            # set MIN and MAX only if not provided, or if *AUTO is true.
-            for m in ['MIN', 'MAX']:
-                # Set to 0 if None.
-                minmax.setdefault(m, 0)
+                    # If auto, use minmax result.
+                    if entity_def.get("%sAUTO" % m):
+                        entity_def[m] = minmax[m]
+                    # Otherwise, only set if not already set.
+                    else:
+                        entity_def.setdefault(m, minmax[m])
 
-                # If auto, use minmax result.
-                if entity_def.get("%sAUTO" % m):
-                    entity_def[m] = minmax[m]
-                # Otherwise, only set if not already set.
-                else:
-                    entity_def.setdefault(m, minmax[m])
+            entity_min = entity_def['MIN']
+            entity_max = entity_def['MAX']
+            num_classes = entity_def.get('NUM_CLASSES', 10)
+            class_width = (entity_max - entity_min)/float(num_classes)
+            
+            # Create classes.
+            classes = []
+            for n in range(num_classes):
+                cmin = entity_min + n * class_width
+                cmax = cmin + class_width
+                classes.append([cmin, cmax])
 
-        entity_min = entity_def['MIN']
-        entity_max = entity_def['MAX']
-        num_buckets = entity_def.get('NUM_BUCKETS', 10)
-        bucket_width = (entity_max - entity_min)/float(num_buckets)
-        return entity_min, entity_max, num_buckets, bucket_width
+        return classes
 
+    def get_histogram_class_label(self, c):
+        class_label = "[%s, %s)" % (c[0], c[1])
+        return class_label
 
-    # Get all buckets for a histogram entity, not just those buckets which have data.
-    def get_histogram_buckets(self, entity_def):
+    # Get histogram entities for a given entity.
+    def get_histogram_entity(self, table_registry, entity_registry, entity_def):
         entity_def = self.prepare_entity_def(entity_def)
-
-        entity_min, entity_max, num_buckets, bucket_width = self.get_bucket_parameters(entity_def)
-
-        bucket_label_label = self.get_bucket_label_label(entity_def)
-
-        # Return dummy buckets if entity_min = entity_max
-        if entity_min == entity_max:
-            num_buckets = 1
-
-        buckets = []
-
-        # Add first bucket.
-        buckets.append({
-            entity_def['ID']: 0, 
-            bucket_label_label: "[..., %s)" % entity_min,
-            })
-
-        for b in range(1, num_buckets + 1):
-            bucket_min = entity_min + (b - 1) * bucket_width
-            bucket_max = entity_min + (b) * bucket_width
-            bucket_name = "[%s, %s)" % (bucket_min, bucket_max)
-            buckets.append({
-                entity_def['ID']: b,
-                bucket_label_label: bucket_name
-                })
-
-        # Add last bucket.
-        buckets.append({
-            entity_def['ID']: num_buckets + 1,
-            bucket_label_label: "[%s, ...)" % entity_max
-            })
-
-        return buckets
-
-
-    # Get histogram bucket entities for a given entity.
-    def get_bucket_entities(self, table_registry, entity_registry, entity_def):
-        entity_def = self.prepare_entity_def(entity_def)
-
-        entity_min, entity_max, num_buckets, bucket_width = self.get_bucket_parameters(entity_def)
 
         # Get or register entity.
         entity = self.get_registered_entity(table_registry, entity_registry, entity_def)
 
-        # Use dummy entity if entity_min == entity_max.
-        if entity_min == entity_max:
-            bucket_id_entity = case([(entity==entity, 0)]).label(entity_def['ID'])
-        # Otherwise get width_bucket entity.
-        else:
-            # Can use the line below in case db doesn't have width_bucket function.
-            #bucket_id_entity = func.greatest(func.round( (((mapped_entity - entity_min)/entity_range) * num_buckets ) - .5) + 1, num_buckets).label(self.get_bucket_id_label(entity))
-            bucket_id_entity = func.width_bucket(entity, entity_min, entity_max, num_buckets).label(entity_def['ID'])
+        # Get histogram classes.
+        classes = self.get_histogram_classes(entity_def)
 
-        # Get label entity.
-        bucket_label_entity = case(
-                [
-                    (
-                        bucket_id_entity == 0, 
-                        '[..., ' + cast(entity_min, String) + ')'
-                        ),
-                    (
-                        bucket_id_entity == num_buckets + 1, 
-                        '[' + cast( entity_max, String) + ', ...)'
-                        )
-                    ],
-                else_ = '[' + cast(entity_min + bucket_width * (bucket_id_entity - 1), String ) + ', ' + cast(entity_min + bucket_width * (bucket_id_entity), String) + ')' )
+        # Assemble cases for case statement.
+        cases = []
+        for c in classes:
+            case_obj = (
+                    and_(entity >= c[0], entity < c[1]), 
+                    self.get_histogram_class_label(c)
+                    )
+            cases.append(case_obj)
 
-        # Label per conventions.
-        bucket_label_entity = bucket_label_entity.label(self.get_bucket_label_label(entity_def))
+        # Get labeled entity.
+        histogram_entity = case(cases).label(entity_def['ID'])
 
-        # Return the histogram entities.
-        return bucket_id_entity, bucket_label_entity
+        return histogram_entity
 
-    def get_bucket_label_label(self, entity_def):
-        return "%s_bucket_label" % entity_def['ID']
-
-    
     def get_dialect(self, dialect):
         try:
             dialects_module = __import__("sqlalchemy.dialects", fromlist=[dialect])
