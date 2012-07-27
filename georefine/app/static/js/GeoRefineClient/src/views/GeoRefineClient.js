@@ -514,11 +514,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                             var bmin = bminmax.min;
                             var bmax = bminmax.max;
 
-                            if (bmin <= range_min){
+                            if (bmin < range_min || range_min == null){
                                 range_min = bmin;
                             }
 
-                            if (bmax >= range_max){
+                            if (bmax > range_max || range_max == null){
                                range_max = bmax; 
                             }
 
