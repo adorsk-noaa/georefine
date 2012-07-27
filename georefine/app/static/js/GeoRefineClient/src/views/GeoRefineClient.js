@@ -547,19 +547,18 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 						base_histogram = _.sortBy(base_histogram, function(b){return b.count});
 						primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
 
-                        var set_obj = {
+                        _this.set({
                             base_histogram: base_histogram,
                             filtered_histogram: primary_histogram,
-                        };
+                        });
 
                         if (opts.updateRange){
-                            _.extend(set_obj, {
-                                range_min: range_min,
-                                range_max: range_max
+                            _this.get('range').set({
+                                min: range_min,
+                                max: range_max
                             });
                         }
 
-						_this.set(set_obj);
 					}
 				});
 			};
@@ -619,11 +618,16 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                 return formatted_filters;
             };
 
-            numericFacetFormatFilters = function(selected_values){
-                var formatted_filters = [
-                    [this.model.get('filter_entity'), '>=', selected_values['selection_min']],
-                    [this.model.get('filter_entity'), '<=', selected_values['selection_max']],
-                ];
+            numericFacetFormatFilters = function(selection){
+                var filter_entity = this.model.get('filter_entity');
+                var formatted_filters = [];
+                _.each(['min', 'max'], function(minmax){
+                    var val = parseFloat(selection[minmax]);
+                    if (! isNaN(val)){
+                        var op = (minmax == 'min') ? '>=' : '<=';
+                        formatted_filters.push([filter_entity, op, val]);
+                    }
+                });
                 return formatted_filters;
             };
 
@@ -640,7 +644,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				var model, view;
 
 				if (facet.type == 'list'){
-					model = new Facets.models.FacetModel(_.extend({
+					model = new Backbone.Model(_.extend({
                         primary_filters: {},
                         base_filters: {}
                     }, facet, {
@@ -673,7 +677,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				}
 
 				else if (facet.type == 'numeric'){
-					model = new Facets.models.FacetModel(_.extend({}, facet, {
+					model = new Backbone.Model(_.extend({}, facet, {
 						filtered_histogram: [],
 						base_histogram: [],
 					}));
@@ -687,7 +691,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 				}
 
 				else if (facet.type == 'time-slider'){
-					model = new Facets.models.FacetModel(_.extend({}, facet, {
+					model = new Backbone.Model(_.extend({}, facet, {
 					}));
 					model.getData = timeSliderFacetGetData;
 					view = new Facets.views.TimeSliderFacetView({ model: model });
@@ -781,7 +785,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			_.each(facets, function(facet){
 				facet_models.push(facet['model'])
 			});
-			facet_collection_model = new Facets.models.FacetCollection(facet_models, {});
+			facet_collection_model = new Backbone.Collection(facet_models);
 			facet_collection_view = new Facets.views.FacetCollectionView({
 				el: $(_s.sprintf('#%s-facets', this.model.cid)),
 				model: facet_collection_model,
