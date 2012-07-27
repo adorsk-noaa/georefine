@@ -513,13 +513,12 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                             var bminmax = _app.getBucketMinMax(bucket_label);
                             var bmin = bminmax.min;
                             var bmax = bminmax.max;
-                            
 
-                            if (! range_min <= bmin){
+                            if (bmin <= range_min){
                                 range_min = bmin;
                             }
 
-                            if (! range_max >= bmax){
+                            if (bmax >= range_max){
                                range_max = bmax; 
                             }
 
