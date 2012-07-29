@@ -442,6 +442,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			};
 
 			numericFacetGetData = function(opts) {
+                console.log("nfgd", arguments);
                 var opts = opts || {updateRange: false};
                 var facet_model = this;
 
@@ -607,11 +608,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
             };
 
             // The 'formatFilter' functions will be called with a facet view as 'this'.
-            listFacetFormatFilters = function(selected_values){
+            listFacetFormatFilters = function(selection){
                 var formatted_filters = [];
-                if (selected_values.length > 0){
+                if (selection.length > 0){
                     formatted_filters = [
-                        [this.model.get('filter_entity'), 'in', selected_values]
+                        [this.model.get('filter_entity'), 'in', selection]
                         ];
                 }
                 return formatted_filters;
@@ -630,9 +631,9 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
                 return formatted_filters;
             };
 
-            timeSliderFacetFormatFilters = function(selected_value){
+            timeSliderFacetFormatFilters = function(selection){
                 var formatted_filters = [
-                    [this.model.get('filter_entity'), '==', selected_value]
+                    [this.model.get('filter_entity'), '==', selection]
                     ];
                 return formatted_filters;
             };
@@ -1353,14 +1354,20 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 		setUpInitialState: function(){
 			var initial_state = GeoRefine.config.initial_state;
 
+            // Initialize facet quantity field.
+            var initial_qfield_id = initial_state.facet_quantity_field;
+            if (initial_qfield_id){
+                var qfield = this.facet_quantity_fields.get(initial_qfield_id);
+                this.filters_qfield_select.model.set('selection', qfield.cid);
+            }
+
             // Initialize facets.
             if (initial_state.facets){
-                var initial_qfield_id = initial_state.facets.initial_quantity_field_id;
-                if (initial_qfield_id){
-                    var qfield = this.facet_quantity_fields.get(initial_qfield_id);
-                    this.filters_qfield_select.model.set('selection', qfield.cid);
-                }
             }
+
+            // Connect the facets to events.
+
+
 
 
 			// Initialize Data Views.
