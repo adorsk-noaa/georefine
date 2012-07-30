@@ -17,13 +17,11 @@ define([
 function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, GeoRefineViewsUtil, template, flyout_template){
 
 
-    var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-    var keyed_strings_endpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.config.context_root);
 
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
-			'click .filters-editor-container .title': 'toggleFiltersEditor',
+			'click .facets-editor-container .title': 'toggleFiltersEditor',
 			"click .add-map-button": "addMapView",
 			"click .add-chart-button": "addChartView"
 		},
@@ -35,6 +33,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 view: this,
                 id: this.cid
             };
+
+            // Set endpoints.
+            GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+            GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.config.context_root);
 
 			$(this.el).addClass('georefine-client');
 
@@ -243,7 +245,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
                 // Get shortened parameters key.
 				$.ajax({
-					url: keyed_strings_endpoint,
+					url: GeoRefine.app.keyedStringsEndpoint,
 					type: 'POST',
 					data: {'s': JSON.stringify(params)},
                     complete: function(){
@@ -469,7 +471,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 requests.push(keyed_query_request);
 
 				$.ajax({
-					url: requests_endpoint,
+					url: GeoRefine.app.requestsEndpoint,
 					type: 'POST',
 					data: {'requests': JSON.stringify(requests)},
                     complete: function(){
@@ -628,8 +630,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
         },
 
         toggleFiltersEditor: function(){
-            var $filtersEditor = $('.filters-editor-container', this.el);
-            var $table = $('.filters-editor-table', this.el);
+            var $filtersEditor = $('.facets-editor-container', this.el);
+            var $table = $('.facets-editor-table', this.el);
             if (! $filtersEditor.hasClass('changing')){
                 this.expandContractTab({
                     expand: ! $filtersEditor.hasClass('expanded'),
@@ -645,10 +647,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
         },
 
         resizeFiltersEditor: function(){
-            var $table = $('.filters-editor-table', this.el);
+            var $table = $('.facets-editor-table', this.el);
             Util.util.fillParent($table);
-            this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
-            var $sbc = $('.filters-editor-table .summary-bar-container');
+            this.resizeVerticalTab($('.facets-editor-tab', this.el)); 
+            var $sbc = $('.facets-editor-table .summary-bar-container');
             $sbc.parent().css('height', $sbc.height());
         },
 
@@ -745,53 +747,74 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
         loadState: function(state){
-            var state = {
-                actionQueue: {
-                    async: true,
+
+            // Shortcut.
+            var stateUtil = GeoRefineViewsUtil.stateUtil;
+
+            // Load quantity field state.
+            var qFieldActionQueue = {
+                    async: false,
                     actions: [
                         {
-                            type: 'actionQueue',
-                            async: false,
-                            actions: [
-                                // Facets.
-                                {
-                                    type: 'actionQueue',
-                                    async: false,
-                                    actions: [
-                                        // Substrates facet.
-                                        {
-                                            type: 'actionQueue',
-                                            async: false,
-                                            actions: [
-                                                // Create facet.
-                                                {
-                                                    type: 'action',
-                                                    handler: 'facetsCreateFacet',
-                                                    opts: {
-                                                        fromDefinition: true,
-                                                        id: 'substrates'
-                                                    }
-                                                },
-                                                // Load data.
-                                                {
-                                                    type: 'action',
-                                                    handler: 'facetsGetData',
-                                                    opts: {
-                                                        id: 'substrates'
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
+                            type: 'action',
+                            handler: 'facetsFacetsEditorSetQField',
+                            opts: {
+                                id: 'result.cell.area:sum'
+                            }
                         }
                     ]
-                }
             };
-            var loadStateAction = GeoRefineViewsUtil.stateUtil.processActionQueue(state.actionQueue);            
-            var dfd = loadStateAction();
-            dfd.done(function(){console.log("all done")});
+            var qFieldAction = stateUtil.processActionQueue(qFieldActionQueue);
+            var qFieldDeferred = qFieldAction();
+
+            // Load facets state.
+            var facetsActionQueue = {
+                type: 'actionQueue',
+                async: false,
+                actions: [
+                    // Substrates facet.
+                    {
+                        type: 'actionQueue',
+                        async: false,
+                        actions: [
+                            // Create facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsCreateFacet',
+                                opts: {
+                                    fromDefinition: true,
+                                    id: 'substrates'
+                                }
+                            },
+                            // Initialize facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsInitializeFacet',
+                                opts: {
+                                    id: 'substrates'
+                                }
+                            },
+                            // Load data.
+                            {
+                                type: 'action',
+                                handler: 'facetsGetData',
+                                opts: {
+                                    id: 'substrates'
+                                }
+                            }
+                        ]
+                    }
+                ]
+            };
+            var facetsAction = stateUtil.processActionQueue(facetsActionQueue);
+
+            // Load after quantity field state is set up.
+            $.when(qFieldDeferred).then(function(){
+                console.log("qfield done");
+                $.when(facetsAction()).then(function(){
+                    console.log("facetsDone");
+                });
+            });
         },
 
 

@@ -44,13 +44,13 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
             });
         });
 
-        _facets.facetEditor.select = new Util.views.InfoSelectView({
+        var qFieldSelect = new Util.views.InfoSelectView({
             el : $('.quantity-field-info-select', GeoRefine.app.view.el),
             model: new Backbone.Model({
                 "choices": choices
             })
         });
-        var qFieldSelect = _facets.facetEditor.select;
+        _facets.facetEditor.qFieldSelect = qFieldSelect;
 
         // When the quantity field selector changes, update the facets and summary bar.
         qFieldSelect.model.on('change:selection', function(){
@@ -165,7 +165,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
             // Start the request and save the deferred object.
             var deferred = $.ajax({
-                url: requests_endpoint,
+                url: GeoRefine.app.requestsEndpoint,
                 type: 'POST',
                 data: {
                     'requests': JSON.stringify(requests)
@@ -290,7 +290,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
             // Start request and save the deferred object.
             var deferred = $.ajax({
-                url: requests_endpoint,
+                url: GeoRefine.app.requestsEndpoint,
                 type: 'POST',
                 data: {
                     'requests': JSON.stringify(requests)
@@ -368,7 +368,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
             // Execute requests and save the deferred object.
             var deferred = $.ajax({
-                url: requests_endpoint,
+                url: GeoRefine.app.requestsEndpoint,
                 type: 'POST',
                 data: {
                     'requests': JSON.stringify(requests)
@@ -385,7 +385,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
                             id: result['key'],
                             label: result['label'],
                             count: value,
-                            count_label: _grFormat(qfield.get('format') || '%s', value)
+                            count_label: formatUtil.GeoRefineFormatter(qfield.get('format') || '%s', value)
                         });
                     });
                     _this.set('choices', choices);
@@ -541,6 +541,22 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         }
     };
 
+    // Initialize a facet.  Sets filters, qfield.
+    actionHandlers.facetsInitializeFacet= function(opts){
+        // Get facet.
+        var facet = _facets.registry[opts.id];
+
+        // Get quantity field.
+        var qfield_cid = _facets.facetEditor.qFieldSelect.model.get('selection');
+        var qfield = _facets.qFields.getByCid(qfield_cid);
+
+        // Set facet attributes.
+        facet.model.set({
+            quantity_field: qfield
+        });
+
+    };
+
     // getData action handler.
     actionHandlers.facetsGetData = function(opts){
         // Get facet.
@@ -549,6 +565,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         if (facet.model.getData){
             return facet.model.getData(opts);
         }
+    };
+
+    // setQField action handler.
+    actionHandlers.facetsFacetsEditorSetQField = function(opts){
+        var qfield = _facets.qFields.get(opts.id);
+        _facets.facetEditor.qFieldSelect.model.set('selection', qfield.cid);
     };
 
     // Objects to expose.

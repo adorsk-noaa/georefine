@@ -97,6 +97,7 @@ function($, Backbone, _, _s, Util, facetsUtil){
             else{
                 deferred.resolve();
             }
+
             return deferred;
         };
 
