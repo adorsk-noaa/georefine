@@ -991,12 +991,27 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     actions: [
                                         // Substrates facet.
                                         {
-                                            type: 'action',
-                                            handler: 'facetsCreateFacet',
-                                            opts: {
-                                                fromDefinition: true,
-                                                id: 'substrates'
-                                            }
+                                            type: 'actionQueue',
+                                            async: false,
+                                            actions: [
+                                                // Create facet.
+                                                {
+                                                    type: 'action',
+                                                    handler: 'facetsCreateFacet',
+                                                    opts: {
+                                                        fromDefinition: true,
+                                                        id: 'substrates'
+                                                    }
+                                                },
+                                                // Load data.
+                                                {
+                                                    type: 'action',
+                                                    handler: 'facetsGetData',
+                                                    opts: {
+                                                        id: 'substrates'
+                                                    }
+                                                }
+                                            ]
                                         }
                                     ]
                                 },

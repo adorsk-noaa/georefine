@@ -11,8 +11,12 @@ define([
 		],
 function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil){
 
+    // Add facets namespace to global app variable.
+    GeoRefine.app.facets = {};
+
     var facetCollection = null;
     var facetDefinitions = GeoRefine.config.facets.definitions;
+    var registry= {};
 
     // Create facet collection container at the given div.
     var createFacetCollection = function(opts){
@@ -300,6 +304,9 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         model.getData = function(){
             var _this = this;
             var qfield = this.get('quantity_field');
+            if (! qfield){
+                return;
+            }
 
             // Copy the key entity.
             var key = JSON.parse(JSON.stringify(_this.get('KEY')));
@@ -468,15 +475,29 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
     // Define action handlers for state loading.
     var actionHandlers = {};
+
+    // createFacet action handler.
     actionHandlers.facetsCreateFacet = function(opts){
         if (opts.fromDefinition){
             // Get definition.
             var facetDef = facetDefinitions[opts.id];
             // Create facet.
             var facet = createFacet(facetDef);
+            // Add to registry.
+            registry[opts.id] = facet;
             // Add to facet collection.
             facetCollection.view.addFacetView(facet.view);
             // Connect to filters.
+        }
+    };
+
+    // getData action handler.
+    actionHandlers.facetsGetData = function(opts){
+        // Get facet.
+        var facet = registry[opts.id];
+        // Call get data.
+        if (facet.model.getData){
+            return facet.model.getData(opts);
         }
     };
 
