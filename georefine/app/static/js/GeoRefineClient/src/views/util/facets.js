@@ -462,7 +462,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // Objects to expose.
     var facetsUtil = {
         createFacetCollection: createFacetCollection,
-        connectFacetEvents: connectFacetEvents
+        connectFacetEvents: connectFacetEvents,
+        actionHandlers: {
+            facetsCreateFacet: function(){
+                console.log("facetsCreateFacet");
+            }
+        }
     };
     return facetsUtil;
 });
