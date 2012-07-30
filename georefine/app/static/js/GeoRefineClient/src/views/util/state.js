@@ -19,7 +19,15 @@ function($, Backbone, _, _s, Util, facetsUtil){
 
     // TESTING! Test handler.
     actionHandlers['testHandler'] = function(opts){
-        console.log('testHandler', arguments);
+        console.log("executing", JSON.stringify(opts));
+        return $.Deferred(function(){
+            var _this = this;
+            setTimeout(function(){
+                console.log('testHandler', JSON.stringify(opts));
+                _this.resolve();
+            }, opts.delay || 200);
+        });
+
     };
 
     // Convert an action definition to an action function.
@@ -27,7 +35,9 @@ function($, Backbone, _, _s, Util, facetsUtil){
         // Get handler for action.
         var handler = actionHandlers[action.handler];
         // Return handler bound w/ action opts.
-        return function(){ return handler(action.opts); };
+        return function(){
+            return handler(action.opts); 
+        };
     };
 
     // Convert an action queue definition to an action function.
@@ -72,15 +82,14 @@ function($, Backbone, _, _s, Util, facetsUtil){
                     // Trigger subsequent subactions in sequence.
                     for (var i = 1; i < actionFuncs.length; i++){
                         var i_ = i;
-                        finalDeferred = finalDeferred.pipe(
-                                $.when(actionFuncs[i_]())
-                                );
+                        finalDeferred = finalDeferred.pipe(function(){
+                            return $.when(actionFuncs[i_]());
+                        });
                     }
                 }
 
                 // When final deferred is complete, resolve.
                 finalDeferred.done(function(){
-                    console.log('done');
                     deferred.resolve();
                 });
             }

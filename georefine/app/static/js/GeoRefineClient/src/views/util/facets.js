@@ -11,6 +11,9 @@ define([
 		],
 function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil){
 
+    var facetCollection = null;
+    var facetDefinitions = GeoRefine.config.facets.definitions;
+
     // Create facet collection container at the given div.
     var createFacetCollection = function(opts){
         var model = new Backbone.Collection();
@@ -19,10 +22,13 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
             model: model
         });
 
-        return {
+        // Assign to global facet collection.
+        facetCollection = {
             model: model,
             view: view
         };
+
+        return facetCollection;
     };
 
     // Create a list facet.
@@ -459,15 +465,27 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
     // Remove a facet.
 
+
+    // Define action handlers for state loading.
+    var actionHandlers = {};
+    actionHandlers.facetsCreateFacet = function(opts){
+        if (opts.fromDefinition){
+            // Get definition.
+            var facetDef = facetDefinitions[opts.id];
+            // Create facet.
+            var facet = createFacet(facetDef);
+            // Add to facet collection.
+            facetCollection.view.addFacetView(facet.view);
+            // Connect to filters.
+        }
+    };
+
     // Objects to expose.
     var facetsUtil = {
+        createFacet: createFacet,
         createFacetCollection: createFacetCollection,
         connectFacetEvents: connectFacetEvents,
-        actionHandlers: {
-            facetsCreateFacet: function(){
-                console.log("facetsCreateFacet");
-            }
-        }
+        actionHandlers: actionHandlers
     };
     return facetsUtil;
 });

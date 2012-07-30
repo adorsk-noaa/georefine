@@ -49,6 +49,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			var _this = this;
 			$(document).ready(function(){
 				_this.setUpFacets();
+                _this.loadState();
                 /*
 				_this.setUpWindows();
 				_this.setUpFilterGroups();
@@ -888,9 +889,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			$rc.css('height', $rc.parent().width());
 		},
 
-        loadState: function(){
-        },
-
 		setUpInitialState: function(){
 			var initial_state = GeoRefine.config.initial_state;
 
@@ -976,6 +974,41 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			}, this);
 			
 		},
+
+        loadState: function(state){
+            var state = {
+                actionQueue: {
+                    async: true,
+                    actions: [
+                        {
+                            type: 'actionQueue',
+                            async: false,
+                            actions: [
+                                // Facets.
+                                {
+                                    type: 'actionQueue',
+                                    async: false,
+                                    actions: [
+                                        // Substrates facet.
+                                        {
+                                            type: 'action',
+                                            handler: 'facetsCreateFacet',
+                                            opts: {
+                                                fromDefinition: true,
+                                                id: 'substrates'
+                                            }
+                                        }
+                                    ]
+                                },
+                            ]
+                        }
+                    ]
+                }
+            };
+            var loadStateAction = GeoRefineViewsUtil.stateUtil.processActionQueue(state.actionQueue);            
+            var dfd = loadStateAction();
+            dfd.done(function(){console.log("all done")});
+        },
 
 
     });
