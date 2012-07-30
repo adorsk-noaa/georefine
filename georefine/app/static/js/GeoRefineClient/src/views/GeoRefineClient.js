@@ -29,6 +29,13 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
 		initialize: function(){
+            // Save app to global namespace.
+            GeoRefine.app = {
+                model: this.model,
+                view: this,
+                id: this.cid
+            };
+
 			$(this.el).addClass('georefine-client');
 
             this.data_view_counter = 1;
@@ -48,13 +55,13 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
 			var _this = this;
 			$(document).ready(function(){
-				_this.setUpFacets();
+				_this.setUpFilterGroups();
+				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
+				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
                 _this.loadState();
                 /*
 				_this.setUpWindows();
-				_this.setUpFilterGroups();
                 _this.setUpSummaryBar();
-                _this.setUpFiltersEditor();
 				_this.setUpInitialState();
                 _this.resize();
                 */
@@ -67,106 +74,47 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
         setUpFilterGroups: function(){
-            this.filter_groups = {};
+            var filterGroups = {};
 
             // Initialize filter groups.
-			_.each(GeoRefine.config.filter_groups, function(filter_group_config){
-                var filter_group = new Backbone.Collection();
-                this.filter_groups[filter_group_config.id] = filter_group;
-                filter_group.getFilters = function(){
+			_.each(GeoRefine.config.filter_groups, function(groupConfig){
+                var filterGroup = new Backbone.Collection();
+                filterGroups[groupConfig.id] = filterGroup;
+                filterGroup.getFilters = function(){
                     var filters = [];
-                    _.each(filter_group.models, function(model){
-                        var model_filters = model.get('filters');
-                        if (model_filters){
+                    _.each(filterGroup.models, function(model){
+                        var modelFilters = model.get('filters');
+                        if (modelFilters){
                             filters.push({
                                 'source': {
                                     'type': model.getFilterType ? model.getFilterType() : null,
                                     'cid': model.cid
                                 },
-                                'filters': model_filters
+                                'filters': modelFilters
                             });
                         }
                     });
                     return filters;
                 };
-            }, this);
+            });
 
             // Add listeners for synchronizing linked groups.
-			_.each(GeoRefine.config.filter_groups, function(filter_group_config){
-                _.each(filter_group_config.linked_groups, function(linked_group_id){
-                    var main_group = this.filter_groups[filter_group_config.id];
-                    var linked_group = this.filter_groups[linked_group_id];
+			_.each(GeoRefine.config.filter_groups, function(groupConfig){
+                _.each(groupConfig.linked_groups, function(linkedGroupId){
+                    var mainGroup = filterGroups[groupConfig.id];
+                    var linkedGroup = filterGroups[linkedGroupId];
                     _.each(['add', 'remove'], function(evnt){
-                        linked_group.on(evnt, function(model){main_group[evnt](model)});
+                        linkedGroup.on(evnt, function(model){
+                            mainGroup[evnt](model)
+                        });
                     });
-                }, this);
-            }, this);
-
-            _.each(this.filter_groups, function(fg, fg_id){
-                fg.on('change:filters', function(){
                 });
             });
+
+            // Save to global namespaced variable.
+            GeoRefine.app.filterGroups = filterGroups;
         },
 
-        setUpFiltersEditor: function(){
-            // Generate quantity field collection from config.
-            this.facet_quantity_fields = new Backbone.Collection();
-            _.each(GeoRefine.config.facets.quantity_fields, function(field){
-                var model = new Backbone.Model(_.extend({}, field));
-                this.facet_quantity_fields.add(model);
-            }, this);
-
-            // Setup quantity field selector.
-            var choices = [];
-            _.each(this.facet_quantity_fields.models, function(model){
-                choices.push({
-                    value: model.cid,
-                    label: model.get('label'),
-                    info: model.get('info')
-                });
-            });
-            this.filters_qfield_select = new Util.views.InfoSelectView({
-                el : $('.quantity-field-info-select', this.el),
-                model: new Backbone.Model({
-                    "choices": choices
-                })
-            });
-
-            // When the quantity field selector changes, update the facets and summary bar.
-            var _this = this;
-            this.filters_qfield_select.model.on('change:selection', function(){
-                var val = _this.filters_qfield_select.model.get('selection');
-                var selected_field = _this.facet_quantity_fields.getByCid(val);
-                _.each(_this.facets.models, function(facet){
-                    facet.set('quantity_field', selected_field);
-                }, _this);
-                _this.summary_bar.model.set('quantity_field', selected_field);
-            });
-
-            // Resize the filters editor.
-            $('.filters-editor', this.el).height();
-        },
-
-        // Helper function for merging a set of grouped filter objects into a list.
-        // filter objects are keyed by filter group id.
-        _filterObjectGroupsToArray: function(groups){
-            filters_hash = {};
-            _.each(groups, function(group){
-                _.each(group, function(filter_obj){
-                    var key = JSON.stringify(filter_obj.filters);
-                    filters_hash[key] = filter_obj;
-                });
-            });
-            var combined_filters = [];
-            _.each(filters_hash, function(filter_obj){
-                if (filter_obj.filters){
-                    combined_filters = combined_filters.concat(filter_obj.filters);
-                }
-            });
-
-            return combined_filters;
-        },
-    
 		createDataViewWindow: function(data_view, opts){
 			opts = opts || {};
 			$data_views = $('.data-views', this.el);
@@ -243,15 +191,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 				"dockArea": $('.data-views', this.el),
 				"handleScrollbar": false
 			});
-		},
-
-		setUpFacets: function(){
-            // Shortcut for facets util functions.
-            var facetsUtil = GeoRefineViewsUtil.facetsUtil;
-
-            // Setup facets collection.
-			var $facets = $(_s.sprintf('#%s-facets', this.model.cid));
-            this.facets = facetsUtil.createFacetCollection({el: $facets});
 		},
 
 		createMapEditor: function(){
@@ -636,176 +575,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             };
 
 			return chart_editor_view;
-		},
-
-		setUpSummaryBar: function(){
-            var summary_bar_config = GeoRefine.config.summary_bar;
-
-			var model = new Backbone.Model({
-                "id": "summary_bar",
-				"primary_filters": {},
-				"base_filters": {},
-				"quantity_field": null,
-                "data": {}
-			});
-
-			// Listen for primary filter changes.
-            _.each(summary_bar_config.primary_filter_groups, function(filter_group_id){
-                var filter_group = this.filter_groups[filter_group_id];
-                filter_group.on('change:filters', function(){
-                    var filters = _.clone(model.get('query_filters')) || {};
-                    filters[filter_group_id] = filter_group.getFilters();
-                    model.set('primary_filters', filters);
-                });
-            }, this);
-
-            // Listen for base filter changes.
-            _.each(summary_bar_config.base_filter_groups, function(filter_group_id, key){
-                var filter_group = this.filter_groups[filter_group_id];
-                filter_group.on('change:filters', function(){
-                    var base_filters = _.clone(model.get('base_filters')) || {};
-                    base_filters[filter_group_id] = filter_group.getFilters();
-                    model.set('base_filters', base_filters);
-                });
-            }, this);
-
-
-            var _app = this;
-			model.getData = function(){
-				var _this = this;
-
-                // Shortcuts.
-                var qfield = _this.get('quantity_field');
-
-                // If there's no quantity field don't do anything.
-                if (! qfield){
-                    return;
-                }
-
-                // Get the 'selected' query.
-                var selected_inner_q = {
-                    'ID': 'inner',
-                    'SELECT_GROUP_BY': true,
-                };
-                _app.extendQuery(selected_inner_q, qfield.get('inner_query'));
-                _app.addFiltersToQuery(model, ['primary_filters', 'base_filters'], selected_inner_q);
-                var selected_q = {
-                    'ID': 'selected',
-                    'FROM': [{'ID': 'inner', 'TABLE': selected_inner_q}],
-                    'SELECT_GROUP_BY': true,
-                };
-                _app.extendQuery(selected_q, qfield.get('outer_query'));
-
-                // Get the 'total' query.
-                var total_inner_q = {
-                    'ID': 'inner',
-                    'SELECT_GROUP_BY': true,
-                };
-                _app.extendQuery(total_inner_q, qfield.get('inner_query'));
-                _app.addFiltersToQuery(model, ['base_filters'], total_inner_q);
-                var total_q = {
-                    'ID': 'total',
-                    'FROM': [{'ID': 'inner', 'TABLE': total_inner_q}],
-                    'SELECT_GROUP_BY': true,
-                };
-                _app.extendQuery(total_q, qfield.get('outer_query'));
-                
-                // Assemble request.
-                var totals_request = {
-                    'ID': 'totals',
-                    'REQUEST': 'execute_queries',
-                    'PARAMETERS': {'QUERIES': [selected_q, total_q]}
-                };
-
-                var requests = [totals_request];
-
-				$.ajax({
-					url: requests_endpoint,
-					type: 'POST',
-					data: {'requests': JSON.stringify(requests)},
-					error: Backbone.wrapError(function(){}, _this, {}),
-					success: function(data, status, xhr){
-                        var results = data.results;
-                        var count_entity = qfield.get('outer_query')['SELECT'][0];
-
-                        var selected = results['totals']['selected'][0][count_entity['ID']];
-                        var total = results['totals']['total'][0][count_entity['ID']];
-                        model.set('data', {
-                            "selected": selected,
-                            "total": total
-                        });
-					}
-				});
-			};
-
-			var SummaryBarView = Backbone.View.extend({
-				initialize: function(){
-                    $(this.el).html('<div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div>');
-                    // Trigger update when model data changes.
-					this.model.on('change:data', this.onDataChange, this);
-
-                    // Get data when parameters change.
-                    if (this.model.getData){
-
-                        // helper function to get a timeout getData function.
-                        var _timeoutGetData = function(){
-                            var delay = 500;
-                            return setTimeout(function(){
-                                model.getData();
-                                model.set('_fetch_timeout', null);
-                            }, delay);
-                        };
-
-                        this.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-
-                            // We delay the get data call a little, in case multiple things are changing.
-                            // The last change will get executed.
-                            var fetch_timeout = model.get('_fetch_timeout');
-                            // If we're fetching, clear the previous fetch.
-                            if (fetch_timeout){
-                                clearTimeout(fetch_timeout);
-                            }
-                            // Start a new fetch.
-                            model.set('_fetch_timeout', _timeoutGetData(arguments));
-                        });
-                    }
-				},
-
-				onDataChange: function(){
-					var format = this.model.get('quantity_field').get('format') || "%s";
-					var data = this.model.get('data');
-
-                    // Do nothing if data is incomplete.
-                    if (data.selected == null || data.total == null){
-                        return;
-                    }
-
-					var formatted_selected = _grFormat(format, data.selected);
-					var formatted_total = _grFormat(format, data.total);
-					var percentage ;
-                    if (data.total == 0 && data.selected == 0){
-                        percentage = 100.0;
-                    }
-                    else{
-                        percentage = 100.0 * data.selected/data.total;
-                    }
-
-					$(".text .field", this.el).html(_s.sprintf("'%s'", this.model.get('quantity_field').get('label')));
-					$(".text .selected", this.el).html(formatted_selected);
-					$(".text .total", this.el).html(_s.sprintf('(%.1f%% of %s total)', percentage, formatted_total));
-
-                    // Set totals on facets.
-                    _.each(_app.facets.models, function(facet_model){
-                        facet_model.set('total', data.total);
-                    });
-
-				}
-			});
-
-			this.summary_bar = new SummaryBarView({
-				model: model,
-				el: $(".filters-editor .summary-bar", this.el)
-			});
 		},
 
         expandContractTab: function(opts){

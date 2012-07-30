@@ -7,32 +7,82 @@ define([
 	"Util",
 	"./requests",
 	"./functions",
-	"./format"
+	"./format",
+	"./summaryBar"
 		],
-function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil){
+function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil, summaryBarUtil){
 
     // Add facets namespace to global app variable.
     GeoRefine.app.facets = {};
+    // Shortcuts.
+    var _facets = GeoRefine.app.facets;
+    _facets.facetCollection = null;
+    _facets.facetEditor = {};
+    _facets.definitions = GeoRefine.config.facets.definitions;
+    _facets.registry = {};
+    _facets.qFields = null;
 
-    var facetCollection = null;
-    var facetDefinitions = GeoRefine.config.facets.definitions;
-    var registry= {};
+    var setUpFacetsEditor = function(){
+
+        // Setup summary bar.
+        summaryBarUtil.setUpSummaryBar();
+
+        // Generate quantity field collection from config.
+        _facets.qFields = new Backbone.Collection();
+        _.each(GeoRefine.config.facets.quantity_fields, function(field){
+            var model = new Backbone.Model(_.extend({}, field));
+            _facets.qFields.add(model);
+        });
+
+        // Setup quantity field selector.
+        var choices = [];
+        _.each(_facets.qFields.models, function(model){
+            choices.push({
+                value: model.cid,
+                label: model.get('label'),
+                info: model.get('info')
+            });
+        });
+
+        _facets.facetEditor.select = new Util.views.InfoSelectView({
+            el : $('.quantity-field-info-select', GeoRefine.app.view.el),
+            model: new Backbone.Model({
+                "choices": choices
+            })
+        });
+        var qFieldSelect = _facets.facetEditor.select;
+
+        // When the quantity field selector changes, update the facets and summary bar.
+        qFieldSelect.model.on('change:selection', function(){
+            var val = qFieldSelect.model.get('selection');
+            var selected_field = _facets.qFields.getByCid(val);
+            _.each(_facets.registry, function(facet, id){
+                facet.model.set('quantity_field', selected_field);
+            });
+            
+            //.summary_bar.model.set('quantity_field', selected_field);
+        });
+
+        // Resize the facets editor.
+        $('.facets-editor', this.el).height();
+    };
 
     // Create facet collection container at the given div.
-    var createFacetCollection = function(opts){
+    var setUpFacetCollection = function(){
+		var $facets = $(_s.sprintf('#%s-facets', GeoRefine.app.model.cid));
         var model = new Backbone.Collection();
         var view = new Facets.views.FacetCollectionView({
-            el: opts.el,
+            el: $facets,
             model: model
         });
 
         // Assign to global facet collection.
-        facetCollection = {
+        _facets.facetCollection = {
             model: model,
             view: view
         };
 
-        return facetCollection;
+        return _facets.facetCollection;
     };
 
     // Create a list facet.
@@ -480,13 +530,13 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     actionHandlers.facetsCreateFacet = function(opts){
         if (opts.fromDefinition){
             // Get definition.
-            var facetDef = facetDefinitions[opts.id];
+            var facetDef = _facets.definitions[opts.id];
             // Create facet.
             var facet = createFacet(facetDef);
             // Add to registry.
-            registry[opts.id] = facet;
+            _facets.registry[opts.id] = facet;
             // Add to facet collection.
-            facetCollection.view.addFacetView(facet.view);
+            _facets.facetCollection.view.addFacetView(facet.view);
             // Connect to filters.
         }
     };
@@ -494,7 +544,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // getData action handler.
     actionHandlers.facetsGetData = function(opts){
         // Get facet.
-        var facet = registry[opts.id];
+        var facet = _facets.registry[opts.id];
         // Call get data.
         if (facet.model.getData){
             return facet.model.getData(opts);
@@ -504,7 +554,8 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // Objects to expose.
     var facetsUtil = {
         createFacet: createFacet,
-        createFacetCollection: createFacetCollection,
+        setUpFacetCollection: setUpFacetCollection,
+        setUpFacetsEditor: setUpFacetsEditor,
         connectFacetEvents: connectFacetEvents,
         actionHandlers: actionHandlers
     };
