@@ -1,8 +1,7 @@
 define([
-	"use!underscore",
-	"./GeoRefineClient"
+	"./GeoRefineClient",
 ], 
-function(_, GeoRefineClientView){
+function(GeoRefineClientView){
 
 	views = {
 		"GeoRefineClientView": GeoRefineClientView

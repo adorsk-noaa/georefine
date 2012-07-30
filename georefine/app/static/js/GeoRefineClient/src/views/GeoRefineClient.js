@@ -10,22 +10,12 @@ define([
 	"Charts",
 	"Windows",
 	"Util",
+	"./util/main",
 	"text!./templates/GeoRefineClient.html",
 	"text!./templates/flyout_template.html"
 		],
-function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, template, flyout_template){
+function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, GeoRefineViewsUtil, template, flyout_template){
 
-    var _grFormat = function(f, s){
-        var re = /%(\.(\d+))?(H|h)/;
-        var m = re.exec(f)
-        if (m){
-            f = f.replace(re, '%s');
-            var d = parseInt(m[2])|| 1;
-            var use_long = (m[3] == 'H');
-            s = Util.util.friendlyNumber(s, d, use_long)
-        }
-        return _s.sprintf(f, s);
-    };
 
     var requests_endpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
     var keyed_strings_endpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.config.context_root);
@@ -58,13 +48,15 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 
 			var _this = this;
 			$(document).ready(function(){
+				_this.setUpFacets();
+                /*
 				_this.setUpWindows();
 				_this.setUpFilterGroups();
-				_this.setUpFacets();
                 _this.setUpSummaryBar();
                 _this.setUpFiltersEditor();
 				_this.setUpInitialState();
                 _this.resize();
+                */
 			});
 
 			return this;
@@ -252,549 +244,13 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			});
 		},
 
-        // Extend a query by merging in other queries.
-        // Note: this modifies the target query in-place.
-        extendQuery: function(target_q){
-            var array_params = ['SELECT','FROM', 'WHERE', 'GROUP_BY', 'ORDER_BY'];
-            var boolean_params =['SELECT_GROUP_BY'];
-
-            _.each(Array.prototype.slice.call(arguments, 1), function(source_q) {
-                _.each(array_params, function(param){
-                    if (target_q.hasOwnProperty(param)){
-                        _.each(source_q[param], function(source_q_value){
-                            if (target_q[param].indexOf(source_q_value) == -1){
-                                target_q[param].push(source_q_value);
-                            }
-                        });
-                    }
-                    else{
-                        if (source_q.hasOwnProperty(param)){
-                            target_q[param] = JSON.parse(JSON.stringify(source_q[param]));
-                        }
-                    }
-                });
-
-                _.each(boolean_params, function(param){
-                    if (source_q.hasOwnProperty(param)){
-                        target_q[param] = source_q[param];
-                    }
-                });
-            });
-
-            return target_q;
-        },
-
-        // Add a model's filters to a query.
-        addFiltersToQuery: function(model, filter_attrs, q){
-            if (! (q['WHERE'] instanceof Array)){
-                q['WHERE'] = [];
-            }
-
-            _.each(filter_attrs, function(filter_attr){
-                filters = model.get(filter_attr);
-                filter_array = this._filterObjectGroupsToArray(filters);
-                _.each(filter_array, function(f){
-                    q['WHERE'].push(f);
-                }, this);
-            }, this)
-        },
-
-        makeKeyedInnerQuery: function(model, key, filter_attrs){
-            // Set include filters to primary and base by default.
-            filter_attrs = filter_attrs || ['primary_filters', 'base_filters'];
-
-            // Shortcuts.
-            var qfield  = model.get('quantity_field');
-
-            // Initialize query definition.
-            // Note: 'ID' must be 'inner' to conform to conventions.
-            var inner_q = {
-                'ID': 'inner',
-                'SELECT_GROUP_BY': true,
-                'GROUP_BY': []
-            };
-
-            // Merge the quantity field's inner query parameters.
-            this.extendQuery(inner_q, qfield.get('inner_query'));
-
-            // Add the filters.
-            this.addFiltersToQuery(model, filter_attrs, inner_q);
-
-            // Add key entities as group_by paramters.
-            inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
-            if (key['LABEL_ENTITY']){
-                inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
-            }
-
-            return inner_q;
-        },
-
-        makeKeyedOuterQuery: function(model, key, inner_query, query_id){
-
-            key = JSON.parse(JSON.stringify(key));
-
-            // Shortcuts.
-            var qfield  = model.get('quantity_field');
-
-            // Initialize the outer query.
-            var outer_q = {
-                'ID': query_id || 'outer',
-                'FROM': [{'ID': 'inner', 'TABLE': inner_query}],
-                'SELECT_GROUP_BY': true,
-                'GROUP_BY': []
-            };
-
-            // Add the quantity field's outer query parameters.
-            this.extendQuery(outer_q, qfield.get('outer_query'));
-
-            // Add key entities as group_by paramters.
-            var gb_attrs = ['KEY_ENTITY'];
-            if (key['LABEL_ENTITY']){
-                gb_attrs.push('LABEL_ENTITY');
-            }
-            _.each(gb_attrs, function(gb_attr){
-                outer_q['GROUP_BY'].push({
-                    'ID': key[gb_attr]['ID'],
-                    'EXPRESSION': _s.sprintf("{{inner.%s}}", key[gb_attr]['ID'])
-                });
-            });
-
-            return outer_q;
-        },
-
-        makeKeyedQueryRequest: function(model, key, filter_attrs){
-            // This function assembles two sets of queries:
-            // The inner query selects a data set, and optionally groups it.
-            // That query uses the filters.
-            // In some cases we will make separate queries for base filters, and for primary filters.
-            // The outer query does a secondary grouping and aggregation.
-            // This allows us to do things like:
-            // 'select sum(dataset.xy) group by dataset.category from
-            // (select data.x * data.y where data.x > 7 group by data.category) as dataset
-
-            // Shortcuts.
-            var qfield  = model.get('quantity_field');
-
-            // Get the inner query.
-            var inner_q = this.makeKeyedInnerQuery(model, key, filter_attrs);
-
-            // Get the outer query.
-            var outer_q = this.makeKeyedOuterQuery(model, key, inner_q, 'outer');
-
-            // Assemble the keyed result parameters.
-            var keyed_results_parameters = {
-                "KEY": key,
-                "QUERIES": [outer_q]
-            };
-
-            // Assemble keyed query request.
-            keyed_query_request = {
-                'ID': 'keyed_results',
-                'REQUEST': 'execute_keyed_queries',
-                'PARAMETERS': keyed_results_parameters
-            };
-
-            return keyed_query_request;
-        },
-
 		setUpFacets: function(){
-			var facets = {};
+            // Shortcut for facets util functions.
+            var facetsUtil = GeoRefineViewsUtil.facetsUtil;
 
-            var _app = this;
-
-			// The 'getData' functions will be called with a facet model as 'this'.
-			var listFacetGetData = function(){
-                var _this = this;
-                var qfield = this.get('quantity_field');
-
-                // Copy the key entity.
-                var key = JSON.parse(JSON.stringify(_this.get('KEY')));
-
-                // Assemble request.
-                var keyed_query_req = _app.makeKeyedQueryRequest(_this, key);
-                var requests = [];
-                requests.push(keyed_query_req);
-
-                // Execute the requests.
-				$.ajax({
-					url: requests_endpoint,
-					type: 'POST',
-					data: {'requests': JSON.stringify(requests)},
-					error: Backbone.wrapError(function(){}, _this, {}),
-					success: function(data, status, xhr){
-                        var results = data.results;
-                        var count_entity = qfield.get('outer_query')['SELECT'][0];
-
-						// Generate choices from data.
-						var choices = [];
-						_.each(results['keyed_results'], function(result){
-                            value = result['data']['outer'][count_entity['ID']];
-							choices.push({
-								id: result['key'],
-								label: result['label'],
-								count: value,
-                                count_label: _grFormat(qfield.get('format') || '%s', value)
-							});
-						});
-						_this.set('choices', choices);
-					}
-				});
-			};
-
-			numericFacetGetData = function(opts) {
-                console.log("nfgd", arguments);
-                var opts = opts || {updateRange: false};
-                var facet_model = this;
-
-                // Copy the key entity.
-                var key = JSON.parse(JSON.stringify(facet_model.get('KEY')));
-
-                // Shortcuts.
-                var qfield  = facet_model.get('quantity_field');
-                if (! qfield){
-                    return;
-                }
-
-                // Set base filters on key entity context.
-                if (! key['KEY_ENTITY']['CONTEXT']){
-                    key['KEY_ENTITY']['CONTEXT'] = {};
-                }
-                var key_context = key['KEY_ENTITY']['CONTEXT'];
-
-                _app.addFiltersToQuery(facet_model, ['base_filters'], key_context);
-
-                // Get the base query.
-                var base_inner_q = _app.makeKeyedInnerQuery(facet_model, key, ['base_filters']);
-                var base_outer_q = _app.makeKeyedOuterQuery(facet_model, key, base_inner_q, 'base');
-
-                // Get the primary query.
-                var primary_inner_q = _app.makeKeyedInnerQuery(facet_model, key, ['base_filters', 'primary_filters']);
-                var primary_outer_q = _app.makeKeyedOuterQuery(facet_model, key, primary_inner_q, 'primary');
-
-                // Assemble the keyed result parameters.
-                var keyed_results_parameters = {
-                    "KEY": key,
-                    "QUERIES": [base_outer_q, primary_outer_q]
-                };
-
-                // Assemble keyed query request.
-                var keyed_query_request = {
-                    'ID': 'keyed_results',
-                    'REQUEST': 'execute_keyed_queries',
-                    'PARAMETERS': keyed_results_parameters
-                };
-
-                var _this = this;
-
-                // Assemble request.
-                var requests = [];
-                requests.push(keyed_query_request);
-
-                // Execute the requests.
-				$.ajax({
-					url: requests_endpoint,
-					type: 'POST',
-					data: {'requests': JSON.stringify(requests)},
-					error: Backbone.wrapError(function(){}, _this, {}),
-					success: function(data, status, xhr){
-
-                        var results = data.results;
-                        var count_entity = qfield.get('outer_query')['SELECT'][0];
-
-						// Parse data into histograms.
-						var base_histogram = [];
-						var primary_histogram = [];
-
-						// Generate stats and choices from data.
-                        var range_min = null;
-                        var range_max = null;
-						var choices = [];
-						_.each(results['keyed_results'], function(result){
-							var bucket_label = result['label'];
-                            var bminmax = _app.getBucketMinMax(bucket_label);
-                            var bmin = bminmax.min;
-                            var bmax = bminmax.max;
-
-                            if (bmin < range_min || range_min == null){
-                                range_min = bmin;
-                            }
-
-                            if (bmax > range_max || range_max == null){
-                               range_max = bmax; 
-                            }
-
-                            if (result['data']['base']){
-                                var base_bucket = {
-                                    bucket: bucket_label,
-                                    min: bmin,
-                                    max: bmax,
-                                    count: result['data']['base'][count_entity['ID']]
-                                };
-                                base_histogram.push(base_bucket);
-
-                                // Get primary count (if present).
-                                var primary_count = 0.0;
-                                if (result['data'].hasOwnProperty('primary')){
-                                    var primary_count = result['data']['primary'][count_entity['ID']];
-                                }
-                                var primary_bucket = _.extend({}, base_bucket, {
-                                    count: primary_count
-                                });
-                                primary_histogram.push(primary_bucket);
-                            }
-						});
-
-						base_histogram = _.sortBy(base_histogram, function(b){return b.count});
-						primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
-
-                        _this.set({
-                            base_histogram: base_histogram,
-                            filtered_histogram: primary_histogram,
-                        });
-
-                        if (opts.updateRange){
-                            _this.get('range').set({
-                                min: range_min,
-                                max: range_max
-                            });
-                        }
-
-					}
-				});
-			};
-
-            timeSliderFacetGetData = function(){
-				var _this = this;
-
-                var qfield = this.get('quantity_field');
-
-                // Copy the key entity.
-                var key = JSON.parse(JSON.stringify(_this.get('KEY')));
-
-                // Assemble request.
-                var keyed_query_req = _app.makeKeyedQueryRequest(_this, key);
-                var requests = [];
-                requests.push(keyed_query_req);
-
-				$.ajax({
-					url: requests_endpoint,
-					type: 'POST',
-					data: {'requests': JSON.stringify(requests)},
-					error: Backbone.wrapError(function(){}, _this, {}),
-					success: function(data, status, xhr){
-
-                        var results = data.results;
-                        var count_entity = qfield.get('outer_query')['SELECT'][0];
-
-						// Generate choices from data.
-                        var choices = [];
-						_.each(results['keyed_results'], function(result){
-                            value = result['data']['outer'][count_entity['ID']];
-                            choices.push({
-                                'id': result['key'],
-                                'label': result['label'],
-                                'value': value
-                            });
-                        }, _this);
-
-                        // Sort choices.
-                        choices = _.sortBy(choices, function(choice){
-                            return choice['label'];
-                        });
-
-						_this.set('choices', choices);
-					}
-				});
-            };
-
-            // The 'formatFilter' functions will be called with a facet view as 'this'.
-            listFacetFormatFilters = function(selection){
-                var formatted_filters = [];
-                if (selection.length > 0){
-                    formatted_filters = [
-                        [this.model.get('filter_entity'), 'in', selection]
-                        ];
-                }
-                return formatted_filters;
-            };
-
-            numericFacetFormatFilters = function(selection){
-                var filter_entity = this.model.get('filter_entity');
-                var formatted_filters = [];
-                _.each(['min', 'max'], function(minmax){
-                    var val = parseFloat(selection[minmax]);
-                    if (! isNaN(val)){
-                        var op = (minmax == 'min') ? '>=' : '<=';
-                        formatted_filters.push([filter_entity, op, val]);
-                    }
-                });
-                return formatted_filters;
-            };
-
-            timeSliderFacetFormatFilters = function(selection){
-                var formatted_filters = [
-                    [this.model.get('filter_entity'), '==', selection]
-                    ];
-                return formatted_filters;
-            };
-
-			// For each facet definition...
-			_.each(GeoRefine.config.facets.facets, function(facet){
-
-				var model, view;
-
-				if (facet.type == 'list'){
-					model = new Backbone.Model(_.extend({
-                        primary_filters: {},
-                        base_filters: {}
-                    }, facet, {
-						choices: []
-					}));
-					model.getData = listFacetGetData;
-
-					view = new Facets.views.ListFacetView({ 
-                        model: model
-                    });
-
-                    // This function will be called with the view as 'this'.
-                    view.formatChoiceCountLabels = function(choices){
-                        var labels = [];
-                        var count_entity = this.model.get('count_entity');
-                        _.each(choices, function(choice){
-                            var label = "";
-                            if (count_entity && count_entity.format){
-                                label = _grFormat(count_entity.format || '%s', choice['count']);
-                            }
-                            else{
-                                label = choice['count'];
-                            }
-                            labels.push(label);
-                        });
-                        return labels;
-                    };
-
-                    view.formatFilters = listFacetFormatFilters;
-				}
-
-				else if (facet.type == 'numeric'){
-					model = new Backbone.Model(_.extend({}, facet, {
-						filtered_histogram: [],
-						base_histogram: [],
-					}));
-					model.getData = numericFacetGetData;
-					view = new Facets.views.NumericFacetView({ model: model });
-                    view.formatter = function(format, value){
-                        return _grFormat(format, value);
-                    }
-                    view.formatFilters = numericFacetFormatFilters;
-
-				}
-
-				else if (facet.type == 'time-slider'){
-					model = new Backbone.Model(_.extend({}, facet, {
-					}));
-					model.getData = timeSliderFacetGetData;
-					view = new Facets.views.TimeSliderFacetView({ model: model });
-                    view.formatFilters = timeSliderFacetFormatFilters;
-                }
-                
-                // Setup the facet's primary filter group config.
-                _.each(facet.primary_filter_groups, function(filter_group_id, key){
-                    var filter_group = this.filter_groups[filter_group_id];
-                    filter_group.add(model);
-
-                    // When the filter group changes, change the facet's primary filters.
-                    filter_group.on('change:filters', function(){
-                        var primary_filters = _.clone(model.get('primary_filters')) || {} ;
-                        // A facet should not use its own selection in the filters.
-                        primary_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
-                            return (filterObj.source.cid != model.cid);
-                        });
-                        model.set('primary_filters', primary_filters);
-                    });
-
-                    // Initialize primary filters.
-                    var primary_filters = _.clone(model.get('primary_filters')) || {} ;
-                    primary_filters[filter_group_id] = _.filter(filter_group.getFilters(), function(filterObj){
-                        return (filterObj.source.cid != model.cid);
-                    });
-                    model.set('primary_filters', primary_filters);
-
-                }, this);
-
-                // Setup the facet's base filter group config.
-                _.each(facet.base_filter_groups, function(filter_group_id, key){
-                    var filter_group = this.filter_groups[filter_group_id];
-                    filter_group.on('change:filters', function(){
-                        var base_filters = _.clone(model.get('base_filters')) || {};
-                        base_filters[filter_group_id] = filter_group.getFilters();
-                        model.set('base_filters', base_filters);
-                    });
-
-                    // Initialize base filters.
-                    var base_filters = _.clone(model.get('base_filters')) || {};
-                    base_filters[filter_group_id] = filter_group.getFilters();
-                    model.set('base_filters', base_filters);
-
-                }, this);
-
-                // Have the facet update when its query or base filters or count entities change.
-                if (model.getData){
-
-                    // helper function to get a timeout getData function.
-                    var _timeoutGetData = function(changes){
-                        var delay = 500;
-                        return setTimeout(function(){
-                            var opts = {};
-                            // For numeric facet, add update range flag
-                            // for base_filter changes.
-                            if (model.get('type') == 'numeric' 
-                            && changes && changes.changes 
-                            && changes.changes['base_filters']){
-                                opts.updateRange = true;
-                            }
-                            model.getData(opts);
-                            model.set('_fetch_timeout', null);
-                        }, delay);
-                    };
-
-                    model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-
-                        var changes = arguments[2];
-                        // We delay the get data call a little, in case multiple things are changing.
-                        // The last change will get executed.
-                        var fetch_timeout = model.get('_fetch_timeout');
-                        // If we're fetching, clear the previous fetch.
-                        if (fetch_timeout){
-                            clearTimeout(fetch_timeout);
-                        }
-                        // Start a new fetch.
-                        model.set('_fetch_timeout', _timeoutGetData(changes));
-                    });
-                }
-
-                // Save the facet objects to the registry.
-				facets[model.cid] = {
-					model: model,
-					view: view
-				};
-			}, this);
-
-			// Create facet collection.
-			var facet_models = [];
-			_.each(facets, function(facet){
-				facet_models.push(facet['model'])
-			});
-			facet_collection_model = new Backbone.Collection(facet_models);
-			facet_collection_view = new Facets.views.FacetCollectionView({
-				el: $(_s.sprintf('#%s-facets', this.model.cid)),
-				model: facet_collection_model,
-			});
-			_.each(facets,function(facet){
-				facet_collection_view.addFacetView(facet['view']);
-			});
-
-            this.facets = facet_collection_model;
+            // Setup facets collection.
+			var $facets = $(_s.sprintf('#%s-facets', this.model.cid));
+            this.facets = facetsUtil.createFacetCollection({el: $facets});
 		},
 
 		createMapEditor: function(){
@@ -1351,6 +807,90 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			});
 		},
 
+        expandContractTab: function(opts){
+            var _this = this;
+            var expand = opts.expand;
+            var $tc = opts.tab_container;
+            var $table = opts.table;
+            var dim = opts.dimension;
+
+
+            // Calculate how much to change dimension.
+            var delta = parseInt($tc.css('max' + _s.capitalize(dim)), 10) - parseInt($tc.css('min' + _s.capitalize(dim)), 10);
+            if (! expand){
+                delta = -1 * delta;
+            }
+
+            // Animate field container dimension.
+            $tc.addClass('changing');
+
+            // Toggle button text
+            var button_text = ($('button.toggle', $tc).html() == '\u25B2') ? '\u25BC' : '\u25B2';
+            $('button.toggle', $tc).html(button_text);
+
+            // Execute the animation.
+            var tc_dim_opts = {};
+            tc_dim_opts[dim] = parseInt($tc.css(dim),10) + delta;
+            $tc.animate(
+                    tc_dim_opts,
+                    {
+                        complete: function(){
+                            $tc.removeClass('changing');
+
+                            if (expand){
+                                $tc.addClass('expanded')
+                            }
+                            else{
+                                $tc.removeClass('expanded');
+                                Util.util.fillParent($table);
+                            }
+                        }
+                    }
+                    );
+
+            // Animate cell dimension.
+            $tc.parent().animate(tc_dim_opts);
+
+            // Animate table dimension.
+            var table_dim_opts = {};
+            table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
+            $table.animate(table_dim_opts);
+        },
+
+        toggleFiltersEditor: function(){
+            var $filtersEditor = $('.filters-editor-container', this.el);
+            var $table = $('.filters-editor-table', this.el);
+            if (! $filtersEditor.hasClass('changing')){
+                this.expandContractTab({
+                    expand: ! $filtersEditor.hasClass('expanded'),
+                    tab_container: $filtersEditor,
+                    table: $table,
+                    dimension: 'width'
+                });
+            }
+        },
+
+        resize: function(){
+            this.resizeFiltersEditor();
+        },
+
+        resizeFiltersEditor: function(){
+            var $table = $('.filters-editor-table', this.el);
+            Util.util.fillParent($table);
+            this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
+            var $sbc = $('.filters-editor-table .summary-bar-container');
+            $sbc.parent().css('height', $sbc.height());
+        },
+
+		resizeVerticalTab: function($vt){
+			var $rc = $('.rotate-container', $vt);
+			$rc.css('width', $rc.parent().height());
+			$rc.css('height', $rc.parent().width());
+		},
+
+        loadState: function(){
+        },
+
 		setUpInitialState: function(){
 			var initial_state = GeoRefine.config.initial_state;
 
@@ -1437,105 +977,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, t
 			
 		},
 
-        expandContractTab: function(opts){
-            var _this = this;
-            var expand = opts.expand;
-            var $tc = opts.tab_container;
-            var $table = opts.table;
-            var dim = opts.dimension;
-
-
-            // Calculate how much to change dimension.
-            var delta = parseInt($tc.css('max' + _s.capitalize(dim)), 10) - parseInt($tc.css('min' + _s.capitalize(dim)), 10);
-            if (! expand){
-                delta = -1 * delta;
-            }
-
-            // Animate field container dimension.
-            $tc.addClass('changing');
-
-            // Toggle button text
-            var button_text = ($('button.toggle', $tc).html() == '\u25B2') ? '\u25BC' : '\u25B2';
-            $('button.toggle', $tc).html(button_text);
-
-            // Execute the animation.
-            var tc_dim_opts = {};
-            tc_dim_opts[dim] = parseInt($tc.css(dim),10) + delta;
-            $tc.animate(
-                    tc_dim_opts,
-                    {
-                        complete: function(){
-                            $tc.removeClass('changing');
-
-                            if (expand){
-                                $tc.addClass('expanded')
-                            }
-                            else{
-                                $tc.removeClass('expanded');
-                                Util.util.fillParent($table);
-                            }
-                        }
-                    }
-                    );
-
-            // Animate cell dimension.
-            $tc.parent().animate(tc_dim_opts);
-
-            // Animate table dimension.
-            var table_dim_opts = {};
-            table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
-            $table.animate(table_dim_opts);
-        },
-
-        toggleFiltersEditor: function(){
-            var $filtersEditor = $('.filters-editor-container', this.el);
-            var $table = $('.filters-editor-table', this.el);
-            if (! $filtersEditor.hasClass('changing')){
-                this.expandContractTab({
-                    expand: ! $filtersEditor.hasClass('expanded'),
-                    tab_container: $filtersEditor,
-                    table: $table,
-                    dimension: 'width'
-                });
-            }
-        },
-
-        resize: function(){
-            this.resizeFiltersEditor();
-        },
-
-        resizeFiltersEditor: function(){
-            var $table = $('.filters-editor-table', this.el);
-            Util.util.fillParent($table);
-            this.resizeVerticalTab($('.filters-editor-tab', this.el)); 
-            var $sbc = $('.filters-editor-table .summary-bar-container');
-            $sbc.parent().css('height', $sbc.height());
-        },
-
-		resizeVerticalTab: function($vt){
-			var $rc = $('.rotate-container', $vt);
-			$rc.css('width', $rc.parent().height());
-			$rc.css('height', $rc.parent().width());
-		},
-
-        getBucketMinMax: function(bucket_label){
-            var minmax_regex = /[\[(](.*?),(.*?)[\]|)]/;
-            var match = minmax_regex.exec(bucket_label);
-            var bmin, bmax;
-
-            if (match != null){
-                bmin = (match[1].indexOf('...') > -1) ? -Number.MAX_VALUE : parseFloat(match[1]);
-                bmax = (match[2].indexOf('...') > -1) ? Number.MAX_VALUE : parseFloat(match[2]);
-                return {
-                    min: bmin,
-                    max: bmax
-                };
-            }
-            else{
-                return null;
-            }
-
-        }
 
     });
 
