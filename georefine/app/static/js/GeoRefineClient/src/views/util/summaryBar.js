@@ -5,8 +5,13 @@ define([
 	"_s",
 	"Util",
 	"./requests",
+	"./facets",
+	"./format",
 		],
-function($, Backbone, _, _s, Util, requestsUtil){
+function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
+
+    // shortcut.
+    var _summaryBar;
 
     setUpSummaryBar = function(){
         var model = new Backbone.Model({
@@ -15,19 +20,6 @@ function($, Backbone, _, _s, Util, requestsUtil){
             "base_filters": {},
             "quantity_field": null,
             "data": {}
-        });
-
-        // Listen for filter changes.
-        _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = GeoRefine.config.summary_bar[filterCategory + "_filter_groups"];
-            _.each(groupIds, function(filterGroupId){
-                var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
-                filterGroup.on('change:filters', function(){
-                    var filters = _.clone(model.get(filterCategory + '_filters')) || {};
-                    filters[filterGroupId] = filterGroup.getFilters();
-                    model.set(filterCategory + '_filters', filters);
-                });
-            });
         });
 
         // Define getData function.
@@ -78,7 +70,7 @@ function($, Backbone, _, _s, Util, requestsUtil){
             var requests = [totals_request];
 
             var deferred = $.ajax({
-                url: requests_endpoint,
+                url: GeoRefine.app.requestsEndpoint,
                 type: 'POST',
                 data: {'requests': JSON.stringify(requests)},
                 error: Backbone.wrapError(function(){}, _this, {}),
@@ -105,13 +97,6 @@ function($, Backbone, _, _s, Util, requestsUtil){
                 // Trigger update when model data changes.
                 this.model.on('change:data', this.onDataChange, this);
 
-                // Get data when parameters change.
-                if (this.model.getData){
-                    var _this = this;
-                    this.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-                        _this.model.getData();
-                    });
-                }
             },
 
             onDataChange: function(){
@@ -123,8 +108,9 @@ function($, Backbone, _, _s, Util, requestsUtil){
                     return;
                 }
 
-                var formatted_selected = _grFormat(format, data.selected);
-                var formatted_total = _grFormat(format, data.total);
+                var formatter = formatUtil.GeoRefineFormatter;
+                var formatted_selected = formatter(format, data.selected);
+                var formatted_total = formatter(format, data.total);
                 var percentage ;
                 if (data.total == 0 && data.selected == 0){
                     percentage = 100.0;
@@ -139,7 +125,7 @@ function($, Backbone, _, _s, Util, requestsUtil){
 
                 // Set totals on facets.
                 _.each(GeoRefine.app.facets.facetCollection.models, function(facetModel){
-                    facetMmodel.set('total', data.total);
+                    facetModel.set('total', data.total);
                 });
             }
         });
@@ -155,12 +141,80 @@ function($, Backbone, _, _s, Util, requestsUtil){
             view: view
         };
 
+        // Set shortcut.
+        _summaryBar = GeoRefine.app.summaryBar;
+
         return GeoRefine.app.summaryBar;
+    };
+
+
+    var updateSummaryBarFilters = function(summaryBar, filterCategory, opts){
+        var filters = _.clone(summaryBar.model.get(filterCategory + '_filters')) || {} ;
+        _.each(summaryBar.model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+            filters[filterGroupId] = filterGroup.getFilters();
+        });
+        var setObj = {};
+        setObj[filterCategory + '_filters'] = filters;
+        summaryBar.model.set(setObj, opts);
+    };
+
+    var connectSummaryBar = function(opts){
+        // Listen for filter changes.
+        _.each(['primary', 'base'], function(filterCategory){
+            var groupIds = _summaryBar.model.get(filterCategory + "_filter_groups");
+            _.each(groupIds, function(filterGroupId){
+                var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+                filterGroup.on('change:filters', function(){
+                    var filters = _.clone(_summaryBar.model.get(filterCategory + '_filters')) || {};
+                    filters[filterGroupId] = filterGroup.getFilters();
+                    _summaryBar.model.set(filterCategory + '_filters', filters);
+                });
+            });
+        });
+        // Get data when parameters change.
+        if (_summaryBar.model.getData){
+            _summaryBar.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+                _summaryBar.model.getData();
+            });
+        }
+    };
+
+    var actionHandlers =  {};
+
+    // Initialize summary bar.  Sets filters, qfield.
+    actionHandlers.summaryBarInitialize = function(opts){
+
+        // Set quantity field.
+        console.log(GeoRefine.app.facets);
+        var qfield_cid = GeoRefine.app.facets.facetEditor.qFieldSelect.model.get('selection');
+        var qfield = GeoRefine.app.facets.qFields.getByCid(qfield_cid);
+
+        _summaryBar.model.set({quantity_field: qfield }, {silent: true});
+
+        // Set filters.
+        _.each(['base', 'primary'], function(filterCategory){
+            updateSummaryBarFilters(_summaryBar, filterCategory, {silent: true});
+        });
+    };
+
+    // Connect summaryBar.
+    actionHandlers.summaryBarConnect = function(opts){
+        connectSummaryBar(opts);
+    };
+
+    // getData action handler.
+    actionHandlers.summaryBarGetData = function(opts){
+        // Call get data.
+        if (_summaryBar.model.getData){
+            return _summaryBar.model.getData(opts);
+        }
     };
 
     // Objects to expose.
     var summaryBarUtil = {
-        setUpSummaryBar: setUpSummaryBar
+        setUpSummaryBar: setUpSummaryBar,
+        actionHandlers: actionHandlers
     };
     return summaryBarUtil;
 });

@@ -12,31 +12,21 @@ define([
 		],
 function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil, summaryBarUtil){
 
-    // Add facets namespace to global app variable.
-    GeoRefine.app.facets = {};
-    // Shortcuts.
-    var _facets = GeoRefine.app.facets;
-    _facets.facetCollection = null;
-    _facets.facetEditor = {};
-    _facets.definitions = GeoRefine.config.facets.definitions;
-    _facets.registry = {};
-    _facets.qFields = null;
-
     var setUpFacetsEditor = function(){
 
         // Setup summary bar.
         summaryBarUtil.setUpSummaryBar();
 
         // Generate quantity field collection from config.
-        _facets.qFields = new Backbone.Collection();
+        GeoRefine.app.facets.qFields = new Backbone.Collection();
         _.each(GeoRefine.config.facets.quantity_fields, function(field){
             var model = new Backbone.Model(_.extend({}, field));
-            _facets.qFields.add(model);
+            GeoRefine.app.facets.qFields.add(model);
         });
 
         // Setup quantity field selector.
         var choices = [];
-        _.each(_facets.qFields.models, function(model){
+        _.each(GeoRefine.app.facets.qFields.models, function(model){
             choices.push({
                 value: model.cid,
                 label: model.get('label'),
@@ -50,13 +40,15 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
                 "choices": choices
             })
         });
-        _facets.facetEditor.qFieldSelect = qFieldSelect;
+        GeoRefine.app.facets.facetEditor = {
+            qFieldSelect : qFieldSelect
+        };
 
         // When the quantity field selector changes, update the facets and summary bar.
         qFieldSelect.model.on('change:selection', function(){
             var val = qFieldSelect.model.get('selection');
-            var selected_field = _facets.qFields.getByCid(val);
-            _.each(_facets.registry, function(facet, id){
+            var selected_field = GeoRefine.app.facets.qFields.getByCid(val);
+            _.each(GeoRefine.app.facets.registry, function(facet, id){
                 facet.model.set('quantity_field', selected_field);
             });
             
@@ -77,12 +69,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         });
 
         // Assign to global facet collection.
-        _facets.facetCollection = {
+        GeoRefine.app.facets.facetCollection = {
             model: model,
             view: view
         };
 
-        return _facets.facetCollection;
+        return GeoRefine.app.facets.facetCollection;
     };
 
     // Create a list facet.
@@ -546,13 +538,13 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     actionHandlers.facetsCreateFacet = function(opts){
         if (opts.fromDefinition){
             // Get definition.
-            var facetDef = _facets.definitions[opts.id];
+            var facetDef = GeoRefine.app.facets.definitions[opts.id];
             // Create facet.
             var facet = createFacet(facetDef);
             // Add to registry.
-            _facets.registry[opts.id] = facet;
+            GeoRefine.app.facets.registry[opts.id] = facet;
             // Add to facet collection.
-            _facets.facetCollection.view.addFacetView(facet.view);
+            GeoRefine.app.facets.facetCollection.view.addFacetView(facet.view);
             // Connect to filters.
         }
     };
@@ -560,22 +552,31 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // Initialize a facet.  Sets filters, qfield.
     actionHandlers.facetsInitializeFacet = function(opts){
         // Get facet.
-        var facet = _facets.registry[opts.id];
+        var facet = GeoRefine.app.facets.registry[opts.id];
 
         // Set quantity field.
-        var qfield_cid = _facets.facetEditor.qFieldSelect.model.get('selection');
-        var qfield = _facets.qFields.getByCid(qfield_cid);
+        var qfield_cid = GeoRefine.app.facets.facetEditor.qFieldSelect.model.get('selection');
+        var qfield = GeoRefine.app.facets.qFields.getByCid(qfield_cid);
         facet.model.set({quantity_field: qfield }, {silent: true});
 
         // Set filters.
         updateFacetPrimaryFilters(facet, {silent: true});
         updateFacetFilters(facet, 'base', {silent: true});
+
+        // Set totals.
+        if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){
+            var data = GeoRefine.app.summaryBar.model.get('data');
+            var total = parseFloat(data);
+            if (! isNaN(total)){
+                facet.model.set('total', total);
+            }
+        }
     };
 
     // Connect facet.
     actionHandlers.facetsConnectFacet = function(opts){
         // Get facet.
-        var facet = _facets.registry[opts.id];
+        var facet = GeoRefine.app.facets.registry[opts.id];
         connectFacet(facet, opts);
 
     };
@@ -583,7 +584,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // getData action handler.
     actionHandlers.facetsGetData = function(opts){
         // Get facet.
-        var facet = _facets.registry[opts.id];
+        var facet = GeoRefine.app.facets.registry[opts.id];
         // Call get data.
         if (facet.model.getData){
             return facet.model.getData(opts);
@@ -593,7 +594,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     // Set Selection action handler.
     actionHandlers.facetsSetSelection = function(opts){
         // Get facet.
-        var facet = _facets.registry[opts.id];
+        var facet = GeoRefine.app.facets.registry[opts.id];
 
         // Set facet selection.
         var facet_type = facet.model.get('type');
@@ -607,8 +608,8 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
     // setQField action handler.
     actionHandlers.facetsFacetsEditorSetQField = function(opts){
-        var qfield = _facets.qFields.get(opts.id);
-        _facets.facetEditor.qFieldSelect.model.set('selection', qfield.cid);
+        var qfield = GeoRefine.app.facets.qFields.get(opts.id);
+        GeoRefine.app.facets.facetEditor.qFieldSelect.model.set('selection', qfield.cid);
     };
 
     // Objects to expose.

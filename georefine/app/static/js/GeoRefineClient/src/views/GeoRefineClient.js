@@ -31,7 +31,12 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             GeoRefine.app = {
                 model: this.model,
                 view: this,
-                id: this.cid
+                id: this.cid,
+                facets: {
+                    definitions: GeoRefine.config.facets.definitions,
+                    registry: {}
+                },
+                summaryBar: {}
             };
 
             // Set endpoints.
@@ -751,29 +756,19 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             // Shortcut.
             var stateUtil = GeoRefineViewsUtil.stateUtil;
 
-            // Load quantity field state.
-            var qFieldActionQueue = {
-                    async: false,
-                    actions: [
-                        {
-                            type: 'action',
-                            handler: 'facetsFacetsEditorSetQField',
-                            opts: {
-                                id: 'result.x:sum'
-                            }
-                        }
-                    ]
-            };
-            var qFieldAction = stateUtil.processActionQueue(qFieldActionQueue);
-            var qFieldDeferred = qFieldAction();
-
-            // Load facets state.
-            var facetsActionQueue = {
-                type: 'actionQueue',
+            var actionQueue = {
                 async: false,
                 actions: [
+                    // Setup quantity field.
+                    {
+                        type: 'action',
+                        handler: 'facetsFacetsEditorSetQField',
+                        opts: {
+                            id: 'result.x:sum'
+                        }
+                    },
 
-                    // Timestep facet.
+                    // Setup timestep facet.
                     {
                         type: 'actionQueue',
                         async: false,
@@ -824,7 +819,31 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         ]
                     },
 
-                    // Substrates facet.
+                    // Setup summary bar.
+                    {
+                        type: 'actionQueue',
+                        async: false,
+                        actions: [
+                            // Initialize summary bar.
+                            {
+                                type: 'action',
+                                handler: 'summaryBarInitialize',
+                            },
+
+                            // Connect summary bar.
+                            {
+                                type: 'action',
+                                handler: 'summaryBarConnect',
+                            },
+                            // Get data for summary bar.
+                            {
+                                type: 'action',
+                                handler: 'summaryBarGetData',
+                            },
+                        ]
+                    },
+
+                    // Setup substrate facets.
                     {
                         type: 'actionQueue',
                         async: false,
@@ -866,13 +885,12 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     }
                 ]
             };
-            var facetsAction = stateUtil.processActionQueue(facetsActionQueue);
+            var action = stateUtil.processActionQueue(actionQueue);
+            var deferred = action();
 
             // Load after quantity field state is set up.
-            $.when(qFieldDeferred).then(function(){
-                $.when(facetsAction()).then(function(){
-                    console.log("facetsDone");
-                });
+            $.when(deferred).then(function(){
+                console.log("All Done.");
             });
         },
 

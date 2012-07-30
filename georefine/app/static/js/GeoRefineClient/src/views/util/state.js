@@ -5,13 +5,14 @@ define([
 	"_s",
 	"Util",
 	"./facets",
+	"./summaryBar",
 		],
-function($, Backbone, _, _s, Util, facetsUtil){
+function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil){
 
     // Registry for action handlers, to be populated
     // by other modules as well.
     var actionHandlers = {};
-    _.each([facetsUtil], function(module){
+    _.each([facetsUtil, summaryBarUtil], function(module){
         _.each(module.actionHandlers, function(handler, id){
             actionHandlers[id] = handler;
         });
