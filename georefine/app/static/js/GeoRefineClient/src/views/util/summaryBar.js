@@ -25,7 +25,7 @@ function($, Backbone, _, _s, Util, requestsUtil){
                 filterGroup.on('change:filters', function(){
                     var filters = _.clone(model.get(filterCategory + '_filters')) || {};
                     filters[filterGroupId] = filterGroup.getFilters();
-                    model.set(attr + '_filters', filters);
+                    model.set(filterCategory + '_filters', filters);
                 });
             });
         });
@@ -109,7 +109,7 @@ function($, Backbone, _, _s, Util, requestsUtil){
                 if (this.model.getData){
                     var _this = this;
                     this.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-                        this.model.getData();
+                        _this.model.getData();
                     });
                 }
             },

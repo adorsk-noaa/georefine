@@ -455,32 +455,48 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         return facet;
     };
 
+    var updateFacetPrimaryFilters = function(facet, opts){
+        var primaryFilters = _.clone(facet.model.get('primary_filters')) || {} ;
+        _.each(facet.model.get('primary_filter_groups'), function(filterGroupId, key){
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+            // A facet should not use its own selection in the filters.
+            primaryFilters[filterGroupId] = _.filter(filterGroup.getFilters(), 
+                function(filterObj){
+                    return (filterObj.source.cid != facet.model.cid);
+                });
+        });
+        facet.model.set({'primary_filters': primaryFilters}, opts);
+
+    };
+
+    var updateFacetFilters = function(facet, filterCategory, opts){
+        var filters = _.clone(facet.model.get(filterCategory + '_filters')) || {} ;
+        _.each(facet.model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+            filters[filterGroupId] = filterGroup.getFilters();
+        });
+        var setObj = {};
+        setObj[filterCategory + '_filters'] = filters;
+        facet.model.set(setObj, opts);
+    };
+
     // Setup event chains for a facet.
-    var connectFacetEvents = function(facet, filterGroups, opts){
+    var connectFacet = function(facet, opts){
 
         // Setup the facet's primary filter groups.
         _.each(facet.model.get('primary_filter_groups'), function(filterGroupId, key){
-            var filterGroup = filterGroups[filterGroupId];
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.add(facet.model);
-            filter_group.on('change:filters', function(){
-                var primaryFilters = _.clone(facet.model.get('primary_filters')) || {} ;
-                // A facet should not use its own selection in the filters.
-                primaryFilters[filterGroupId] = _.filter(filterGroup.getFilters(), 
-                    function(filterObj){
-                        return (filterObj.source.cid != facet.model.cid);
-                    });
-                facet.model.set('primary_filters', primary_filters);
+            filterGroup.on('change:filters', function(){
+                updateFacetPrimaryFilters(facet);
             });
-
         });
 
         // Setup the facet's base filter group config.
         _.each(facet.model.get('base_filter_groups'), function(filterGroupId, key){
-            var filterGroup = filterGroups[filterGroupId];
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.on('change:filters', function(){
-                var baseFilters = _.clone(model.get('base_filters')) || {};
-                baseFilters[filterGroupId] = filterGroup.getFilters();
-                model.set('base_filters', baseFilters);
+                updateFacetFilters(facet, 'base');
             });
         });
 
@@ -542,18 +558,25 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
     };
 
     // Initialize a facet.  Sets filters, qfield.
-    actionHandlers.facetsInitializeFacet= function(opts){
+    actionHandlers.facetsInitializeFacet = function(opts){
         // Get facet.
         var facet = _facets.registry[opts.id];
 
-        // Get quantity field.
+        // Set quantity field.
         var qfield_cid = _facets.facetEditor.qFieldSelect.model.get('selection');
         var qfield = _facets.qFields.getByCid(qfield_cid);
+        facet.model.set({quantity_field: qfield }, {silent: true});
 
-        // Set facet attributes.
-        facet.model.set({
-            quantity_field: qfield
-        });
+        // Set filters.
+        updateFacetPrimaryFilters(facet, {silent: true});
+        updateFacetFilters(facet, 'base', {silent: true});
+    };
+
+    // Connect facet.
+    actionHandlers.facetsConnectFacet = function(opts){
+        // Get facet.
+        var facet = _facets.registry[opts.id];
+        connectFacet(facet, opts);
 
     };
 
@@ -564,6 +587,21 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         // Call get data.
         if (facet.model.getData){
             return facet.model.getData(opts);
+        }
+    };
+
+    // Set Selection action handler.
+    actionHandlers.facetsSetSelection = function(opts){
+        // Get facet.
+        var facet = _facets.registry[opts.id];
+
+        // Set facet selection.
+        var facet_type = facet.model.get('type');
+        if (facet_type == 'timeSlider'){
+            if (opts.index != null){
+                var choice = facet.model.get('choices')[opts.index];
+                facet.model.set('selection', choice.id);
+            }
         }
     };
 
@@ -578,7 +616,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         createFacet: createFacet,
         setUpFacetCollection: setUpFacetCollection,
         setUpFacetsEditor: setUpFacetsEditor,
-        connectFacetEvents: connectFacetEvents,
+        connectFacet: connectFacet,
         actionHandlers: actionHandlers
     };
     return facetsUtil;

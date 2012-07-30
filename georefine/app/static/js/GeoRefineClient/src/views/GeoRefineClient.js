@@ -759,7 +759,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             type: 'action',
                             handler: 'facetsFacetsEditorSetQField',
                             opts: {
-                                id: 'result.cell.area:sum'
+                                id: 'result.x:sum'
                             }
                         }
                     ]
@@ -772,6 +772,58 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 type: 'actionQueue',
                 async: false,
                 actions: [
+
+                    // Timestep facet.
+                    {
+                        type: 'actionQueue',
+                        async: false,
+                        actions: [
+                            // Create facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsCreateFacet',
+                                opts: {
+                                    fromDefinition: true,
+                                    id: 'timestep'
+                                }
+                            },
+                            // Initialize facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsInitializeFacet',
+                                opts: {
+                                    id: 'timestep'
+                                }
+                            },
+                            // Connect facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsConnectFacet',
+                                opts: {
+                                    id: 'timestep'
+                                }
+                            },
+                            // Load data.
+                            {
+                                type: 'action',
+                                handler: 'facetsGetData',
+                                opts: {
+                                    id: 'timestep'
+                                }
+                            },
+                            // Select first choice.
+                            {
+                                type: 'action',
+                                handler: 'facetsSetSelection',
+                                opts: {
+                                    id: 'timestep',
+                                    index: 1
+                                }
+                            },
+
+                        ]
+                    },
+
                     // Substrates facet.
                     {
                         type: 'actionQueue',
@@ -794,6 +846,14 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     id: 'substrates'
                                 }
                             },
+                            // Connect facet.
+                            {
+                                type: 'action',
+                                handler: 'facetsConnectFacet',
+                                opts: {
+                                    id: 'substrates'
+                                }
+                            },
                             // Load data.
                             {
                                 type: 'action',
@@ -810,7 +870,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
             // Load after quantity field state is set up.
             $.when(qFieldDeferred).then(function(){
-                console.log("qfield done");
                 $.when(facetsAction()).then(function(){
                     console.log("facetsDone");
                 });
