@@ -10,17 +10,14 @@ define([
 		],
 function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
 
-    // shortcut.
-    var _summaryBar;
-
     setUpSummaryBar = function(){
-        var model = new Backbone.Model({
+        var model = new Backbone.Model(_.extend({
             "id": "summary_bar",
             "primary_filters": {},
             "base_filters": {},
             "quantity_field": null,
             "data": {}
-        });
+        }, GeoRefine.config.summary_bar));
 
         // Define getData function.
         model.getData = function(){
@@ -141,9 +138,6 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
             view: view
         };
 
-        // Set shortcut.
-        _summaryBar = GeoRefine.app.summaryBar;
-
         return GeoRefine.app.summaryBar;
     };
 
@@ -162,20 +156,20 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
     var connectSummaryBar = function(opts){
         // Listen for filter changes.
         _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = _summaryBar.model.get(filterCategory + "_filter_groups");
+            var groupIds = GeoRefine.app.summaryBar.model.get(filterCategory + "_filter_groups");
             _.each(groupIds, function(filterGroupId){
                 var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
                 filterGroup.on('change:filters', function(){
-                    var filters = _.clone(_summaryBar.model.get(filterCategory + '_filters')) || {};
+                    var filters = _.clone(GeoRefine.app.summaryBar.model.get(filterCategory + '_filters')) || {};
                     filters[filterGroupId] = filterGroup.getFilters();
-                    _summaryBar.model.set(filterCategory + '_filters', filters);
+                    GeoRefine.app.summaryBar.model.set(filterCategory + '_filters', filters);
                 });
             });
         });
         // Get data when parameters change.
-        if (_summaryBar.model.getData){
-            _summaryBar.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
-                _summaryBar.model.getData();
+        if (GeoRefine.app.summaryBar.model.getData){
+            GeoRefine.app.summaryBar.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+                GeoRefine.app.summaryBar.model.getData();
             });
         }
     };
@@ -189,11 +183,11 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
         var qfield_cid = GeoRefine.app.facets.facetEditor.qFieldSelect.model.get('selection');
         var qfield = GeoRefine.app.facets.qFields.getByCid(qfield_cid);
 
-        _summaryBar.model.set({quantity_field: qfield }, {silent: true});
+        GeoRefine.app.summaryBar.model.set({quantity_field: qfield }, {silent: true});
 
         // Set filters.
         _.each(['base', 'primary'], function(filterCategory){
-            updateSummaryBarFilters(_summaryBar, filterCategory, {silent: true});
+            updateSummaryBarFilters(GeoRefine.app.summaryBar, filterCategory, {silent: true});
         });
     };
 
@@ -205,8 +199,8 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
     // getData action handler.
     actionHandlers.summaryBarGetData = function(opts){
         // Call get data.
-        if (_summaryBar.model.getData){
-            return _summaryBar.model.getData(opts);
+        if (GeoRefine.app.summaryBar.model.getData){
+            return GeoRefine.app.summaryBar.model.getData(opts);
         }
     };
 
