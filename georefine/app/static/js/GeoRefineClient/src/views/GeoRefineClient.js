@@ -65,12 +65,12 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 				_this.setUpFilterGroups();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
+                _this.resize();
                 _this.loadState();
                 /*
 				_this.setUpWindows();
                 _this.setUpSummaryBar();
 				_this.setUpInitialState();
-                _this.resize();
                 */
 			});
 
