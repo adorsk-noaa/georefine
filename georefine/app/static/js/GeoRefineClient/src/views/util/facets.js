@@ -566,7 +566,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         // Set totals.
         if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){
             var data = GeoRefine.app.summaryBar.model.get('data');
-            var total = parseFloat(data);
+            var total = parseFloat(data.total);
             if (! isNaN(total)){
                 facet.model.set('total', total);
             }

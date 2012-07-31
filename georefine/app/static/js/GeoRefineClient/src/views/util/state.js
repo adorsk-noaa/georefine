@@ -34,25 +34,47 @@ function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil){
     // Convert an action definition to an action function.
     var processAction = function(action){
         // Get handler for action.
-        var handler = actionHandlers[action.handler];
+        var handler = null;
+        if ($.isFunction(action.handler)){
+            handler = action.handler;
+        }
+        else{
+            handler = actionHandlers[action.handler];
+        }
         // Return handler bound w/ action opts.
         return function(){
             return handler(action.opts); 
         };
     };
 
+    var getAQStrings = function(actionQueue){
+        var afs = [];
+        var _actionQueue = actionQueue;
+        _.each(_actionQueue.actions, function(action){
+            if (action.type == 'action'){
+                afs.push(action.handler);
+            }
+            else if (action.type == 'actionQueue'){
+                afs.push(getAQStrings(action));
+            }
+        });
+        return afs;
+    };
+
     // Convert an action queue definition to an action function.
     var processActionQueue = function(actionQueue){
+        var _id = (Math.random() * 100).toPrecision(3);
 
-        var action = function(){
+        var _actionQueue = actionQueue;
+
+        var queueAction = function(){
             var deferred = $.Deferred();
 
             // If there were child actions...
-            if (actionQueue.actions.length > 0){
-
+            if (_actionQueue.actions.length > 0){
                 // Convert child actions into action functions.
                 var actionFuncs = [];
-                _.each(actionQueue.actions, function(action){
+                _.each(_actionQueue.actions, function(action){
                     var actionFunc = null;
                     if (action.type == 'action'){
                         actionFunc = processAction(action);
@@ -68,7 +90,7 @@ function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil){
                 var finalDeferred = null;
 
                 // If async, execute actions in parallel.
-                if (actionQueue.async){
+                if (_actionQueue.async){
                     var deferreds = [];
                     _.each(actionFuncs, function(actionFunc){
                         deferreds.push(actionFunc());
@@ -82,10 +104,12 @@ function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil){
                     finalDeferred = $.when(actionFuncs[0]());
                     // Trigger subsequent subactions in sequence.
                     for (var i = 1; i < actionFuncs.length; i++){
-                        var i_ = i;
-                        finalDeferred = finalDeferred.pipe(function(){
-                            return $.when(actionFuncs[i_]());
-                        });
+                        // We wrap inside a function to avoid closure conflicts.
+                        (function(_i){
+                            finalDeferred = finalDeferred.pipe(function(){
+                                return $.when(actionFuncs[_i]());
+                            });
+                        })(i);
                     }
                 }
 
@@ -102,7 +126,7 @@ function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil){
             return deferred;
         };
 
-        return action;
+        return queueAction;
     };
 
     // Objects to expose.

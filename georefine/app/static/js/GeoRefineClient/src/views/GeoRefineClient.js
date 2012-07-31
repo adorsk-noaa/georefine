@@ -829,7 +829,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                 type: 'action',
                                 handler: 'summaryBarInitialize',
                             },
-
                             // Connect summary bar.
                             {
                                 type: 'action',

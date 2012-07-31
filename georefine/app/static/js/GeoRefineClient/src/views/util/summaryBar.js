@@ -186,7 +186,6 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
     actionHandlers.summaryBarInitialize = function(opts){
 
         // Set quantity field.
-        console.log(GeoRefine.app.facets);
         var qfield_cid = GeoRefine.app.facets.facetEditor.qFieldSelect.model.get('selection');
         var qfield = GeoRefine.app.facets.qFields.getByCid(qfield_cid);
 
