@@ -218,7 +218,22 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
             return Util.util.friendlyNumber(value,1);
         };
 
-        return chartEditorView;
+        return {
+            model: chartEditorModel,
+            view: chartEditorView
+        };
+    };
+
+    var updateChartEditorFilters = function(chartEditor, filterCategory, opts){
+        var q = chartEditor.model.get('datasource').get('query');
+        var filters = _.clone(q.get(filterCategory + '_filters')) || {} ;
+        _.each(q.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+            filters[filterGroupId] = filterGroup.getFilters();
+        });
+        var setObj = {};
+        setObj[filterCategory + '_filters'] = filters;
+        q.set(setObj, opts);
     };
 
     // Objects to expose.

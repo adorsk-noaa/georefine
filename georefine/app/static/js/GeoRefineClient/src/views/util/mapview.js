@@ -50,7 +50,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
             // and set the service_url.
             success: function(data, status, xhr){
                 var url_params = [_s.sprintf('PARAMS_KEY=%s', data.key)];
-                var service_url = map_endpoint + '?' + url_params.join('&') + '&';
+                var service_url = GeoRefine.app.mapEndpoint + '?' + url_params.join('&') + '&';
                 model.set('service_url', service_url);
             }
         });
@@ -71,7 +71,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
         });
 
         // Process layers from config.
-        var processed_layers = {};
+        var processedLayers = {};
         _.each(['data', 'base', 'overlay'], function(layerCategory){
             var layers = mapConfig[_s.sprintf('%s_layers', layerCategory)];
             var layerCollection = new Backbone.Collection();
@@ -86,7 +86,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
                 var model = new Backbone.Model(_.extend({},	
                         mapConfig.default_layer_attributes, 
                         procLayer, 
-                        {'layer_category': layer_category,
+                        {'layer_category': layerCategory,
                             'options': _.extend({}, 
                                 mapConfig.default_layer_options, 
                                 procLayer.options)
@@ -124,7 +124,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
                 }
 
                 else if (procLayer.source == 'local_geoserver'){
-                    var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, proc_layer.workspace);
+                    var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, procLayer.workspace);
                     model.set('service_url', service_url);
                 }
 
@@ -138,14 +138,14 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
             layers: new Backbone.Collection(),
             options: {
                 allOverlays: true,
-                maxExtent: map_config.max_extent,
-                restrictedExtent: map_config.max_extent,
-                resolutions: map_config.resolutions,
+                maxExtent: mapConfig.max_extent,
+                restrictedExtent: mapConfig.max_extent,
+                resolutions: mapConfig.resolutions,
                 theme: null
             },
             graticule_intervals: [2]
         }, 
-        map_config
+        mapConfig
         ));
 
         // Setup the mapview.
@@ -164,13 +164,41 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
             model: mapEditorModel
         });
 
-        return mapEditorView;
+        return {
+            model: mapEditorModel,
+            view: mapEditorView
+        };
 
+    };
+
+    var updateMapEditorFilters = function(mapEditor, filterCategory, opts){
+        // Get relevant layer models.
+        var localGetMapLayerModels = [];
+        _.each(mapEditor.view.map_view.layers.models, function(layerModel){
+            if (layerModel.get('source') == 'local_getmap'){
+                localGetMapLayerModels.push(layerModel);
+            }
+        });
+
+        // Get filter groups from map.
+        var groupIds = mapEditor.view.map_view.model.get(filterCategory + '_filter_groups');
+        _.each(groupIds, function(groupId, key){
+            // Update filters on each layer model.
+            _.each(localGetMapLayerModels, function(layerModel){
+                var filters = _.clone(layerModel.get(filterCategory + '_filters')) || {} ;
+                var filterGroup = GeoRefine.app.filterGroups[groupId];
+                filters[groupId] = filterGroup.getFilters();
+                var setObj = {};
+                setObj[filterCategory + '_filters'] = filters;
+                layerModel.set(setObj, opts);
+            });
+        });
     };
 
     // Objects to expose.
     var mapViewUtil = {
-        createMapEditor: createMapEditor
+        createMapEditor: createMapEditor,
+        updateMapEditorFilters: updateMapEditorFilters
     };
     return mapViewUtil;
 });

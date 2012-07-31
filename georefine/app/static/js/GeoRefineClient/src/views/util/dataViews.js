@@ -23,8 +23,8 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
 
     createDataViewWindow = function(dataView, opts){
         opts = opts || {};
-        $dataViews = $('.data-views', this.el);
-        var dvOffset = $data_views.offset();
+        $dataViews = $('.data-views', GeoRefine.app.view.el);
+        var dvOffset = $dataViews.offset();
 
         // Set default title.
         opts.title = opts.title || 'Window';
@@ -55,7 +55,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
 
         // Connect window events to data view.
         w.on("resize", function(){
-            Util.util.fillParent(data_view.el);
+            Util.util.fillParent(dataView.el);
             dataView.trigger('resize');
         });
 
@@ -90,23 +90,78 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         });
     };
 
-    createMapView = function(){
+    createMapView = function(opts){
         var mapEditor = mapViewUtil.createMapEditor();
-        createDataViewWindow(mapEditor, {
+        
+        // Set initial extent if given.
+        if (opts.initialExtent){
+            mapEditor.view.map_view.model.set('initial_extent', opts.initialExtent);
+        }
+
+        // Update filters.
+        _.each(['base', 'primary'], function(filterCategory){
+            mapViewUtil.updateMapEditorFilters(mapEditor, filterCategory, {silent: true});
+        });
+
+        // Set attributes on individual layers.
+        _.each(opts.layers, function(layer){
+            var layerModel = mapEditor.view.map_view.layers.get(layer.id);
+            layerModel.set(layer.attributes);
+        });
+
+        createDataViewWindow(mapEditor.view, {
             "title": "Map"
         });
     };
 
-    createChartView = function(){
+    createChartView = function(opts){
         var chartEditor = chartsUtil.createChartEditor();
-        createDataViewWindow(chartEditor, {
+
+        // Update filters.
+
+        var schema = chartEditor.model.get('datasource').get('schema');
+
+        // Set category/quantity field attributes if given.
+        _.each(opts.fields, function(fieldAttributes){
+            var fields = schema.get(fieldAttributes.type);
+            var field = fields.get(fieldAttributes.id);
+            field.set(fieldAttributes);
+        });
+
+        // Select initial category/quantity fields.
+        _.each(["category", "quantity"], function(fieldType){
+            var initialField = opts["initial_" + fieldType + "_field"];
+            if (initialField){
+                var fields = schema.get(fieldType);
+                var field = fields.get(initialField.id);
+                var fieldSelector = chartEditor[_s.sprintf("%s_field_selector", field_type)];
+                fieldSelector.model.set("selected_field", field);
+            }
+        });
+
+        createDataViewWindow(chartEditor.view, {
             "title": "Chart"
         });
     };
 
+    var actionHandlers = {};
+    actionHandlers.dataViewsCreateDataView = function(opts){
+        switch(opts.type){
+            case 'map':
+                createMapView(opts);
+                break;
+            case 'chart':
+                createChartView(opts);
+                break;
+        }
+    };
+
+
 
     // Objects to expose.
     var dataViewUtil = {
+        actionHandlers: actionHandlers,
+        setUpDataViews: setUpDataViews,
         setUpWindows: setUpWindows,
         createMapView: createMapView,
         createChartView: createChartView,

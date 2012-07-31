@@ -67,6 +67,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
 				GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
+				GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
                 _this.resize();
                 _this.loadState();
 			});
@@ -166,53 +167,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			$rc.css('width', $rc.parent().height());
 			$rc.css('height', $rc.parent().width());
 		},
-
-
-/*
-				// Handle map data views.
-				if (data_view.type == 'map'){
-					var map_editor = this.createMapEditor();
-
-					// Handle initial extents.
-					if (data_view.hasOwnProperty("initial_extent")){
-						map_editor.map_view.model.set('initial_extent', data_view.initial_extent);
-					}
-
-					// Handle layer configs.
-					_.each(data_view.layers, function(layer){
-						map_editor.map_view.layers.get(layer.id).set(layer.attributes);
-					});
-
-					// Create window.
-					this.createDataViewWindow(map_editor, _.extend({"title": "Map"}, pos));
-				}
-
-				// Handle chart data views.
-				else if (data_view.type == 'chart'){
-					var chart_editor = this.createChartEditor();
-
-					_.each(["category", "quantity"], function(field_type){
-
-						var field_attr = _s.sprintf("initial_%s_field", field_type);
-
-						if (data_view.hasOwnProperty(field_attr)){
-							var fields = chart_editor.model.get('datasource').get('schema').get(field_type + "_fields");
-							var field = fields.get(data_view[field_attr].id);
-
-							chart_editor[_s.sprintf("%s_field_selector", field_type)].model.set(_s.sprintf("selected_field", field_type), field);
-
-						}
-					}, this);
-
-					this.createDataViewWindow(chart_editor, _.extend({"title": "Chart"}, pos));
-				}
-
-                column = (column + 1) % views_per_row;
-
-			}, this);
-			
-		},
-        */
 
         loadState: function(state){
 
@@ -341,6 +295,30 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                 handler: 'facetsGetData',
                                 opts: {
                                     id: 'substrates'
+                                }
+                            }
+                        ]
+                    },
+
+                    // Setup Data views.
+                    {
+                        type: 'actionQueue',
+                        async: true,
+                        actions: [
+                            // Mapview.
+                            {
+                                type: 'action',
+                                handler: 'dataViewsCreateDataView',
+                                opts: {
+                                    type: 'map',
+                                    layers: [
+                                        {
+                                            id: 'x',
+                                            attributes: {
+                                                disabled: false
+                                            }
+                                        }
+                                    ]
                                 }
                             }
                         ]
