@@ -42,6 +42,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
         };
 
         // Get shortened parameters key.
+        console.log("fetching key");
         var deferred = $.ajax({
             url: GeoRefine.app.keyedStringsEndpoint,
             type: 'POST',

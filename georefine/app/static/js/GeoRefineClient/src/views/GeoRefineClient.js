@@ -347,6 +347,22 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                         }
                                     }
                                 ]
+                            },
+                            // ChartView.
+                            {
+                                type: 'actionQueue',
+                                async: false,
+                                actions: [
+                                    // Create chart.
+                                    {
+                                        type: 'action',
+                                        handler: 'dataViewsCreateDataView',
+                                        opts: {
+                                            id: 'initialChart',
+                                            type: 'chart',
+                                        }
+                                    },
+                                ]
                             }
                         ]
                     }

@@ -5,9 +5,10 @@ define([
 	"_s",
 	"Util",
     "Charts",
-    "./requests"
+    "./requests",
+    "./functions"
 		],
-function($, Backbone, _, _s, Util, Charts, requestsUtil){
+function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
 
     // This function will be used by chart datasources to
     // get data.
@@ -41,12 +42,12 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
         requestsUtil.addFiltersToQuery(q, ['base_filters'], key_context);
 
         // Get the base query.
-        var base_inner_q = _app.makeKeyedInnerQuery(q, key, ['base_filters']);
-        var base_outer_q = _app.makeKeyedOuterQuery(q, key, base_inner_q, 'base');
+        var base_inner_q = requestsUtil.makeKeyedInnerQuery(q, key, ['base_filters']);
+        var base_outer_q = requestsUtil.makeKeyedOuterQuery(q, key, base_inner_q, 'base');
 
         // Get the primary query.
-        var primary_inner_q = _app.makeKeyedInnerQuery(q, key, ['base_filters', 'primary_filters']);
-        var primary_outer_q = _app.makeKeyedOuterQuery(q, key, primary_inner_q, 'primary');
+        var primary_inner_q = requestsUtil.makeKeyedInnerQuery(q, key, ['base_filters', 'primary_filters']);
+        var primary_outer_q = requestsUtil.makeKeyedOuterQuery(q, key, primary_inner_q, 'primary');
 
         // Assemble the keyed result parameters.
         var keyed_results_parameters = {
@@ -63,10 +64,14 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
         };
         requests.push(keyed_query_request);
 
+        var _this = this;
         var deferred = $.ajax({
             url: GeoRefine.app.requestsEndpoint,
             type: 'POST',
             data: {'requests': JSON.stringify(requests)},
+            complete: function(){
+                _this.set('loading', false);
+            },
             success: function(data, status, xhr){
                 var results = data.results;
                 var count_entity = qfield.get('outer_query')['SELECT'][0];
@@ -87,17 +92,17 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
 
                     var chart_datum = {
                         id: result.key,
-                    label: result.label,
-                    data: {
-                        'primary': {value: primary_value},
-                    'base': {value: base_value}
-                    }
+                        label: result.label,
+                        data: {
+                            'primary': {value: primary_value},
+                            'base': {value: base_value}
+                        }
                     };
 
                     // If key is a histogram key...
                     if (key['KEY_ENTITY']['AS_HISTOGRAM']){
                         // Get min/max for the bucket.
-                        var bminmax = _app.getBucketMinMax(result['label']);
+                        var bminmax = functionsUtil.parseBucketLabel(result['label']);
                         chart_datum.min = bminmax.min;
                         chart_datum.max = bminmax.max;
 
@@ -120,7 +125,7 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
                     });
                 }
 
-                this.set('data', chart_data);
+                _this.set('data', chart_data);
             }
         });
     };
@@ -130,7 +135,7 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil){
         var chartsConfig = GeoRefine.config.charts;
 
         // Create models for fields.
-        var procFields = {};
+        var processedFields = {};
         _.each(['category', 'quantity'], function(fieldType){
             var fields = chartsConfig[_s.sprintf('%s_fields', fieldType)] || [];
             var fieldModels = [];
