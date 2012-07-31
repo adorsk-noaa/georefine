@@ -201,9 +201,9 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
                 filterGroup.on('change:filters', function(){
                     var filters = _.clone(q.get(filterCategory + '_filters')) || {};
                     filters[groupId] = filterGroup.getFilters();
-                    model.set(filterCategory + '_filters', filters);
+                    q.set(filterCategory + '_filters', filters);
                 });
-            }, this);
+            });
         });
 
         // Create chart model.

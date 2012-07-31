@@ -526,6 +526,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
                 facet.model.set('_fetch_timeout', _timeoutGetData(changes));
             });
         }
+
+        // Update totals when the summary bar totals change.
+        GeoRefine.app.summaryBar.model.on('change:data', function(){
+            var data = GeoRefine.app.summaryBar.model.get('data');
+            facet.model.set('total', data.total);
+        });
     };
 
     // Remove a facet.
@@ -578,7 +584,6 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         // Get facet.
         var facet = GeoRefine.app.facets.registry[opts.id];
         connectFacet(facet, opts);
-
     };
 
     // getData action handler.

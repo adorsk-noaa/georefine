@@ -161,6 +161,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
     };
 
     var createDataView = function(opts){
+        opts = opts || {};
         opts.id = opts.id || Math.random();
         var dataView = null;
         switch(opts.type){
@@ -236,8 +237,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         actionHandlers: actionHandlers,
         setUpDataViews: setUpDataViews,
         setUpWindows: setUpWindows,
-        createMapView: createMapView,
-        createChartView: createChartView,
+        createDataView: createDataView
     };
     return dataViewUtil;
 });

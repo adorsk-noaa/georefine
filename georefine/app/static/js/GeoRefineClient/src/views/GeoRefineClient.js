@@ -80,11 +80,15 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
 
 		addMapView: function(){
-            GeoRefineViewsUtil.dataViewsUtil.createMapView();
+            GeoRefineViewsUtil.dataViewsUtil.createDataView({
+                type: 'map'
+            });
 		},
 
 		addChartView: function(){
-            GeoRefineViewsUtil.dataViewsUtil.createChartView();
+            GeoRefineViewsUtil.dataViewsUtil.createDataView({
+                type: 'chart'
+            });
 		},
 
         expandContractTab: function(opts){
