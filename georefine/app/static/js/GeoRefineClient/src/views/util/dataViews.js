@@ -10,7 +10,7 @@ define([
 		],
 function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
 
-    setUpDataViews = function(){
+    var setUpDataViews = function(){
         // Initialize counter.
         GeoRefine.app.dataViews.counter = 0;
 
@@ -19,10 +19,14 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
             width: 500,
             height: 500
         };
+
+        // Initialize registry.
+        GeoRefine.app.dataViews.registry = {};
     };
 
-    createDataViewWindow = function(dataView, opts){
+    var createDataViewWindow = function(dataView, opts){
         opts = opts || {};
+
         $dataViews = $('.data-views', GeoRefine.app.view.el);
         var dvOffset = $dataViews.offset();
 
@@ -80,9 +84,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
 
         // Bump counter.
         GeoRefine.app.dataViews.counter += 1;
+
+        return w;
     };
 
-    setUpWindows = function(){
+    var setUpWindows = function(){
         $.window.prepare({
             "dock": "right",
             "dockArea": $('.data-views', this.el),
@@ -90,7 +96,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         });
     };
 
-    createMapView = function(opts){
+    var createMapView = function(opts){
         var mapEditor = mapViewUtil.createMapEditor();
         
         // Set initial extent if given.
@@ -109,12 +115,17 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
             layerModel.set(layer.attributes);
         });
 
-        createDataViewWindow(mapEditor.view, {
+        var w = createDataViewWindow(mapEditor.view, {
             "title": "Map"
         });
+
+        return {
+            dataView: mapEditor,
+            window: w
+        };
     };
 
-    createChartView = function(opts){
+    var createChartView = function(opts){
         var chartEditor = chartsUtil.createChartEditor();
 
         // Update filters.
@@ -139,23 +150,85 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
             }
         });
 
-        createDataViewWindow(chartEditor.view, {
-            "title": "Chart"
+        var w = createDataViewWindow(chartEditor.view, {
+            title: "Chart"
         });
+
+        return {
+            dataView: chartEditor,
+            window: w
+        };
+    };
+
+    var createDataView = function(opts){
+        opts.id = opts.id || Math.random();
+        var dataView = null;
+        switch(opts.type){
+            case 'map':
+                dataView = createMapView(opts);
+                break;
+            case 'chart':
+                dataView = createChartView(opts);
+                break;
+        }
+
+        // Register the data view.
+        GeoRefine.app.dataViews.registry[opts.id] = dataView;
+
+        // Unregister on remove.
+        dataView.dataView.view.on('remove', function(){
+            delete GeoRefine.app.dataViews.registry[opts.id];
+        });
+    };
+
+    var getDataViewMapEditor = function(opts){
+        var dataView = GeoRefine.app.dataViews.registry[opts.id];
+        var mapEditor = dataView.dataView;
+        return mapEditor;
+    };
+
+    var getMapEditorLayerModels = function(mapEditor, opts){
+        var layerModels = [];
+        _.each(opts.layers, function(layer){
+            var layerModel = mapEditor.view.map_view.layers.get(layer.id);
+            layerModels.push(layerModel);
+        });
+        return layerModels;
+    };
+
+    var getMapEditorLayerModel = function(mapEditor, opts){
+        var layerModels = getMapEditorLayerModels(mapEditor, _.extend({}, opts, {
+            layers: [opts.layer]
+        }));
+        if (layerModels && layerModels.length == 1){
+            return layerModels[0];
+        }
     };
 
     var actionHandlers = {};
     actionHandlers.dataViewsCreateDataView = function(opts){
-        switch(opts.type){
-            case 'map':
-                createMapView(opts);
-                break;
-            case 'chart':
-                createChartView(opts);
-                break;
-        }
+        createDataView(opts);
     };
 
+    actionHandlers.dataViewsMapUpdateLayerUrls = function(opts){
+        var mapEditor = getDataViewMapEditor(opts);
+        var layerModels = getMapEditorLayerModels(mapEditor, opts);
+        var deferreds = [];
+        _.each(layerModels, function(layerModel){
+            if (layerModel.updateServiceUrl){
+                deferreds.push(layerModel.updateServiceUrl());
+            }
+        });
+        return $.when.apply($, deferreds);
+    };
+
+    actionHandlers.dataViewsMapSetLayerAttributes = function(opts){
+        var mapEditor = getDataViewMapEditor(opts);
+        _.each(opts.layers, function(layer){
+            var layerModel = getMapEditorLayerModel(mapEditor, {layer: layer});
+            layerModel.set(layer.attributes);
+        });
+    };
 
 
     // Objects to expose.

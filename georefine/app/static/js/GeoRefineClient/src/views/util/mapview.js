@@ -116,11 +116,14 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
                     }, this);
                     });
 
+                    // Set updateServiceUrl method.
+                    model.updateServiceUrl = updateServiceUrlLocalDataLayer;
+
                     // Update service url when related model attributes change.
-                    model.on('change:data_entity change:primary_filters change:base_filters', updateServiceUrlLocalDataLayer, model);
+                    model.on('change:data_entity change:primary_filters change:base_filters', model.updateServiceUrl, model);
 
                     // Initialize service url.
-                    updateServiceUrlLocalDataLayer.call(model);
+                    model.updateServiceUrl();
                 }
 
                 else if (procLayer.source == 'local_geoserver'){

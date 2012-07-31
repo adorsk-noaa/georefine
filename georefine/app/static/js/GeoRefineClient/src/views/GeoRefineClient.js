@@ -307,19 +307,46 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         actions: [
                             // Mapview.
                             {
-                                type: 'action',
-                                handler: 'dataViewsCreateDataView',
-                                opts: {
-                                    type: 'map',
-                                    layers: [
-                                        {
-                                            id: 'x',
-                                            attributes: {
-                                                disabled: false
-                                            }
+                                type: 'actionQueue',
+                                async: false,
+                                actions: [
+                                    // Create map.
+                                    {
+                                        type: 'action',
+                                        handler: 'dataViewsCreateDataView',
+                                        opts: {
+                                            id: 'initialMap',
+                                            type: 'map',
                                         }
-                                    ]
-                                }
+                                    },
+                                    // Update layer urls.
+                                    {
+                                        type: 'action',
+                                        handler: 'dataViewsMapUpdateLayerUrls',
+                                        opts: {
+                                            id: 'initialMap',
+                                            layers: [
+                                                {id: 'x'}
+                                            ]
+                                        }
+                                    },
+                                    // Activate layers.
+                                    {
+                                        type: 'action',
+                                        handler: 'dataViewsMapSetLayerAttributes',
+                                        opts: {
+                                            id: 'initialMap',
+                                            layers: [
+                                                {
+                                                    id: 'x',
+                                                    attributes: {
+                                                        disabled: false
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     }
