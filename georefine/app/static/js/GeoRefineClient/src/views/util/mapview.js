@@ -64,7 +64,6 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
     // service URLs on change.
     // The 'this' object will be a layer model.
     var updateServiceUrlLocalDataLayer = function(){
-        console.log("usuldl", this.toJSON());
         var model = this;
 
         // Deferred object to trigger after url has been set.
@@ -300,9 +299,19 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
         });
     };
 
+    var getMapEditorLayerModels = function(mapEditor, opts){
+        var layerModels = [];
+        _.each(opts.layers, function(layer){
+            var layerModel = mapEditor.view.map_view.layers.get(layer.id);
+            layerModels.push(layerModel);
+        });
+        return layerModels;
+    };
+
     // Objects to expose.
     var mapViewUtil = {
         createMapEditor: createMapEditor,
+        getMapEditorLayerModels: getMapEditorLayerModels
     };
     return mapViewUtil;
 });

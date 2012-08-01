@@ -340,7 +340,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
-                            /*
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -357,7 +356,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     },
                                 ]
                             }
-                            */
                         ]
                     }
                 ]

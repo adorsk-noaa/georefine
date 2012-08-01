@@ -183,24 +183,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         return mapEditor;
     };
 
-    var getMapEditorLayerModels = function(mapEditor, opts){
-        var layerModels = [];
-        _.each(opts.layers, function(layer){
-            var layerModel = mapEditor.view.map_view.layers.get(layer.id);
-            layerModels.push(layerModel);
-        });
-        return layerModels;
-    };
-
-    var getMapEditorLayerModel = function(mapEditor, opts){
-        var layerModels = getMapEditorLayerModels(mapEditor, _.extend({}, opts, {
-            layers: [opts.layer]
-        }));
-        if (layerModels && layerModels.length == 1){
-            return layerModels[0];
-        }
-    };
-
     var actionHandlers = {};
     actionHandlers.dataViewsCreateDataView = function(opts){
         createDataView(opts);
@@ -209,7 +191,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
     actionHandlers.dataViewsMapSetLayerAttributes = function(opts){
         var mapEditor = getDataViewMapEditor(opts);
         _.each(opts.layers, function(layer){
-            var layerModel = getMapEditorLayerModel(mapEditor, {layer: layer});
+            var layerModel = mapViewUtil.getMapEditorLayerModels(mapEditor, {layers: [layer]}).pop();
             layerModel.set(layer.attributes);
         });
     };
