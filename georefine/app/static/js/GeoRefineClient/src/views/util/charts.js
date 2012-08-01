@@ -164,7 +164,7 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
                             _.extend(entityDefaults, quantityEntity)
                             );
                 }
-            fieldModel = new Backbone.Model(_.extend({}, 
+                fieldModel = new Backbone.Model(_.extend({}, 
                         field, 
                         {
                             'field_type': fieldType,
@@ -199,10 +199,17 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
             _.each(groupIds, function(groupId){
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filterGroup.on('change:filters', function(){
+                    console.log('chango');
                     var filters = _.clone(q.get(filterCategory + '_filters')) || {};
                     filters[groupId] = filterGroup.getFilters();
                     q.set(filterCategory + '_filters', filters);
+                }, q);
+
+                // Remove callback when query is removed.
+                q.on('remove', function(){
+                    filterGroup.off(null, null, q);
                 });
+
             });
         });
 
@@ -241,9 +248,16 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
         q.set(setObj, opts);
     };
 
+    var selectFields = function(chartEditor, opts){
+        if (opts.categoryField){
+
+        };
+    };
+
     // Objects to expose.
     var chartsUtil = {
-        createChartEditor: createChartEditor
+        createChartEditor: createChartEditor,
+        selectFields: selectFields
     };
     return chartsUtil;
 });

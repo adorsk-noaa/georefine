@@ -177,25 +177,25 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         });
     };
 
-    var getDataViewMapEditor = function(opts){
-        var dataView = GeoRefine.app.dataViews.registry[opts.id];
-        var mapEditor = dataView.dataView;
-        return mapEditor;
-    };
-
     var actionHandlers = {};
     actionHandlers.dataViewsCreateDataView = function(opts){
         createDataView(opts);
     };
 
     actionHandlers.dataViewsMapSetLayerAttributes = function(opts){
-        var mapEditor = getDataViewMapEditor(opts);
+        var dataView = GeoRefine.app.dataViews.registry[opts.id];
+        var mapEditor = dataView.dataView;
         _.each(opts.layers, function(layer){
             var layerModel = mapViewUtil.getMapEditorLayerModels(mapEditor, {layers: [layer]}).pop();
             layerModel.set(layer.attributes);
         });
     };
 
+    actionHandlers.dataViewsChartsSelectFields = function(opts){
+        var dataView = GeoRefine.app.dataViews.registry[opts.id];
+        var chartEditor = dataView.dataView;
+        chartsUtil.selectFields(chartEditor, opts);
+    };
 
     // Objects to expose.
     var dataViewUtil = {
