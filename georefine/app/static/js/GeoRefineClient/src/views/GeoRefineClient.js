@@ -323,18 +323,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                             type: 'map',
                                         }
                                     },
-                                    // Update layer urls.
-                                    {
-                                        type: 'action',
-                                        handler: 'dataViewsMapUpdateLayerUrls',
-                                        opts: {
-                                            id: 'initialMap',
-                                            layers: [
-                                                {id: 'x'}
-                                            ]
-                                        }
-                                    },
-                                    // Activate layers.
                                     {
                                         type: 'action',
                                         handler: 'dataViewsMapSetLayerAttributes',
@@ -352,6 +340,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
+                            /*
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -368,6 +357,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     },
                                 ]
                             }
+                            */
                         ]
                     }
                 ]

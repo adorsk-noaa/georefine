@@ -104,11 +104,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
             mapEditor.view.map_view.model.set('initial_extent', opts.initialExtent);
         }
 
-        // Update filters.
-        _.each(['base', 'primary'], function(filterCategory){
-            mapViewUtil.updateMapEditorFilters(mapEditor, filterCategory, {silent: true});
-        });
-
         // Set attributes on individual layers.
         _.each(opts.layers, function(layer){
             var layerModel = mapEditor.view.map_view.layers.get(layer.id);
@@ -209,18 +204,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
     var actionHandlers = {};
     actionHandlers.dataViewsCreateDataView = function(opts){
         createDataView(opts);
-    };
-
-    actionHandlers.dataViewsMapUpdateLayerUrls = function(opts){
-        var mapEditor = getDataViewMapEditor(opts);
-        var layerModels = getMapEditorLayerModels(mapEditor, opts);
-        var deferreds = [];
-        _.each(layerModels, function(layerModel){
-            if (layerModel.updateServiceUrl){
-                deferreds.push(layerModel.updateServiceUrl());
-            }
-        });
-        return $.when.apply($, deferreds);
     };
 
     actionHandlers.dataViewsMapSetLayerAttributes = function(opts){

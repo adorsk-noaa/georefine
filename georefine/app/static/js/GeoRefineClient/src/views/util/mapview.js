@@ -9,16 +9,30 @@ define([
 		],
 function($, Backbone, _, _s, Util, MapView, requestsUtil){
 
-    // This function is used by local data layers to set their
-    // service URLs on change.
+    var setLocalDataLayerConnections = function(layerModel, connect){
+        if (connect){
+            // Change query parameters when layer parameters change.
+            layerModel.on('change:data_entity change:primary_filters change:base_filters', layerModel.updateQueryParameters, layerModel);
+            // Change service url when query parameters change.
+            layerModel.on('change:query_parameters', layerModel.updateServiceUrl, layerModel);
+        }
+        else{
+            layerModel.off(null, layerModel.updateServiceUrl);
+            layerModel.off(null, layerModel.updateQueryParameters);
+        };
+    };
+
+    var setLayerConnections = function(layerModel, connect){
+        if (layerModel.get('source') == 'local_getmap'){
+            return setLocalDataLayerConnections(layerModel, connect);
+        }
+    };
+
+    // This function will be used by local data layers to set their
+    // service url query parameters.
     // The 'this' object will be a layer model.
-    var updateServiceUrlLocalDataLayer = function(attr, options){
+    var updateQueryParametersLocalDataLayer = function(){
         var model = this;
-
-        // We assemble a query, and then get a shortened key for the query.
-
-        // A list of parameters for the map query.
-        var params = [];
 
         // Get query.
         var inner_q = {
@@ -41,18 +55,45 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
             'DATA_ENTITY': model.get('data_entity'),
         };
 
+        // Set stringified parameters.
+        var jsonParams = JSON.stringify(params);
+        model.set('query_parameters', jsonParams);
+    };
+
+    // This function is used by local data layers to set their
+    // service URLs on change.
+    // The 'this' object will be a layer model.
+    var updateServiceUrlLocalDataLayer = function(){
+        console.log("usuldl", this.toJSON());
+        var model = this;
+
+        // Deferred object to trigger after url has been set.
+        var deferred = $.Deferred();
+
         // Get shortened parameters key.
-        console.log("fetching key");
-        var deferred = $.ajax({
+        $.ajax({
             url: GeoRefine.app.keyedStringsEndpoint,
             type: 'POST',
-            data: {'s': JSON.stringify(params)},
+            data: {'s': model.get('query_parameters')},
             // After we get the key back, add it as a query parameter.
             // and set the service_url.
             success: function(data, status, xhr){
                 var url_params = [_s.sprintf('PARAMS_KEY=%s', data.key)];
                 var service_url = GeoRefine.app.mapEndpoint + '?' + url_params.join('&') + '&';
+
+                // Resolve after load end.
+                var onLoadEnd = function(){
+                    deferred.resolve();
+                    // Disconnect after.
+                    model.off('load:end', onLoadEnd);
+                };
+                model.on('load:end', onLoadEnd);
+
+                // Set the url.
                 model.set('service_url', service_url);
+            },
+            error: function(){
+                deferred.reject();
             }
         });
 
@@ -71,6 +112,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
             maxExtent: mapConfig.max_extent
         });
 
+
         // Process layers from config.
         var processedLayers = {};
         _.each(['data', 'base', 'overlay'], function(layerCategory){
@@ -85,17 +127,46 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
 
                 // Create model for layer.
                 var model = new Backbone.Model(_.extend({},	
-                        mapConfig.default_layer_attributes, 
-                        procLayer, 
-                        {'layer_category': layerCategory,
-                            'options': _.extend({}, 
-                                mapConfig.default_layer_options, 
-                                procLayer.options)
-                        })
-                    );
+                    mapConfig.default_layer_attributes, 
+                    procLayer, 
+                    {
+                        layer_category: layerCategory,
+                        options: _.extend({}, 
+                            mapConfig.default_layer_options, 
+                            procLayer.options
+                        ),
+                        // Have layers include map's filter groups.
+                        primary_filter_groups: mapConfig.primary_filter_groups,
+                        base_filter_groups: mapConfig.base_filter_groups,
+                        // Set initial visible state per disabled state.
+                        visible: (layer.visible != null) ? layer.visible : ! layer.disabled
+                    }
+                ));
 
+                // Set model to remove callbacks when remove is triggered.
+                model.on('remove', function(){
+                    this.off();
+                }, model);
 
-                // Handle service url updates for various layer types.
+                // Set default onDisabledChange function for model and 
+                // connect to disabled events.
+                model.onDisabledChange = function(){
+                    // Tie visibility to disabled state.
+                    this.set('visible', ! this.get('disabled'));
+                    // Connect layer.
+                    setLayerConnections(this, ! this.get('disabled'));
+                };
+                model.on('change:disabled', function(){
+                    this.onDisabledChange();
+                }, model);
+
+                // If the layer isn't disabled initially, then connect it.
+                if (! model.get('disabled')){
+                    setLayerConnections(model, true);
+                }
+
+                // Handle customizations for specific layer types.
+                // @TODO: break this out into sub functions for cleanliness?
                 if (procLayer.source == 'local_getmap'){
                     _.each(['data_entity', 'geom_entity', 'geom_id_entity'], function(entity_attr){
                         if (procLayer[entity_attr]){
@@ -113,18 +184,56 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
                                 var filters = _.clone(model.get(filterCategory + '_filters')) || {};
                                 filters[groupId] = filterGroup.getFilters();
                                 model.set(filterCategory + '_filters', filters);
+                            }, model);
+
+                            // Remove callback when model is removed.
+                            model.on('remove', function(){
+                                filterGroup.off(null, null, model);
                             });
-                    }, this);
+                        });
                     });
+
+                    // Set updateQueryParameters method.
+                    model.updateQueryParameters= updateQueryParametersLocalDataLayer;
 
                     // Set updateServiceUrl method.
                     model.updateServiceUrl = updateServiceUrlLocalDataLayer;
 
-                    // Update service url when related model attributes change.
-                    model.on('change:data_entity change:primary_filters change:base_filters', model.updateServiceUrl, model);
+                    // Override onDisabledChange to set visible only after
+                    // service url has changed.
+                    model.onDisabledChange = function(){
+                        var _this = this;
+                        // If disabled, then disconnect and turn visibility off.
+                        if (_this.get('disabled')){
+                            _this.set('visible', false);
+                            setLayerConnections(_this, false);
+                        }
+                        // Otherwise if enabled...
+                        else{
+                            // Update filters.
+                            _.each(['base', 'primary'], function(filterCategory){
+                                updateLayerFilters(_this, filterCategory);
+                            });
+                            // Manually call update query parameters.
+                            _this.updateQueryParameters();
 
-                    // Initialize service url.
-                    model.updateServiceUrl();
+                            // If query parameters have changed, then
+                            // update the service url and connect.
+                            if (_this.hasChanged('query_parameters')){
+                                var deferred = _this.updateServiceUrl();
+                                deferred.then(function(){
+                                    _this.set('visible', true);
+                                    setLayerConnections(_this, true);
+                                });
+                            }
+                            // Otherwise just set visibility and connect.
+                            else{
+                                _this.set('visible', true);
+                                setLayerConnections(_this, true);
+                            }
+                        }
+                    }
+
                 }
 
                 else if (procLayer.source == 'local_geoserver'){
@@ -132,7 +241,9 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
                     model.set('service_url', service_url);
                 }
 
+                // Add layer to layer collection.
                 layerCollection.add(model);
+
             }, this);
             processedLayers[layerCategory] = layerCollection;
         }, this);
@@ -175,20 +286,10 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
 
     };
 
-    var updateMapEditorFilters = function(mapEditor, filterCategory, opts){
-        // Get relevant layer models.
-        var localGetMapLayerModels = [];
-        _.each(mapEditor.view.map_view.layers.models, function(layerModel){
-            if (layerModel.get('source') == 'local_getmap'){
-                localGetMapLayerModels.push(layerModel);
-            }
-        });
-
-        // Get filter groups from map.
-        var groupIds = mapEditor.view.map_view.model.get(filterCategory + '_filter_groups');
-        _.each(groupIds, function(groupId, key){
-            // Update filters on each layer model.
-            _.each(localGetMapLayerModels, function(layerModel){
+    var updateLayerFilters = function(layerModel, filterCategory, opts){
+        var groupIds = layerModel.get(filterCategory + "_filter_groups");
+        _.each(groupIds, function(groupId){
+            _.each(groupIds, function(groupId){
                 var filters = _.clone(layerModel.get(filterCategory + '_filters')) || {} ;
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filters[groupId] = filterGroup.getFilters();
@@ -202,7 +303,6 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil){
     // Objects to expose.
     var mapViewUtil = {
         createMapEditor: createMapEditor,
-        updateMapEditorFilters: updateMapEditorFilters
     };
     return mapViewUtil;
 });
