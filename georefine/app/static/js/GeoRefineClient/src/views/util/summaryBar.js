@@ -93,7 +93,6 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
                 $(this.el).html('<div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div>');
                 // Trigger update when model data changes.
                 this.model.on('change:data', this.onDataChange, this);
-
             },
 
             onDataChange: function(){
@@ -166,6 +165,20 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
                 });
             });
         });
+
+        // Listen for quantity field changes.
+        var qFieldSelect = GeoRefine.app.facets.facetEditor.qFieldSelect;
+        qFieldSelect.model.on('change:selection', function(){
+            var fieldCid = qFieldSelect.model.get('selection');
+            var selectedField = GeoRefine.app.facets.qFields.getByCid(fieldCid);
+            this.set('quantity_field', selectedField);
+        }, GeoRefine.app.summaryBar.model);
+
+        // Remove callback when model is removed.
+        GeoRefine.app.summaryBar.model.on('remove', function(){
+            qFieldSelect.model.off(null, null, this);
+        }, GeoRefine.app.summaryBar.model);
+
         // Get data when parameters change.
         if (GeoRefine.app.summaryBar.model.getData){
             GeoRefine.app.summaryBar.model.on('change:primary_filters change:base_filters change:quantity_field', function(){

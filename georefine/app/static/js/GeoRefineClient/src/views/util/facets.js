@@ -44,17 +44,6 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
             qFieldSelect : qFieldSelect
         };
 
-        // When the quantity field selector changes, update the facets and summary bar.
-        qFieldSelect.model.on('change:selection', function(){
-            var val = qFieldSelect.model.get('selection');
-            var selected_field = GeoRefine.app.facets.qFields.getByCid(val);
-            _.each(GeoRefine.app.facets.registry, function(facet, id){
-                facet.model.set('quantity_field', selected_field);
-            });
-            
-            //.summary_bar.model.set('quantity_field', selected_field);
-        });
-
         // Resize the facets editor.
         $('.facets-editor', this.el).height();
     };
@@ -447,29 +436,29 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         return facet;
     };
 
-    var updateFacetPrimaryFilters = function(facet, opts){
-        var primaryFilters = _.clone(facet.model.get('primary_filters')) || {} ;
-        _.each(facet.model.get('primary_filter_groups'), function(filterGroupId, key){
+    var updateFacetModelPrimaryFilters = function(facetModel, opts){
+        var primaryFilters = _.clone(facetModel.get('primary_filters')) || {} ;
+        _.each(facetModel.get('primary_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             // A facet should not use its own selection in the filters.
             primaryFilters[filterGroupId] = _.filter(filterGroup.getFilters(), 
                 function(filterObj){
-                    return (filterObj.source.cid != facet.model.cid);
+                    return (filterObj.source.cid != facetModel.cid);
                 });
         });
-        facet.model.set({'primary_filters': primaryFilters}, opts);
+        facetModel.set({'primary_filters': primaryFilters}, opts);
 
     };
 
-    var updateFacetFilters = function(facet, filterCategory, opts){
-        var filters = _.clone(facet.model.get(filterCategory + '_filters')) || {} ;
-        _.each(facet.model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
+    var updateFacetModelFilters = function(facetModel, filterCategory, opts){
+        var filters = _.clone(facetModel.get(filterCategory + '_filters')) || {} ;
+        _.each(facetModel.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filters[filterGroupId] = filterGroup.getFilters();
         });
         var setObj = {};
         setObj[filterCategory + '_filters'] = filters;
-        facet.model.set(setObj, opts);
+        facetModel.set(setObj, opts);
     };
 
     // Setup event chains for a facet.
@@ -480,17 +469,47 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.add(facet.model);
             filterGroup.on('change:filters', function(){
-                updateFacetPrimaryFilters(facet);
-            });
+                updateFacetModelPrimaryFilters(this);
+            }, facet.model);
+            // Remove callback when model is removed.
+            facet.model.on('remove', function(){
+                filterGroup.off(null, null, this);
+            }, facet.model);
         });
 
         // Setup the facet's base filter group config.
         _.each(facet.model.get('base_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.on('change:filters', function(){
-                updateFacetFilters(facet, 'base');
-            });
+                updateFacetModelFilters(this, 'base');
+            }, facet.model);
+            // Remove callback when model is removed.
+            facet.model.on('remove', function(){
+                filterGroup.off(null, null, this);
+            }, facet.model);
         });
+
+        // Listen for quantity field changes.
+        var qFieldSelect = GeoRefine.app.facets.facetEditor.qFieldSelect;
+        qFieldSelect.model.on('change:selection', function(){
+            var fieldCid = qFieldSelect.model.get('selection');
+            var selectedField = GeoRefine.app.facets.qFields.getByCid(fieldCid);
+            this.set('quantity_field', selectedField);
+        }, facet.model);
+        // Remove callback when model is removed.
+        facet.model.on('remove', function(){
+            qFieldSelect.model.off(null, null, this);
+        }, facet.model);
+
+        // Update totals when the summary bar totals change.
+        GeoRefine.app.summaryBar.model.on('change:data', function(){
+            var data = GeoRefine.app.summaryBar.model.get('data');
+            this.set('total', data.total);
+        }, facet.model);
+        // Remove callback when model is removed.
+        facet.model.on('remove', function(){
+            GeoRefine.app.summaryBar.model.off(null, null, this);
+        }, facet.model);
 
         // Have the facet update when its query or base filters or count entities change.
         if (facet.model.getData){
@@ -517,21 +536,16 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
                 var changes = arguments[2];
                 // We delay the get data call a little, in case multiple things are changing.
                 // The last change will get executed.
-                var fetch_timeout = facet.model.get('_fetch_timeout');
+                var fetch_timeout = this.get('_fetch_timeout');
                 // If we're fetching, clear the previous fetch.
                 if (fetch_timeout){
                     clearTimeout(fetch_timeout);
                 }
                 // Start a new fetch.
-                facet.model.set('_fetch_timeout', _timeoutGetData(changes));
-            });
+                this.set('_fetch_timeout', _timeoutGetData(changes));
+            }, facet.model);
         }
 
-        // Update totals when the summary bar totals change.
-        GeoRefine.app.summaryBar.model.on('change:data', function(){
-            var data = GeoRefine.app.summaryBar.model.get('data');
-            facet.model.set('total', data.total);
-        });
     };
 
     // Remove a facet.
@@ -566,8 +580,8 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         facet.model.set({quantity_field: qfield }, {silent: true});
 
         // Set filters.
-        updateFacetPrimaryFilters(facet, {silent: true});
-        updateFacetFilters(facet, 'base', {silent: true});
+        updateFacetModelPrimaryFilters(facet.model, {silent: true});
+        updateFacetModelFilters(facet.model, 'base', {silent: true});
 
         // Set totals.
         if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){
