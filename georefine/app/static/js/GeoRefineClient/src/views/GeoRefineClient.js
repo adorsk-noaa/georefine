@@ -361,8 +361,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                         handler: 'dataViewsChartsSelectFields',
                                         opts: {
                                             id: 'initialChart',
-                                            categoryField: {},
-                                            quantityField: {}
+                                            categoryField: {id: 'substrates'},
+                                            quantityField: {id: 'result.cell.area:sum'}
                                         }
                                     }
                                 ]

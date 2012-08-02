@@ -249,9 +249,19 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
     };
 
     var selectFields = function(chartEditor, opts){
-        if (opts.categoryField){
+        _.each(['category', 'quantity'], function(fieldCategory){
+            var fieldOpts = opts[fieldCategory + 'Field'];
+            if (fieldOpts){
+                // Get field from schema.
+                var schema = chartEditor.model.get("datasource").get("schema");
+                var fields = schema.get(fieldCategory + "_fields");
+                var fieldModel = fields.get(fieldOpts.id);
 
-        };
+                // Select field in its category's selector.
+                var selector = chartEditor.view.fieldSelectors[fieldCategory];
+                selector.field_select.model.set('selection', fieldModel.cid);
+            }
+        });
     };
 
     // Objects to expose.
