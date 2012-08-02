@@ -7,8 +7,9 @@ define([
 	"Windows",
 	"./mapview",
 	"./charts",
+	"./serialization",
 		],
-function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
+function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializationUtil){
 
     var setUpDataViews = function(){
         // Initialize counter.
@@ -197,12 +198,28 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil){
         chartsUtil.selectFields(chartEditor, opts);
     };
 
+    // Define alterState hook to add states of data views.
+    dataViews_alterState = function(state){
+        state.dataViews = state.dataViews || {};
+
+        state.dataViews.dataViews = {};
+        _.each(GeoRefine.app.dataViews.registry, function(dataView, id){
+            state.dataViews.dataViews[id] = {
+                dataView: serializationUtil.serialize(dataView.dataView.model, state.serializationRegistry),
+                window: serializationUtil.serialize(dataView.window.model, state.serializationRegistry)
+            }
+        });
+    };
+
     // Objects to expose.
     var dataViewUtil = {
         actionHandlers: actionHandlers,
         setUpDataViews: setUpDataViews,
         setUpWindows: setUpWindows,
-        createDataView: createDataView
+        createDataView: createDataView,
+        alterStateHooks: [
+            dataViews_alterState
+        ]
     };
     return dataViewUtil;
 });

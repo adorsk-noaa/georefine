@@ -4,20 +4,59 @@ define([
 	"use!underscore",
 	"_s",
 	"Util",
+	"./filters",
 	"./facets",
 	"./summaryBar",
 	"./dataViews",
+	"./serialization"
 		],
-function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil, dataViewsUtil){
+function($, Backbone, _, _s, Util, filtersUtil, facetsUtil, summaryBarUtil, dataViewsUtil, serializationUtil){
 
-    // Registry for action handlers, to be populated
-    // by other modules as well.
+    // Registry for action handlers.
     var actionHandlers = {};
     _.each([facetsUtil, summaryBarUtil, dataViewsUtil], function(module){
         _.each(module.actionHandlers, function(handler, id){
             actionHandlers[id] = handler;
         });
     });
+    
+    // Registry for alterState hooks.
+    var alterStateHooks = [];
+    _.each([filtersUtil, facetsUtil, summaryBarUtil, dataViewsUtil], function(module){
+        _.each(module.alterStateHooks, function(hook){
+            alterStateHooks.push(hook);
+        });
+    });
+
+    // Serialize the app's state.
+    var serializeState = function(){
+        // Iniitialize state object.
+        var state = { };
+        // Initialize serialization registry.
+        state.serializationRegistry = {};
+        // Call hooks.
+        _.each(alterStateHooks, function(hook){
+            hook(state);
+        });
+        // Return the altered state object.
+        return state;
+    };
+
+    // Deserialize serialized state.
+    var deserializeState = function(serializedState){
+        // Iniitialize deserialized registry.
+        var deserializationRegistry = {};
+
+        // Remove the serialized registry from the state.
+        var serializationRegistry = serializedState.serializationRegistry;
+        delete serializedState.serializationRegistry;
+
+        // Deserialized the serialized state.
+        var deserializedState = serializationUtil.deserialize(serializedState, deserializationRegistry, serializationRegistry);
+
+        return deserializedState;
+    };
+
 
     // TESTING! Test handler.
     actionHandlers['testHandler'] = function(opts){
@@ -132,6 +171,8 @@ function($, Backbone, _, _s, Util, facetsUtil, summaryBarUtil, dataViewsUtil){
 
     // Objects to expose.
     var stateUtil = {
+        serializeState: serializeState,
+        deserializeState: deserializeState,
         processActionQueue: processActionQueue
     };
 

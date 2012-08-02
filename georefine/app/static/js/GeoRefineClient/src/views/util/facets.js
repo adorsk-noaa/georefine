@@ -9,8 +9,9 @@ define([
 	"./filters",
 	"./functions",
 	"./format",
+	"./serialization",
 		],
-function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsUtil, formatUtil){
+function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsUtil, formatUtil, serializationUtil){
 
     var setUpFacetsEditor = function(){
 
@@ -616,13 +617,38 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         GeoRefine.app.facets.facetEditor.qFieldSelect.model.set('selection', qfield.cid);
     };
 
+    // Define alterState hook for saving facetEditor state.
+    var facetEditor_alterState = function(state){
+        state.facetEditor = state.facetEditor || {};
+        // Save facet editor's selected field.
+        var qFieldSelect = GeoRefine.app.facets.facetEditor.qFieldSelect;
+        var fieldCid = qFieldSelect.model.get('selection');
+        var selectedField = GeoRefine.app.facets.qFields.getByCid(fieldCid);
+        state.facetEditor.selectedField = serializationUtil.serialize(selectedField, state.serializationRegistry);
+    };
+
+    // Define alterState hook for saving state of facets.
+    var facets_alterState = function(state){
+        state.facets = state.facets || {};
+
+        // Save summary attributes.
+        state.facets.facets = {};
+        _.each(GeoRefine.app.facets.registry, function(facet, id){
+            state.facets.facets[id] = serializationUtil.serialize(facet.model, state.serializationRegistry);
+        });
+    };
+
     // Objects to expose.
     var facetsUtil = {
         createFacet: createFacet,
         setUpFacetCollection: setUpFacetCollection,
         setUpFacetsEditor: setUpFacetsEditor,
         connectFacet: connectFacet,
-        actionHandlers: actionHandlers
+        actionHandlers: actionHandlers,
+        alterStateHooks: [
+            facetEditor_alterState,
+            facets_alterState
+        ]
     };
     return facetsUtil;
 });

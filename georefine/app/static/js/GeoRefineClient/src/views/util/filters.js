@@ -4,8 +4,9 @@ define([
 	"use!underscore",
 	"_s",
 	"Util",
+	"./serialization",
 		],
-function($, Backbone, _, _s, Util){
+function($, Backbone, _, _s, Util, serializationUtil){
     // Merge a set of grouped filter objects into a list.
     // filter objects are keyed by filter group id.
     filterObjectGroupsToArray = function(groups){
@@ -79,11 +80,23 @@ function($, Backbone, _, _s, Util){
         model.set(setObj, opts);
     };
 
+    // Define alterState hook for saving filterGroup state.
+    var filterGroups_alterState = function(state){
+        // Save filter group ids.
+        state.filterGroups = state.filterGroups || {};
+        _.each(GeoRefine.app.filterGroups, function(filterGroup, id){
+            state.filterGroups[id] = serializationUtil.serialize(filterGroup, state.serializationRegistry);
+        });
+    };
+
     // Objects to expose.
     var filtersUtil = {
         filterObjectGroupsToArray: filterObjectGroupsToArray,
         setUpFilterGroups: setUpFilterGroups,
-        updateModelFilters: updateModelFilters
+        updateModelFilters: updateModelFilters,
+        alterStateHooks : [
+            filterGroups_alterState
+        ]
     };
     return filtersUtil;
 });

@@ -251,6 +251,12 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
         });
     };
 
+    // Define function for getting state of a chart editor.
+    var chartEditor_getState = function(chartEditor){
+        var state = {};
+        return state;
+    };
+
     // Objects to expose.
     var chartsUtil = {
         createChartEditor: createChartEditor,

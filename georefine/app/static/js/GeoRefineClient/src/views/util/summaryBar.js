@@ -7,8 +7,9 @@ define([
 	"./requests",
 	"./filters",
 	"./format",
+	"./serialization",
 		],
-function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil){
+function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serializationUtil){
 
     setUpSummaryBar = function(){
         var model = new Backbone.Model(_.extend({
@@ -206,10 +207,19 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil){
         }
     };
 
+    // Define alterState hook for saving summaryBar state.
+    var summaryBar_alterState = function(state){
+        // Serialize summary bar and save to state.
+        state.summaryBar = serializationUtil.serialize(GeoRefine.app.summaryBar.model, state.serializationRegistry);
+    };
+
     // Objects to expose.
     var summaryBarUtil = {
         setUpSummaryBar: setUpSummaryBar,
-        actionHandlers: actionHandlers
+        actionHandlers: actionHandlers,
+        alterStateHooks: [
+            summaryBar_alterState
+        ]
     };
     return summaryBarUtil;
 });

@@ -310,6 +310,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         type: 'actionQueue',
                         async: true,
                         actions: [
+                            /*
                             // Mapview.
                             {
                                 type: 'actionQueue',
@@ -341,7 +342,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
-                            /*
+                            */
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -367,7 +368,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             }
-                            */
                         ]
                     }
                 ]
@@ -378,6 +378,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             // Load after quantity field state is set up.
             $.when(deferred).then(function(){
                 console.log("All Done.");
+                var serializedState = stateUtil.serializeState();
+                console.log("serializedState is: ", serializedState);
+
+                var deserializedState = stateUtil.deserializeState(serializedState);
+                console.log("deserializedState is: ", deserializedState);
             });
         },
 
