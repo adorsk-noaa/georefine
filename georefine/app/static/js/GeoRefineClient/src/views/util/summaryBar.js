@@ -5,10 +5,10 @@ define([
 	"_s",
 	"Util",
 	"./requests",
-	"./facets",
+	"./filters",
 	"./format",
 		],
-function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
+function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil){
 
     setUpSummaryBar = function(){
         var model = new Backbone.Model(_.extend({
@@ -141,17 +141,6 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
     };
 
 
-    var updateSummaryBarFilters = function(summaryBar, filterCategory, opts){
-        var filters = _.clone(summaryBar.model.get(filterCategory + '_filters')) || {} ;
-        _.each(summaryBar.model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
-            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
-            filters[filterGroupId] = filterGroup.getFilters();
-        });
-        var setObj = {};
-        setObj[filterCategory + '_filters'] = filters;
-        summaryBar.model.set(setObj, opts);
-    };
-
     var connectSummaryBar = function(opts){
         // Listen for filter changes.
         _.each(['primary', 'base'], function(filterCategory){
@@ -200,7 +189,7 @@ function($, Backbone, _, _s, Util, requestsUtil, facetsUtil, formatUtil){
 
         // Set filters.
         _.each(['base', 'primary'], function(filterCategory){
-            updateSummaryBarFilters(GeoRefine.app.summaryBar, filterCategory, {silent: true});
+            filtersUtil.updateModelFilters(GeoRefine.app.summaryBar.model, filterCategory, {silent: true});
         });
     };
 

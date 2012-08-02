@@ -199,7 +199,6 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
             _.each(groupIds, function(groupId){
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filterGroup.on('change:filters', function(){
-                    console.log('chango');
                     var filters = _.clone(q.get(filterCategory + '_filters')) || {};
                     filters[groupId] = filterGroup.getFilters();
                     q.set(filterCategory + '_filters', filters);
@@ -234,18 +233,6 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
             model: chartEditorModel,
             view: chartEditorView
         };
-    };
-
-    var updateChartEditorFilters = function(chartEditor, filterCategory, opts){
-        var q = chartEditor.model.get('datasource').get('query');
-        var filters = _.clone(q.get(filterCategory + '_filters')) || {} ;
-        _.each(q.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
-            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
-            filters[filterGroupId] = filterGroup.getFilters();
-        });
-        var setObj = {};
-        setObj[filterCategory + '_filters'] = filters;
-        q.set(setObj, opts);
     };
 
     var selectFields = function(chartEditor, opts){

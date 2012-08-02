@@ -1,14 +1,16 @@
 define([
 	"./facets",
+	"./summaryBar",
 	"./requests",
 	"./filters",
 	"./state",
 	"./dataViews",
 ], 
-function(facetsUtil, requestsUtil, filtersUtil, stateUtil, dataViewsUtil){
+function(facetsUtil, summaryBarUtil, requestsUtil, filtersUtil, stateUtil, dataViewsUtil){
 
     var GeoRefineViewsUtil = {
 		facetsUtil: facetsUtil,
+		summaryBarUtil: summaryBarUtil,
 		requestsUtil: requestsUtil,
 		filtersUtil: filtersUtil,
 		stateUtil: stateUtil,

@@ -6,16 +6,13 @@ define([
 	"Facets",
 	"Util",
 	"./requests",
+	"./filters",
 	"./functions",
 	"./format",
-	"./summaryBar"
 		],
-function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUtil, summaryBarUtil){
+function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsUtil, formatUtil){
 
     var setUpFacetsEditor = function(){
-
-        // Setup summary bar.
-        summaryBarUtil.setUpSummaryBar();
 
         // Generate quantity field collection from config.
         GeoRefine.app.facets.qFields = new Backbone.Collection();
@@ -441,24 +438,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         _.each(facetModel.get('primary_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             // A facet should not use its own selection in the filters.
-            primaryFilters[filterGroupId] = _.filter(filterGroup.getFilters(), 
+            primaryFilters[filterGroupId] = _.filter(filterGroup.getFilters(),
                 function(filterObj){
                     return (filterObj.source.cid != facetModel.cid);
                 });
         });
         facetModel.set({'primary_filters': primaryFilters}, opts);
-
-    };
-
-    var updateFacetModelFilters = function(facetModel, filterCategory, opts){
-        var filters = _.clone(facetModel.get(filterCategory + '_filters')) || {} ;
-        _.each(facetModel.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
-            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
-            filters[filterGroupId] = filterGroup.getFilters();
-        });
-        var setObj = {};
-        setObj[filterCategory + '_filters'] = filters;
-        facetModel.set(setObj, opts);
     };
 
     // Setup event chains for a facet.
@@ -481,7 +466,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
         _.each(facet.model.get('base_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.on('change:filters', function(){
-                updateFacetModelFilters(this, 'base');
+                filtersUtil.updateModelFilters(this, 'base');
             }, facet.model);
             // Remove callback when model is removed.
             facet.model.on('remove', function(){
@@ -581,7 +566,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, functionsUtil, formatUt
 
         // Set filters.
         updateFacetModelPrimaryFilters(facet.model, {silent: true});
-        updateFacetModelFilters(facet.model, 'base', {silent: true});
+        filtersUtil.updateModelFilters(facet.model, 'base', {silent: true});
 
         // Set totals.
         if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){

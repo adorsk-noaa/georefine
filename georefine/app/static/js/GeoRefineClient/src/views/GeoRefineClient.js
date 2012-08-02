@@ -65,6 +65,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			$(document).ready(function(){
 				GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
+                GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
 				GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
 				GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();

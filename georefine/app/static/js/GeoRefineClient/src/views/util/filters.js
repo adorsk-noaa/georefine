@@ -68,10 +68,22 @@ function($, Backbone, _, _s, Util){
         GeoRefine.app.filterGroups = filterGroups;
     };
 
+    var updateModelFilters = function(model, filterCategory, opts){
+        var filters = _.clone(model.get(filterCategory + '_filters')) || {} ;
+        _.each(model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
+            var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+            filters[filterGroupId] = filterGroup.getFilters();
+        });
+        var setObj = {};
+        setObj[filterCategory + '_filters'] = filters;
+        model.set(setObj, opts);
+    };
+
     // Objects to expose.
     var filtersUtil = {
         filterObjectGroupsToArray: filterObjectGroupsToArray,
-        setUpFilterGroups: setUpFilterGroups
+        setUpFilterGroups: setUpFilterGroups,
+        updateModelFilters: updateModelFilters
     };
     return filtersUtil;
 });
