@@ -20,7 +20,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
-			'click .facets-editor-container .title': 'toggleFiltersEditor',
+			'click .facets-editor-container .title': 'toggleFacetsEditor',
 			"click .add-map-button": "addMapView",
 			"click .add-chart-button": "addChartView"
 		},
@@ -142,7 +142,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             $table.animate(table_dim_opts);
         },
 
-        toggleFiltersEditor: function(){
+        toggleFacetsEditor: function(){
             var $filtersEditor = $('.facets-editor-container', this.el);
             var $table = $('.facets-editor-table', this.el);
             if (! $filtersEditor.hasClass('changing')){
@@ -310,7 +310,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         type: 'actionQueue',
                         async: true,
                         actions: [
-                            /*
                             // Mapview.
                             {
                                 type: 'actionQueue',
@@ -342,7 +341,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
-                            */
+                            /*
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -368,6 +367,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             }
+                            */
                         ]
                     }
                 ]
