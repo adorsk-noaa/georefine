@@ -73,7 +73,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
 
         toggleEditor: function(){
             var $editorContainer = $('.editor-container', this.el);
-            var $table = $('.facets-editor-table', $editorContainer);
+            var $table = $('.facets-panel-table', GeoRefine.app.view.el);
             if (! $editorContainer.hasClass('changing')){
                 this.expandContractTab({
                     expand: ! $editorContainer.hasClass('expanded'),
