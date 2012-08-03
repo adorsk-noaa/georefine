@@ -22,6 +22,14 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
 
         initialize: function(){
             $(this.el).addClass('facets-editor');
+
+            // Initialize quantity fields if needed.
+            this.qFields = this.model.get('quantity_fields');
+            if (! this.qFields){
+                this.qFields = new Backbone.Collection();
+                this.model.set('quantity_fields', this.qFields);
+            }
+
             this.initialRender();
         },
 
@@ -30,17 +38,26 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
             var html = _.template(facetsEditorTemplate, {model: this.model});
             $(this.el).html(html);
 
+            // Setup choices.
+            var choices = [];
+            _.each(this.qFields.models, function(qFieldModel){
+                choices.push({
+                    value: qFieldModel.cid,
+                    label: qFieldModel.get('label'),
+                    info: qFieldModel.get('info')
+                });
+            });
+
             // Render quantity field selector.
             this.qFieldSelect = new Util.views.InfoSelectView({
                 el : $('.quantity-field-info-select', this.el),
                 model: new Backbone.Model({
-                    "choices": []
+                    "choices": choices
                 })
             });
 
-            // Render summary bar.
-
-            // Render facet collection.
+            // Do initial resize.
+            this.resize();
         },
 
         renderQFieldChoices: function(){
@@ -132,9 +149,7 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         resize: function(){
             var $table = $('.facets-editor-table', this.el);
             Util.util.fillParent($table);
-            Util.util.resizeVerticalTab($('.facets-editor-tab', this.el)); 
-            var $sbc = $('.facets-editor-table .summary-bar-container');
-            $sbc.parent().css('height', $sbc.height());
+            this.resizeVerticalTab($('.editor-tab', this.el)); 
         },
 
     });
