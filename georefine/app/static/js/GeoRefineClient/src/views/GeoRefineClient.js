@@ -26,63 +26,58 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
 		initialize: function(opts){
-
-            // Initialize global namespace variable.
-            GeoRefine.app = {
-                model: this.model,
-                view: this,
-                id: this.cid,
-                facets: {},
-                summaryBar: {},
-                dataViews: {}
-            };
-
-            // If state object was given, load from state.
-            if (opts.state){
-                return this.initializeFromState(opts.state);
-            }
-
-            // Otherwise...
-            // @TODO !!!
-            
-            // Initialize global namespace variable.
-            GeoRefine.app = {
-                model: this.model,
-                view: this,
-                id: this.cid,
-                facets: {
-                    definitions: GeoRefine.config.facets.definitions,
-                    registry: {}
-                },
-                summaryBar: {},
-                dataViews: {}
-            };
-
-            // Set endpoints.
-            GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-            GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.config.context_root);
-            GeoRefine.app.mapEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-
 			$(this.el).addClass('georefine-client');
 
-            this.data_view_counter = 1;
-            this.data_view_defaults = {
-                width: 500,
-                height: 500
+            // Initialize global namespace variable.
+            GeoRefine.app = {
+                model: this.model,
+                view: this,
+                id: this.cid,
+                config: {},
+                filterGroups: null,
+                facets: {},
+                summaryBar: {},
+                dataViews: {},
+                state: {}
             };
 
-			this.render();
-			this.on('ready', this.onReady, this);
+            // If no serialized state object was given, get state from config.
+            // @TODO!!!
+            var serializedState = null; 
+            if (! opts.serializedState){
+            }
+            else{
+                serializedState = opts.serializedState;
+            }
 
+            // Deserialize the state.
+            var state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
+            GeoRefine.app.state = state;
+
+            // Set config from state.
+            GeoRefine.app.config = state.config;
+        
+            // Set endpoints.
+            GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.app.config.context_root, GeoRefine.app.config.project_id);
+            GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.app.config.context_root);
+            GeoRefine.app.mapEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.app.config.context_root, GeoRefine.app.config.project_id);
+
+            // Do initial render.
+			this.initialRender();
+
+            // Listen for ready event.
+			this.on('ready', this.onReady, this);
 		},
 
-		render: function(){
+		initialRender: function(){
 			var html = _.template(template, {model: this.model});
 			$(this.el).html(html);
 
 			var _this = this;
 			$(document).ready(function(){
 				GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
+                console.log(GeoRefine.app);
+                /*
 				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
                 GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
@@ -90,6 +85,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 				GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
                 _this.resize();
                 _this.loadState();
+                */
 			});
 
 			return this;
@@ -403,11 +399,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 console.log(JSON.stringify(serializedState));
             });
         },
-
-        initializeFromState : function(state){
-            console.log("here", "state is: ", state);
-        }
-
 
     });
 

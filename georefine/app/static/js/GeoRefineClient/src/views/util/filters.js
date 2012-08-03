@@ -7,9 +7,16 @@ define([
 	"./serialization",
 		],
 function($, Backbone, _, _s, Util, serializationUtil){
+
+    // Sets up filters from application state.
+    var setUpFilterGroups = function(){
+        // Set filter groups from app state.
+        GeoRefine.app.filterGroups = GeoRefine.app.state.filterGroups;
+    };
+
     // Merge a set of grouped filter objects into a list.
     // filter objects are keyed by filter group id.
-    filterObjectGroupsToArray = function(groups){
+    var filterObjectGroupsToArray = function(groups){
         filters_hash = {};
         _.each(groups, function(group){
             _.each(group, function(filter_obj){
@@ -27,48 +34,9 @@ function($, Backbone, _, _s, Util, serializationUtil){
         return combined_filters;
     };
 
-    setUpFilterGroups = function(){
-        var filterGroups = {};
 
-        // Initialize filter groups.
-        _.each(GeoRefine.config.filter_groups, function(groupConfig){
-            var filterGroup = new Backbone.Collection();
-            filterGroups[groupConfig.id] = filterGroup;
-            filterGroup.getFilters = function(){
-                var filters = [];
-                _.each(filterGroup.models, function(model){
-                    var modelFilters = model.get('filters');
-                    if (modelFilters){
-                        filters.push({
-                            'source': {
-                                'type': model.getFilterType ? model.getFilterType() : null,
-                            'cid': model.cid
-                            },
-                            'filters': modelFilters
-                        });
-                    }
-                });
-                return filters;
-            };
-        });
-
-        // Add listeners for synchronizing linked groups.
-        _.each(GeoRefine.config.filter_groups, function(groupConfig){
-            _.each(groupConfig.linked_groups, function(linkedGroupId){
-                var mainGroup = filterGroups[groupConfig.id];
-                var linkedGroup = filterGroups[linkedGroupId];
-                _.each(['add', 'remove'], function(evnt){
-                    linkedGroup.on(evnt, function(model){
-                        mainGroup[evnt](model)
-                    });
-                });
-            });
-        });
-
-        // Save to global namespaced variable.
-        GeoRefine.app.filterGroups = filterGroups;
-    };
-
+    // Update model's filter attributes by getting filters from its
+    // filter groups.
     var updateModelFilters = function(model, filterCategory, opts){
         var filters = _.clone(model.get(filterCategory + '_filters')) || {} ;
         _.each(model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){

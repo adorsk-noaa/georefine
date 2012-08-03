@@ -4,7 +4,7 @@ define([
 	"./requests",
 	"./filters",
 	"./state",
-	"./dataViews",
+	"./dataViews"
 ], 
 function(facetsUtil, summaryBarUtil, requestsUtil, filtersUtil, stateUtil, dataViewsUtil){
 
