@@ -28,6 +28,12 @@ function($, Backbone, _, _s, Util, filtersUtil, facetsUtil, summaryBarUtil, data
         });
     });
 
+    // Add hook to add config to state.
+    var config_alterState = function(state){
+        state.config = serializationUtil.serialize(GeoRefine.config, state.serializationRegistry);
+    };
+    alterStateHooks.push(config_alterState);
+
     // Serialize the app's state.
     var serializeState = function(){
         // Iniitialize state object.

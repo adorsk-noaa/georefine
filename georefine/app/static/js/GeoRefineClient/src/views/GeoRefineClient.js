@@ -25,8 +25,27 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			"click .add-chart-button": "addChartView"
 		},
 
-		initialize: function(){
-            // Save app to global namespace.
+		initialize: function(opts){
+
+            // Initialize global namespace variable.
+            GeoRefine.app = {
+                model: this.model,
+                view: this,
+                id: this.cid,
+                facets: {},
+                summaryBar: {},
+                dataViews: {}
+            };
+
+            // If state object was given, load from state.
+            if (opts.state){
+                return this.initializeFromState(opts.state);
+            }
+
+            // Otherwise...
+            // @TODO !!!
+            
+            // Initialize global namespace variable.
             GeoRefine.app = {
                 model: this.model,
                 view: this,
@@ -380,11 +399,14 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 console.log("All Done.");
                 var serializedState = stateUtil.serializeState();
                 console.log("serializedState is: ", serializedState);
-
-                var deserializedState = stateUtil.deserializeState(serializedState);
-                console.log("deserializedState is: ", deserializedState);
+                console.log("json state: ");
+                console.log(JSON.stringify(serializedState));
             });
         },
+
+        initializeFromState : function(state){
+            console.log("here", "state is: ", state);
+        }
 
 
     });
