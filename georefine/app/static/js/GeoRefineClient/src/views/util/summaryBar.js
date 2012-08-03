@@ -146,6 +146,10 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                     filters[filterGroupId] = filterGroup.getFilters();
                     GeoRefine.app.summaryBar.model.set(filterCategory + '_filters', filters);
                 });
+                // Remove callback when model is removed.
+                GeoRefine.app.summaryBar.model.on('remove', function(){
+                    filterGroup.off(null, null, this);
+                }, GeoRefine.app.summaryBar.model);
             });
         });
 
@@ -185,7 +189,6 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         _.each(['base', 'primary'], function(filterCategory){
             filtersUtil.updateModelFilters(GeoRefine.app.summaryBar.model, filterCategory, {silent: true});
         });
-        console.log("sb: ", GeoRefine);
     };
 
     // Connect summaryBar.
@@ -211,8 +214,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
     var summaryBar_deserializeConfigState = function(configState, state){
 
         // Create model for summary bar.
-        var summaryBarModel = new Backbone.Model({
-        });
+        var summaryBarModel = new Backbone.Model(configState.summaryBar);
 
         // Set summary bar in state object.
         state.summaryBar = summaryBarModel;
