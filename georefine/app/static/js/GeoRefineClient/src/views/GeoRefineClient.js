@@ -20,7 +20,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
-			'click .facets-editor-container .title': 'toggleFacetsEditor',
 			"click .add-map-button": "addMapView",
 			"click .add-chart-button": "addChartView"
 		},
@@ -76,16 +75,15 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			var _this = this;
 			$(document).ready(function(){
 				GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
-                console.log(GeoRefine.app);
-                /*
-				GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
-                GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
 				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
+                /*
+                GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
 				GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
 				GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
                 _this.resize();
                 _this.loadState();
                 */
+                console.log(GeoRefine.app);
 			});
 
 			return this;
@@ -107,86 +105,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             });
 		},
 
-        expandContractTab: function(opts){
-            var _this = this;
-            var expand = opts.expand;
-            var $tc = opts.tab_container;
-            var $table = opts.table;
-            var dim = opts.dimension;
-
-
-            // Calculate how much to change dimension.
-            var delta = parseInt($tc.css('max' + _s.capitalize(dim)), 10) - parseInt($tc.css('min' + _s.capitalize(dim)), 10);
-            if (! expand){
-                delta = -1 * delta;
-            }
-
-            // Animate field container dimension.
-            $tc.addClass('changing');
-
-            // Toggle button text
-            var button_text = ($('button.toggle', $tc).html() == '\u25B2') ? '\u25BC' : '\u25B2';
-            $('button.toggle', $tc).html(button_text);
-
-            // Execute the animation.
-            var tc_dim_opts = {};
-            tc_dim_opts[dim] = parseInt($tc.css(dim),10) + delta;
-            $tc.animate(
-                    tc_dim_opts,
-                    {
-                        complete: function(){
-                            $tc.removeClass('changing');
-
-                            if (expand){
-                                $tc.addClass('expanded')
-                            }
-                            else{
-                                $tc.removeClass('expanded');
-                                Util.util.fillParent($table);
-                            }
-                        }
-                    }
-                    );
-
-            // Animate cell dimension.
-            $tc.parent().animate(tc_dim_opts);
-
-            // Animate table dimension.
-            var table_dim_opts = {};
-            table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
-            $table.animate(table_dim_opts);
-        },
-
-        toggleFacetsEditor: function(){
-            var $filtersEditor = $('.facets-editor-container', this.el);
-            var $table = $('.facets-editor-table', this.el);
-            if (! $filtersEditor.hasClass('changing')){
-                this.expandContractTab({
-                    expand: ! $filtersEditor.hasClass('expanded'),
-                    tab_container: $filtersEditor,
-                    table: $table,
-                    dimension: 'width'
-                });
-            }
-        },
-
         resize: function(){
-            this.resizeFiltersEditor();
+            GeoRefine.app.facetsEditor.view.resize();
         },
 
-        resizeFiltersEditor: function(){
-            var $table = $('.facets-editor-table', this.el);
-            Util.util.fillParent($table);
-            this.resizeVerticalTab($('.facets-editor-tab', this.el)); 
-            var $sbc = $('.facets-editor-table .summary-bar-container');
-            $sbc.parent().css('height', $sbc.height());
-        },
-
-		resizeVerticalTab: function($vt){
-			var $rc = $('.rotate-container', $vt);
-			$rc.css('width', $rc.parent().height());
-			$rc.css('height', $rc.parent().width());
-		},
 
         loadState: function(state){
 

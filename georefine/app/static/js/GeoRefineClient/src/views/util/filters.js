@@ -10,7 +10,6 @@ function($, Backbone, _, _s, Util, serializationUtil){
 
     // Sets up filters from application state.
     var setUpFilterGroups = function(){
-        // Set filter groups from app state.
         GeoRefine.app.filterGroups = GeoRefine.app.state.filterGroups;
     };
 
