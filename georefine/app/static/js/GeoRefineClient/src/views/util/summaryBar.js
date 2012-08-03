@@ -12,13 +12,8 @@ define([
 function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serializationUtil){
 
     setUpSummaryBar = function(){
-        var model = new Backbone.Model(_.extend({
-            "id": "summary_bar",
-            "primary_filters": {},
-            "base_filters": {},
-            "quantity_field": null,
-            "data": {}
-        }, GeoRefine.config.summary_bar));
+        
+        var model = GeoRefine.app.state.summaryBar;
 
         // Define getData function.
         model.getData = function(){
@@ -91,7 +86,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         // Define summary bar class.
         var SummaryBarView = Backbone.View.extend({
             initialize: function(){
-                $(this.el).html('<div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div>');
+                $(this.el).html('<div class="inner"><div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div></div>');
                 // Trigger update when model data changes.
                 this.model.on('change:data', this.onDataChange, this);
             },
@@ -120,15 +115,13 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                 $(".text .selected", this.el).html(formatted_selected);
                 $(".text .total", this.el).html(_s.sprintf('(%.1f%% of %s total)', percentage, formatted_total));
 
-                // Set totals on facets.
-                _.each(GeoRefine.app.facets.facetCollection.models, function(facetModel){
-                    facetModel.set('total', data.total);
-                });
+                this.trigger('change:size');
+
             }
         });
 
         var view = new SummaryBarView({
-            el: $(".facets-editor .summary-bar", GeoRefine.app.view.el),
+            el: $(".facets-panel .summary-bar", GeoRefine.app.view.el),
             model: model
         });
 
@@ -157,10 +150,10 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         });
 
         // Listen for quantity field changes.
-        var qFieldSelect = GeoRefine.app.facets.facetEditor.qFieldSelect;
+        var qFieldSelect = GeoRefine.app.facetsEditor.view.qFieldSelect;
         qFieldSelect.model.on('change:selection', function(){
             var fieldCid = qFieldSelect.model.get('selection');
-            var selectedField = GeoRefine.app.facets.qFields.getByCid(fieldCid);
+            var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(fieldCid);
             this.set('quantity_field', selectedField);
         }, GeoRefine.app.summaryBar.model);
 
@@ -183,8 +176,8 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
     actionHandlers.summaryBarInitialize = function(opts){
 
         // Set quantity field.
-        var qfield_cid = GeoRefine.app.facets.facetEditor.qFieldSelect.model.get('selection');
-        var qfield = GeoRefine.app.facets.qFields.getByCid(qfield_cid);
+        var qfield_cid = GeoRefine.app.facetsEditor.view.qFieldSelect.model.get('selection');
+        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
 
         GeoRefine.app.summaryBar.model.set({quantity_field: qfield }, {silent: true});
 
@@ -192,6 +185,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         _.each(['base', 'primary'], function(filterCategory){
             filtersUtil.updateModelFilters(GeoRefine.app.summaryBar.model, filterCategory, {silent: true});
         });
+        console.log("sb: ", GeoRefine);
     };
 
     // Connect summaryBar.
@@ -213,12 +207,26 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         state.summaryBar = serializationUtil.serialize(GeoRefine.app.summaryBar.model, state.serializationRegistry);
     };
 
+    // Define deserializeConfigState hook for loading summaryBar state.
+    var summaryBar_deserializeConfigState = function(configState, state){
+
+        // Create model for summary bar.
+        var summaryBarModel = new Backbone.Model({
+        });
+
+        // Set summary bar in state object.
+        state.summaryBar = summaryBarModel;
+    };
+
     // Objects to expose.
     var summaryBarUtil = {
         setUpSummaryBar: setUpSummaryBar,
         actionHandlers: actionHandlers,
         alterStateHooks: [
             summaryBar_alterState
+        ],
+        deserializeConfigStateHooks: [
+            summaryBar_deserializeConfigState
         ]
     };
     return summaryBarUtil;

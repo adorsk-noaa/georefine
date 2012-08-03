@@ -11,6 +11,28 @@ function($, Backbone, _, _s, Util, serializationUtil){
     // Sets up filters from application state.
     var setUpFilterGroups = function(){
         GeoRefine.app.filterGroups = GeoRefine.app.state.filterGroups;
+
+        // Define getFilters method for each filter group.
+        // @TODO! Move this into a separate function, rather than having
+        // it be a method of the filter group.
+        _.each(GeoRefine.app.filterGroups, function(filterGroup){
+            filterGroup.getFilters = function(){
+                var filters = [];
+                _.each(filterGroup.models, function(model){
+                    var modelFilters = model.get('filters');
+                    if (modelFilters){
+                        filters.push({
+                            'source': {
+                                'type': model.getFilterType ? model.getFilterType() : null,
+                            'cid': model.cid
+                            },
+                            'filters': modelFilters
+                        });
+                    }
+                });
+                return filters;
+            };
+        });
     };
 
     // Merge a set of grouped filter objects into a list.
@@ -56,6 +78,24 @@ function($, Backbone, _, _s, Util, serializationUtil){
         });
     };
 
+    // Define deserializeConfigState hook for filter groups.
+    var filterGroups_deserializeConfigState = function(configState, state){
+        if (! configState.filterGroups){
+            return;
+        }
+
+        // Create collections for filter groups.
+        var filterGroups = {};
+
+        _.each(configState.filterGroups, function(filterGroupDef){
+            var filterGroup = new Backbone.Collection();
+            filterGroups[filterGroupDef.id] = filterGroup;
+        });
+
+        // Set editor in state object.
+        state.filterGroups = filterGroups;
+    };
+
     // Objects to expose.
     var filtersUtil = {
         filterObjectGroupsToArray: filterObjectGroupsToArray,
@@ -63,6 +103,9 @@ function($, Backbone, _, _s, Util, serializationUtil){
         updateModelFilters: updateModelFilters,
         alterStateHooks : [
             filterGroups_alterState
+        ],
+        deserializeConfigStateHooks: [
+            filterGroups_deserializeConfigState
         ]
     };
     return filtersUtil;

@@ -146,9 +146,10 @@
             }
 
 
-            .summary-bar-container {
+            .summary-bar {
                 overflow-y: scroll;
-                .summary-bar {
+
+                > .inner {
                     .rounded_corners(@padding_normal);
                     background-color: @faint_grey;
                     margin: 0 5px; 
@@ -161,13 +162,10 @@
                 }
             }
 
-            .facets-container{
+            .facets {
                 overflow-y: scroll;
-
-                .facets {
-                    width: 100%;
-                    height: 100%;
-                }
+                width: 100%;
+                height: 100%;
             }
         }
     }

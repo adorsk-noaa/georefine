@@ -41,20 +41,19 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             };
 
             // If no serialized state object was given, get state from config.
-            // @TODO!!!
-            var serializedState = null; 
             if (! opts.serializedState){
+                var configState = GeoRefine.config.defaultInitialState;
+                GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeConfigState(configState);
+                GeoRefine.app.config = GeoRefine.config;
             }
+            // Otherwise deserialize serialized state.
             else{
                 serializedState = opts.serializedState;
+                GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
+                // Set config from state.
+                GeoRefine.app.config = state.config;
             }
 
-            // Deserialize the state.
-            var state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
-            GeoRefine.app.state = state;
-
-            // Set config from state.
-            GeoRefine.app.config = state.config;
         
             // Set endpoints.
             GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.app.config.context_root, GeoRefine.app.config.project_id);
@@ -71,20 +70,22 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		initialRender: function(){
 			var html = _.template(template, {model: this.model});
 			$(this.el).html(html);
+            GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
+            GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
+            GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
+            GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
+            GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
+            GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
 
-			var _this = this;
-			$(document).ready(function(){
-				GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
-				GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
-                /*
-                GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
-				GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
-				GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
-                _this.resize();
-                _this.loadState();
-                */
-                console.log(GeoRefine.app);
-			});
+            // When summaryBar size changes, update its parent container size.
+            var sbView = GeoRefine.app.summaryBar.view;
+            sbView.on('change:size', function(){
+                console.log("here, change size");
+                $(sbView.el).parent().height($(sbView.el).outerHeight());
+            });
+
+            this.resize();
+            this.loadState();
 
 			return this;
 		},
@@ -317,8 +318,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 console.log("All Done.");
                 var serializedState = stateUtil.serializeState();
                 console.log("serializedState is: ", serializedState);
+                /*
                 console.log("json state: ");
                 console.log(JSON.stringify(serializedState));
+                */
             });
         },
 

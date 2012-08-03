@@ -30,6 +30,7 @@ def georefine_client(project_id):
         "maps": project.app_config.get('maps', {}),
         "summary_bar": project.app_config.get('summary_bar', {}),
         "initial_state": project.app_config.get('initial_state', {}),
+        "defaultInitialState": project.app_config.get('defaultInitialState', {}),
     }
     json_georefine_config = json.dumps(georefine_config)
     return render_template("projects/georefine_client.html", context_root=context_root, georefine_config=Markup(json_georefine_config))

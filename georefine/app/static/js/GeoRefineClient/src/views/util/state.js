@@ -63,6 +63,28 @@ function($, Backbone, _, _s, Util, filtersUtil, facetsUtil, summaryBarUtil, data
         return deserializedState;
     };
 
+    // Registry for deserializeConfigState hooks.
+    var deserializeConfigStateHooks = [];
+    _.each([filtersUtil, facetsUtil, summaryBarUtil, dataViewsUtil], function(module){
+        _.each(module.deserializeConfigStateHooks, function(hook){
+            deserializeConfigStateHooks.push(hook);
+        });
+    });
+
+    // Deserialize state from a config-style serialized state.
+    // This is used for initializing the app when no state is passed.
+    var deserializeConfigState = function(configState){
+        // Initialize state object.
+        var state = {};
+
+        // Call hooks.
+        _.each(deserializeConfigStateHooks, function(hook){
+            hook(configState, state);
+        });
+
+        return state;
+    };
+
 
     // TESTING! Test handler.
     actionHandlers['testHandler'] = function(opts){
@@ -179,6 +201,7 @@ function($, Backbone, _, _s, Util, filtersUtil, facetsUtil, summaryBarUtil, data
     var stateUtil = {
         serializeState: serializeState,
         deserializeState: deserializeState,
+        deserializeConfigState: deserializeConfigState,
         processActionQueue: processActionQueue
     };
 
