@@ -279,7 +279,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                             }
                                         }
                                     },
-                                /*
                                     {
                                         type: 'action',
                                         handler: 'dataViews_setMapLayerAttributes',
@@ -295,7 +294,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                             ]
                                         }
                                     }
-                                    */
                                 ]
                             },
                         /*

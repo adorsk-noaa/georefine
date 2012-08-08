@@ -416,11 +416,13 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
     var getMapEditorLayers = function(mapEditor, opts){
         var layers = [];
-        _.each(opts.layers, function(layer){
-            var layer = mapEditor.mapView.layerRegistry.get(layer.id);
-            layers.push(layer);
+        _.each(opts.layers, function(layerOpts){
+            var layer = mapEditor.mapView.layerRegistry[layerOpts.id];
+            if (layer){
+                layers.push(layer);
+            }
         });
-        return layer;
+        return layers;
     };
 
     // Objects to expose.

@@ -24,11 +24,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
             height: 500
         };
 
-        // Initialize collection.
-        GeoRefine.app.dataViews.dataViews = dvState.dataViews || new Backbone.Collection();
+        // Initialize registry.
+        GeoRefine.app.dataViews.registry = dvState.registry || {};
 
         // Create any initial data views.
-        _.each(GeoRefine.app.dataViews.dataViews, function(dataView){
+        _.each(GeoRefine.app.dataViews.registry, function(dataView){
             addFloatingDataView(dataView);
         });
     };
@@ -55,7 +55,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     var initializeDataView = function(dataView){
         var initializer = dataViewInitializers[dataView.model.get('type')];
         if (initializer){
-            console.log("here")
             initializer(dataView);
         }
     };
@@ -79,7 +78,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         }
     };
     var connectDataView = function(dataView){
-        console.log("connecting");
         connect = getDataViewConnector(dataView, true);
         if (connect){
             connect(dataView);
@@ -166,6 +164,9 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         var floatingDataView = new FloatingDataViewView({
             model: model
         });
+        
+        // Register the floating data view.
+        GeoRefine.app.dataViews.registry[model.id] = floatingDataView;
 
         // Initialize and connect data view.
         initializeDataView(floatingDataView.dataView);
@@ -238,6 +239,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         if (windowModel && dataViewModel){
             // Create floating data view model.
             var floatingDataViewModel = new Backbone.Model({
+                id: opts.id || Math.random(),
                 window: windowModel,
                 dataView: dataViewModel
             });
@@ -255,9 +257,9 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     actionHandlers.dataViews_setMapLayerAttributes = function(opts){
         var dataView = GeoRefine.app.dataViews.registry[opts.id];
         var mapEditor = dataView.dataView;
-        _.each(opts.layers, function(layer){
-            var layer = mapViewUtil.getMapEditorLayers(mapEditor, {layers: [layer]}).pop();
-            layer.model.set(layer.attributes);
+        _.each(opts.layers, function(layerOpts){
+            var layer = mapViewUtil.getMapEditorLayers(mapEditor, {layers: [layerOpts]}).pop();
+            layer.model.set(layerOpts.attributes);
         });
     };
 
