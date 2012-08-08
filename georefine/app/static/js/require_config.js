@@ -128,6 +128,11 @@ var require = {
         {
             "name": "uiExtras",
             "location": ASSETS_BASEURL + "/js/jquery.ui.extras"
+        },
+
+        {
+            "name": "Menus",
+            "location": ASSETS_BASEURL + "/js/menus/src"
         }
 	]
 

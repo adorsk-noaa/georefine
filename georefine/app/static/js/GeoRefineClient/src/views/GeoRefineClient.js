@@ -51,7 +51,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 serializedState = opts.serializedState;
                 GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
                 // Set config from state.
-                GeoRefine.app.config = state.config;
+                GeoRefine.app.config = serializedState.config;
             }
 
         
@@ -72,17 +72,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			$(this.el).html(html);
             GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
             GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
-            GeoRefineViewsUtil.facetsUtil.setUpFacetCollection();
-            GeoRefineViewsUtil.summaryBarUtil.setUpSummaryBar();
+            /*
             GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
             GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
-
-            // When summaryBar size changes, update its parent container size.
-            var sbView = GeoRefine.app.summaryBar.view;
-            sbView.on('change:size', function(){
-                console.log("here, change size");
-                $(sbView.el).parent().height($(sbView.el).outerHeight());
-            });
+            */
 
             this.resize();
             this.loadState();
@@ -107,7 +100,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
         resize: function(){
-            GeoRefine.app.facetsEditor.view.resize();
+            GeoRefine.app.facetsEditor.resize();
         },
 
 
@@ -122,7 +115,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     // Setup quantity field.
                     {
                         type: 'action',
-                        handler: 'facetsFacetsEditorSetQField',
+                        handler: 'facets_facetsEditorSetQField',
                         opts: {
                             id: 'result.x:sum'
                         }
@@ -136,42 +129,39 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             // Create facet.
                             {
                                 type: 'action',
-                                handler: 'facetsCreateFacet',
+                                handler: 'facets_addFacet',
                                 opts: {
                                     fromDefinition: true,
-                                    id: 'timestep'
+                                    category: 'base',
+                                    defId: 'timestep',
+                                    facetId: 'tstep'
                                 }
                             },
                             // Initialize facet.
                             {
                                 type: 'action',
-                                handler: 'facetsInitializeFacet',
+                                handler: 'facets_initializeFacet',
                                 opts: {
-                                    id: 'timestep'
-                                }
-                            },
-                            // Connect facet.
-                            {
-                                type: 'action',
-                                handler: 'facetsConnectFacet',
-                                opts: {
-                                    id: 'timestep'
+                                    category: 'base',
+                                    id: 'tstep'
                                 }
                             },
                             // Load data.
                             {
                                 type: 'action',
-                                handler: 'facetsGetData',
+                                handler: 'facets_getData',
                                 opts: {
-                                    id: 'timestep'
+                                    category: 'base',
+                                    id: 'tstep'
                                 }
                             },
                             // Select first choice.
                             {
                                 type: 'action',
-                                handler: 'facetsSetSelection',
+                                handler: 'facets_setSelection',
                                 opts: {
-                                    id: 'timestep',
+                                    category: 'base',
+                                    id: 'tstep',
                                     index: 1
                                 }
                             },
@@ -187,17 +177,17 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             // Initialize summary bar.
                             {
                                 type: 'action',
-                                handler: 'summaryBarInitialize',
+                                handler: 'summaryBar_initialize',
                             },
                             // Connect summary bar.
                             {
                                 type: 'action',
-                                handler: 'summaryBarConnect',
+                                handler: 'summaryBar_connect',
                             },
                             // Get data for summary bar.
                             {
                                 type: 'action',
-                                handler: 'summaryBarGetData',
+                                handler: 'summaryBar_getData',
                             },
                         ]
                     },
@@ -210,45 +200,41 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             // Create facet.
                             {
                                 type: 'action',
-                                handler: 'facetsCreateFacet',
+                                handler: 'facets_addFacet',
                                 opts: {
                                     fromDefinition: true,
-                                    id: 'substrates'
+                                    category: 'primary',
+                                    defId: 'substrates',
+                                    facetId: 'initSubstrates'
                                 }
                             },
                             // Initialize facet.
                             {
                                 type: 'action',
-                                handler: 'facetsInitializeFacet',
+                                handler: 'facets_initializeFacet',
                                 opts: {
-                                    id: 'substrates'
-                                }
-                            },
-                            // Connect facet.
-                            {
-                                type: 'action',
-                                handler: 'facetsConnectFacet',
-                                opts: {
-                                    id: 'substrates'
+                                    category: 'primary',
+                                    id: 'initSubstrates'
                                 }
                             },
                             // Load data.
                             {
                                 type: 'action',
-                                handler: 'facetsGetData',
+                                handler: 'facets_getData',
                                 opts: {
-                                    id: 'substrates'
+                                    category: 'primary',
+                                    id: 'initSubstrates'
                                 }
                             }
                         ]
                     },
+                    /*
 
                     // Setup Data views.
                     {
                         type: 'actionQueue',
                         async: true,
                         actions: [
-                            /*
                             // Mapview.
                             {
                                 type: 'actionQueue',
@@ -280,7 +266,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
-                            */
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -308,6 +293,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             }
                         ]
                     }
+                    */
                 ]
             };
             var action = stateUtil.processActionQueue(actionQueue);
@@ -316,8 +302,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             // Load after quantity field state is set up.
             $.when(deferred).then(function(){
                 console.log("All Done.");
+                /*
                 var serializedState = stateUtil.serializeState();
                 console.log("serializedState is: ", serializedState);
+                */
                 /*
                 console.log("json state: ");
                 console.log(JSON.stringify(serializedState));

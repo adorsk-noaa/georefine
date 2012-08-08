@@ -5,233 +5,78 @@ define([
 	"_s",
 	"Facets",
 	"Util",
+	"./summaryBar",
 	"./requests",
 	"./filters",
 	"./functions",
 	"./format",
 	"./serialization",
-	"text!./templates/facetsEditor.html",
 		],
-function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsUtil, formatUtil, serializationUtil, facetsEditorTemplate){
-
-    // Define facets editor view.
-    var FacetsEditorView = Backbone.View.extend({
-        events: {
-            'click .title': 'toggleEditor',
-        },
-
-        initialize: function(){
-            $(this.el).addClass('facets-editor');
-
-            // Initialize quantity fields if needed.
-            this.qFields = this.model.get('quantity_fields');
-            if (! this.qFields){
-                this.qFields = new Backbone.Collection();
-                this.model.set('quantity_fields', this.qFields);
-            }
-
-            this.initialRender();
-        },
-
-        initialRender: function(){
-            // Render skeleton.
-            var html = _.template(facetsEditorTemplate, {model: this.model});
-            $(this.el).html(html);
-
-            // Setup choices.
-            var choices = [];
-            _.each(this.qFields.models, function(qFieldModel){
-                choices.push({
-                    value: qFieldModel.cid,
-                    label: qFieldModel.get('label'),
-                    info: qFieldModel.get('info')
-                });
-            });
-
-            // Render quantity field selector.
-            this.qFieldSelect = new Util.views.InfoSelectView({
-                el : $('.quantity-field-info-select', this.el),
-                model: new Backbone.Model({
-                    "choices": choices
-                })
-            });
-
-            // Do initial resize.
-            this.resize();
-        },
-
-        renderQFieldChoices: function(){
-            var choices = [];
-            _.each(GeoRefine.app.facets.qFields.models, function(model){
-                choices.push({
-                    value: model.cid,
-                    label: model.get('label'),
-                    info: model.get('info')
-                });
-            });
-        },
-
-        toggleEditor: function(){
-            var $editorContainer = $('.editor-container', this.el);
-            var $table = $('.facets-panel-table', GeoRefine.app.view.el);
-            if (! $editorContainer.hasClass('changing')){
-                this.expandContractTab({
-                    expand: ! $editorContainer.hasClass('expanded'),
-                    tab_container: $editorContainer,
-                    table: $table,
-                    dimension: 'width'
-                });
-            }
-        },
-
-        expandContractTab: function(opts){
-            var expand = opts.expand;
-            var $tc = opts.tab_container;
-            var $table = opts.table;
-            var dim = opts.dimension;
-
-            // Calculate how much to change dimension.
-            var delta = parseInt($tc.css('max' + _s.capitalize(dim)), 10) - parseInt($tc.css('min' + _s.capitalize(dim)), 10);
-            if (! expand){
-                delta = -1 * delta;
-            }
-
-            // Animate field container dimension.
-            $tc.addClass('changing');
-
-            // Toggle button text
-            var button_text = ($('button.toggle', $tc).html() == '\u25B2') ? '\u25BC' : '\u25B2';
-            $('button.toggle', $tc).html(button_text);
-
-            // Execute animations and save deferreds.
-            var deferreds = [];
-
-            // first animate the tab container.
-            var tc_dim_opts = {};
-            tc_dim_opts[dim] = parseInt($tc.css(dim),10) + delta;
-            var tcDeferred = $tc.animate(
-                    tc_dim_opts,
-                    {
-                        complete: function(){
-                            $tc.removeClass('changing');
-
-                            if (expand){
-                                $tc.addClass('expanded')
-                            }
-                            else{
-                                $tc.removeClass('expanded');
-                                Util.util.fillParent($table);
-                            }
-                        }
-                    }
-                    ).promise();
-            deferreds.push(tcDeferred);
-
-            // Animate cell dimension.
-            var parentDeferred = $tc.parent().animate(tc_dim_opts).promise();
-            deferreds.push(parentDeferred);
-
-            // Animate table dimension.
-            var table_dim_opts = {};
-            table_dim_opts[dim] = parseInt($table.css(dim),10) + delta;
-            var tableDeferred = $table.animate(table_dim_opts).promise();
-
-            // Return combined deferred.
-            return $.when.apply($, deferreds);
-        },
-
-        resizeVerticalTab: function($vt){
-            var $rc = $('.rotate-container', $vt);
-            $rc.css('width', $rc.parent().height());
-            $rc.css('height', $rc.parent().width());
-        },
-
-        resize: function(){
-            var $table = $('.facets-editor-table', this.el);
-            Util.util.fillParent($table);
-            this.resizeVerticalTab($('.editor-tab', this.el)); 
-        },
-
-    });
-
+function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filtersUtil, functionsUtil, formatUtil, serializationUtil){
 
     var setUpFacetsEditor = function(){
 
-        // Load facets editor model from state. 
-        var facetsEditorModel = GeoRefine.app.state.facetsEditor;
+        // Get facets editor model from state, or create a new model. 
+        var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
-        var facetsEditorView = new FacetsEditorView({
+        // Create facets editor view.
+        var facetsEditorView = new Facets.views.FacetsEditorView({
             el: $('.facets-editor', GeoRefine.app.view.el),
             model: facetsEditorModel,
         });
 
-        // Add a shortcut the facetsEditor in the app.
-        GeoRefine.app.facetsEditor = {
-            view: facetsEditorView,
-            model: facetsEditorModel
-        };
+        // Add references to the the facetsEditor and summaryBar in the app variable.
+        GeoRefine.app.facetsEditor = facetsEditorView;
 
-    };
+        GeoRefine.app.summaryBar = facetsEditorView.subViews.summaryBar;
 
+        // Decorate summary bar.
+        summaryBarUtil.decorateSummaryBar();
 
-    // Create facet collection container.
-    var setUpFacetCollection = function(){
-		var $facets = $(_s.sprintf('#%s-facets', GeoRefine.app.model.cid));
-        var model = new Backbone.Collection();
-        var view = new Facets.views.FacetCollectionView({
-            el: $facets,
-            model: model
-        });
+        // Setup initial facets.
+        _.each(['primary', 'base'], function(facetCategory){
+            var facetCollectionView = facetsEditorView.subViews[facetCategory + "_facets"];
+            if (facetCollectionView){
+                // Decorate and connect any initial facets.
+                _.each(facetCollectionView.registry, function(facetView, id){
+                    decorateFacet(facetView);
+                    connectFacet(facetView);
+                });
 
-        // Assign to global facet collection.
-        GeoRefine.app.facets.facetCollection = {
-            model: model,
-            view: view
-        };
+                // Decorate and connect newly added facets.
+                facetCollectionView.on('addFacetView', function(view){
+                    decorateFacet(view);
+                    connectFacet(view);
+                });
 
-        // Initialize registry.
-        GeoRefine.app.facets.registry = {};
+                // Disconnect facets when removed.
+                facetCollectionView.off('removeFacetView', function(view){
+                    disconnectFacet(view)
+                });
 
-    };
-
-
-
-    // Create a list facet.
-    var createNumericFacet = function(opts){
-
-        // If opts had selection or range, 
-        // convert to model.
-        _.each(['selection', 'range'], function(attr){
-            if (opts[attr]){
-                opts[attr] = new Backbone.Model(_.extend({
-                    min: null,
-                    max: null
-                }, opts[attr]));
             }
         });
 
-        // Create model and view.
-        var model = new Backbone.Model(_.extend({
-            filtered_histogram: [],
-            base_histogram: [],
-            selection: new Backbone.Model({
-                min: null,
-                max: null
-            }),
-            range: new Backbone.Model({
-                min: null,
-                max: null
-            })
-        }, opts));
+        // Initialize w/ getData calls???
+        // @TODO: later, for the case of when
+        // data in the db would be dynamic.
 
-        var view = new Facets.views.NumericFacetView({
-            model: model
-        })
+
+    };
+
+    // Define functions for decorating facets.
+    var facetDecorators = {};
+
+    // Numeric facet decorator.
+    facetDecorators['numeric'] = function(numericFacet){
+
+        var model = numericFacet.model;
 
         // Define getData function for model.
-        model.getData = function(){
-            var opts = opts || {updateRange: false};
+        model.getData = function(opts){
+            // 'this' is a numeric facet model.
             var _this = this;
+            var opts = opts || {updateRange: false};
 
             // Shortcuts.
             var qfield  = _this.get('quantity_field');
@@ -348,10 +193,10 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         };
 
 
-        // Define the formatFilters function for the view.
-        view.formatFilters = function(selection){
-            var _this = this;
-            var filter_entity = _this.model.get('filter_entity');
+        // Define the formatFilters function for facet.
+        numericFacet.formatFilters = function(selection){
+            // 'this' is a numeric facet view.
+            var filter_entity = this.model.get('filter_entity');
             var formatted_filters = [];
             _.each(['min', 'max'], function(minmax){
                 var val = parseFloat(selection[minmax]);
@@ -364,29 +209,21 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         };
 
         // Define formatter for the view.
-        view.formatter = function(format, value){
+        numericFacet.formatter = function(format, value){
             return formatUtil.GeoRefineFormatter(format, value);
-        };
-
-        return {
-            id: opts.id,
-            model: model,
-            view: view
         };
         
     };
 
-    // Create a time slider facet.
-    var createTimeSliderFacet = function(opts){
+    // Time slider facet decorator.
+    facetDecorators['timeSlider'] = function(timeSliderFacet){
 
-        // Create model and view.
-        var model = new Backbone.Model(_.extend({}, opts));
-        var view = new Facets.views.TimeSliderFacetView({
-            model: model
-        })
+        // Shortcut to the model.
+        var model = timeSliderFacet.model;
 
         // Define getData function for model.
         model.getData = function(){
+            // 'this' is a timeSliderFacet model.
             var _this = this;
             
             // Shorcut.
@@ -434,35 +271,24 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         };
 
         // Define formatFilters function for the view.
-        view.formatFilters = function(selection){
+        timeSliderFacet.formatFilters = function(selection){
             var _this = this;
             var formatted_filters = [
                 [_this.model.get('filter_entity'), '==', selection]
                 ];
             return formatted_filters;
         };
-
-        return {
-            id: opts.id,
-            model: model,
-            view: view
-        };
-        
     };
 
-    // Create a list facet.
-    var createListFacet = function(opts){
+    // List facet decorator.
+    facetDecorators['list'] = function(listFacet){
 
-        // Create model and view.
-        var model = new Backbone.Model(_.extend({
-            choices: []
-        }, opts));
-        var view = new Facets.views.ListFacetView({
-            model: model
-        })
+        // Shortcut to model.
+        var model = listFacet.model;
 
         // Define getData function for model.
         model.getData = function(){
+            // 'this' is a list facet model.
             var _this = this;
             var qfield = this.get('quantity_field');
             if (! qfield){
@@ -507,22 +333,22 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         };
 
         // Define the formatFilters function for the view.
-        view.formatFilters = function(selection){
-            var _this = this;
+        listFacet.formatFilters = function(selection){
+            // 'this' is a listFacetView.
             var formatted_filters = [];
             if (selection.length > 0){
                 formatted_filters = [
-                    [_this.model.get('filter_entity'), 'in', selection]
+                    [this.model.get('filter_entity'), 'in', selection]
                 ];
             }
             return formatted_filters;
         };
 
         // Define formatChoiceCountLabels function for the view.
-        view.formatChoiceCountLabels = function(choices){
-            var _this = this;
+        listFacet.formatChoiceCountLabels = function(choices){
+            // 'this' is a listFacetView.
             var labels = [];
-            var count_entity = _this.model.get('count_entity');
+            var count_entity = this.model.get('count_entity');
             _.each(choices, function(choice){
                 var label = "";
                 if (count_entity && count_entity.format){
@@ -535,35 +361,17 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
             });
             return labels;
         };
-
-        return {
-            id: opts.id,
-            model: model,
-            view: view
-        };
-        
     };
 
 
-    // Create a facet from the given options.
-    // This is a dispatcher for type-specific functions.
-    var createFacet = function(opts){
+    // Decorate a facet.
+    // This is a dispatcher for type-specific decorators.
+    var decorateFacet = function(facet){
 
-        // Create facet models and views.
-        var facet = null;
-        switch (opts.type){
-            case 'list':
-                facet = createListFacet(opts); 
-                break;
-            case 'numeric':
-                facet = createNumericFacet(opts); 
-                break;
-            case 'timeSlider':
-                facet = createTimeSliderFacet(opts); 
-                break;
+        var decorator = facetDecorators[facet.model.get('type')];
+        if (decorator){
+            decorator(facet);
         }
-
-        return facet;
     };
 
     var updateFacetModelPrimaryFilters = function(facetModel, opts){
@@ -580,57 +388,57 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
     };
 
     // Setup event chains for a facet.
-    var connectFacet = function(facet, opts){
+    var connectFacet = function(facetView, opts){
 
         // Setup the facet's primary filter groups.
-        _.each(facet.model.get('primary_filter_groups'), function(filterGroupId, key){
+        _.each(facetView.model.get('primary_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
-            filterGroup.add(facet.model);
+            filterGroup.add(facetView.model);
             filterGroup.on('change:filters', function(){
                 updateFacetModelPrimaryFilters(this);
-            }, facet.model);
+            }, facetView.model);
             // Remove callback when model is removed.
-            facet.model.on('remove', function(){
+            facetView.model.on('remove', function(){
                 filterGroup.off(null, null, this);
-            }, facet.model);
+            }, facetView.model);
         });
 
         // Setup the facet's base filter group config.
-        _.each(facet.model.get('base_filter_groups'), function(filterGroupId, key){
+        _.each(facetView.model.get('base_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filterGroup.on('change:filters', function(){
                 filtersUtil.updateModelFilters(this, 'base');
-            }, facet.model);
+            }, facetView.model);
             // Remove callback when model is removed.
-            facet.model.on('remove', function(){
+            facetView.model.on('remove', function(){
                 filterGroup.off(null, null, this);
-            }, facet.model);
+            }, facetView.model);
         });
 
         // Listen for quantity field changes.
-        var qFieldSelect = GeoRefine.app.facetsEditor.view.qFieldSelect;
+        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
         qFieldSelect.model.on('change:selection', function(){
             var fieldCid = qFieldSelect.model.get('selection');
             var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(fieldCid);
             this.set('quantity_field', selectedField);
-        }, facet.model);
+        }, facetView.model);
         // Remove callback when model is removed.
-        facet.model.on('remove', function(){
+        facetView.model.on('remove', function(){
             qFieldSelect.model.off(null, null, this);
-        }, facet.model);
+        }, facetView.model);
 
         // Update totals when the summary bar totals change.
         GeoRefine.app.summaryBar.model.on('change:data', function(){
             var data = GeoRefine.app.summaryBar.model.get('data');
             this.set('total', data.total);
-        }, facet.model);
+        }, facetView.model);
         // Remove callback when model is removed.
-        facet.model.on('remove', function(){
+        facetView.model.on('remove', function(){
             GeoRefine.app.summaryBar.model.off(null, null, this);
-        }, facet.model);
+        }, facetView.model);
 
         // Have the facet update when its query or base filters or count entities change.
-        if (facet.model.getData){
+        if (facetView.model.getData){
 
             // helper function to get a timeout getData function.
             var _timeoutGetData = function(changes){
@@ -639,17 +447,17 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
                     var getDataOpts = {};
                     // For numeric facet, add update range flag
                     // for base_filter changes.
-                    if (facet.model.get('type') == 'numeric' 
+                    if (facetView.model.get('type') == 'numeric' 
                         && changes && changes.changes 
                         && changes.changes['base_filters']){
                             getDataOpts.updateRange = true;
                         }
-                    facet.model.getData(getDataOpts);
-                    facet.model.set('_fetch_timeout', null);
+                    facetView.model.getData(getDataOpts);
+                    facetView.model.set('_fetch_timeout', null);
                 }, delay);
             };
 
-            facet.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
+            facetView.model.on('change:primary_filters change:base_filters change:quantity_field', function(){
 
                 var changes = arguments[2];
                 // We delay the get data call a little, in case multiple things are changing.
@@ -661,40 +469,63 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
                 }
                 // Start a new fetch.
                 this.set('_fetch_timeout', _timeoutGetData(changes));
-            }, facet.model);
+            }, facetView.model);
         }
 
     };
 
-    // Remove a facet.
-
+    // Helper function to get facetView.
+    var getFacetViewFromEditor = function(opts){
+        var facetCollection = GeoRefine.app.facetsEditor.subViews[opts.category + '_facets'];
+        return facetCollection.registry[opts.id];
+    };
 
     // Define action handlers for state loading.
     var actionHandlers = {};
 
-    // createFacet action handler.
-    actionHandlers.facetsCreateFacet = function(opts){
+    // addFacet action handler.
+    actionHandlers.facets_addFacet = function(opts){
+        // Shortcut to facetsEditor.
+        var facetsEditor = GeoRefine.app.facetsEditor;
+
         if (opts.fromDefinition){
-            // Get definition.
-            var facetDef = GeoRefine.config.facets.definitions[opts.id];
-            // Create facet.
-            var facet = createFacet(facetDef);
-            // Add to registry.
-            GeoRefine.app.facets.registry[opts.id] = facet;
-            // Add to facet collection.
-            GeoRefine.app.facets.facetCollection.view.addFacetView(facet.view);
-            // Connect to filters.
+            // Get definition from predefined facets.
+            var facetDef = null;
+            var predefinedFacets = facetsEditor.model.get('predefined_facets');
+            if (predefinedFacets){
+                facetDefModel = predefinedFacets.get(opts.defId);
+                if (facetDefModel){
+                    facetDef = facetDefModel.get('facetDef');
+                }
+            }
+
+            if (facetDef){
+
+                // Set id on facetDef.
+                facetDef.id = opts.facetId;
+
+                // Create model from definition.
+                var facetModel = facetsEditor.createFacetModelFromDef(facetDef);
+
+                // Add to primary facet collection.
+                // This will trigger handlers (see above)
+                // to decorate and connect the facet.
+                facetsEditor.model.get(opts.category + '_facets').add(facetModel);
+            }
         }
     };
 
     // Initialize a facet.  Sets filters, qfield.
-    actionHandlers.facetsInitializeFacet = function(opts){
-        // Get facet.
-        var facet = GeoRefine.app.facets.registry[opts.id];
+    actionHandlers.facets_initializeFacet = function(opts){
+        // Shortcut to facetsEditor.
+        var facetsEditor = GeoRefine.app.facetsEditor;
+
+        // Get facet model.
+        var facet = getFacetViewFromEditor(opts);
 
         // Set quantity field.
-        var qfield_cid = GeoRefine.app.facetsEditor.view.qFieldSelect.model.get('selection');
-        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
+        var qfield_cid = facetsEditor.qFieldSelect.model.get('selection');
+        var qfield = facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
         facet.model.set({quantity_field: qfield }, {silent: true});
 
         // Set filters.
@@ -714,16 +545,17 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
     };
 
     // Connect facet.
-    actionHandlers.facetsConnectFacet = function(opts){
+    actionHandlers.facets_connectFacet = function(opts){
         // Get facet.
         var facet = GeoRefine.app.facets.registry[opts.id];
         connectFacet(facet, opts);
     };
 
     // getData action handler.
-    actionHandlers.facetsGetData = function(opts){
+    actionHandlers.facets_getData = function(opts){
         // Get facet.
-        var facet = GeoRefine.app.facets.registry[opts.id];
+        var facet = getFacetViewFromEditor(opts);
+
         // Call get data.
         if (facet.model.getData){
             return facet.model.getData(opts);
@@ -731,13 +563,12 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
     };
 
     // Set Selection action handler.
-    actionHandlers.facetsSetSelection = function(opts){
+    actionHandlers.facets_setSelection = function(opts){
         // Get facet.
-        var facet = GeoRefine.app.facets.registry[opts.id];
+        var facet = getFacetViewFromEditor(opts);
 
         // Set facet selection.
-        var facet_type = facet.model.get('type');
-        if (facet_type == 'timeSlider'){
+        if (facet.model.get('type') == 'timeSlider'){
             if (opts.index != null){
                 var choice = facet.model.get('choices')[opts.index];
                 facet.model.set('selection', choice.id);
@@ -746,10 +577,10 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
     };
 
     // setQField action handler.
-    actionHandlers.facetsFacetsEditorSetQField = function(opts){
+    actionHandlers.facets_facetsEditorSetQField = function(opts){
         var facetsEditor = GeoRefine.app.facetsEditor;
         var qfield = facetsEditor.model.get('quantity_fields').get(opts.id);
-        facetsEditor.view.qFieldSelect.model.set('selection', qfield.cid);
+        facetsEditor.qFieldSelect.model.set('selection', qfield.cid);
     };
 
     // Define alterState hook for saving facetEditor state.
@@ -780,17 +611,23 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
         }
 
         // Create model for facets editor.
-        var facetsEditorModel = new Backbone.Model({
+        var facetsEditorModel = new Backbone.Model();
+
+        // Make collections and models for facet editor sub-collections.
+        _.each(['quantity_fields', 'base_facets', 'primary_facets', 'predefined_facets'], function(attr){
+            var collection = new Backbone.Collection();
+            _.each(configState.facetsEditor[attr], function(modelDef){
+                var model = new Backbone.Model(_.extend({}, modelDef));
+                collection.add(model);
+            });
+            facetsEditorModel.set(attr, collection);
         });
 
-        // Create quantity field collection and add to model.
-        var qFields = new Backbone.Collection();
-        facetsEditorModel.set('quantity_fields', qFields);
-
-        // Make models for quantity fields and them to the editor.
-        _.each(configState.facetsEditor.quantity_fields, function(qFieldDef){
-            var qFieldModel = new Backbone.Model(_.extend({}, qFieldDef));
-            qFields.add(qFieldModel);
+        // Make sub-models.
+        _.each(['summary_bar'], function(attr){
+            var modelDef = configState.facetsEditor[attr];
+            var model = new Backbone.Model(_.extend({}, modelDef));
+            facetsEditorModel.set(attr, model);
         });
 
         // Set editor in state object.
@@ -800,8 +637,6 @@ function($, Backbone, _, _s, Facets, Util, requestsUtil, filtersUtil, functionsU
 
     // Objects to expose.
     var facetsUtil = {
-        createFacet: createFacet,
-        setUpFacetCollection: setUpFacetCollection,
         setUpFacetsEditor: setUpFacetsEditor,
         connectFacet: connectFacet,
         actionHandlers: actionHandlers,

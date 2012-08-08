@@ -11,10 +11,10 @@ define([
 		],
 function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serializationUtil){
 
-    setUpSummaryBar = function(){
-        
-        var model = GeoRefine.app.state.summaryBar;
+    decorateSummaryBar = function(){
 
+        var model = GeoRefine.app.summaryBar.model;
+        
         // Define getData function.
         model.getData = function(){
             var _this = this;
@@ -83,57 +83,10 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
             return deferred;
         };
 
-        // Define summary bar class.
-        var SummaryBarView = Backbone.View.extend({
-            initialize: function(){
-                $(this.el).html('<div class="inner"><div class="text"><div>Currently selected <span class="field"></span>:<div class="selected"></div><div class="total"></div></div></div>');
-                // Trigger update when model data changes.
-                this.model.on('change:data', this.onDataChange, this);
-            },
+        // Set formatter.
+        GeoRefine.app.summaryBar.formatter = formatUtil.GeoRefineFormatter;
 
-            onDataChange: function(){
-                var format = this.model.get('quantity_field').get('format') || "%s";
-                var data = this.model.get('data');
-
-                // Do nothing if data is incomplete.
-                if (data.selected == null || data.total == null){
-                    return;
-                }
-
-                var formatter = formatUtil.GeoRefineFormatter;
-                var formatted_selected = formatter(format, data.selected);
-                var formatted_total = formatter(format, data.total);
-                var percentage ;
-                if (data.total == 0 && data.selected == 0){
-                    percentage = 100.0;
-                }
-                else{
-                    percentage = 100.0 * data.selected/data.total;
-                }
-
-                $(".text .field", this.el).html(_s.sprintf("'%s'", this.model.get('quantity_field').get('label')));
-                $(".text .selected", this.el).html(formatted_selected);
-                $(".text .total", this.el).html(_s.sprintf('(%.1f%% of %s total)', percentage, formatted_total));
-
-                this.trigger('change:size');
-
-            }
-        });
-
-        var view = new SummaryBarView({
-            el: $(".facets-panel .summary-bar", GeoRefine.app.view.el),
-            model: model
-        });
-
-        // Assign to global namespace variable.
-        GeoRefine.app.summaryBar = {
-            model: model,
-            view: view
-        };
-
-        return GeoRefine.app.summaryBar;
     };
-
 
     var connectSummaryBar = function(opts){
         // Listen for filter changes.
@@ -154,7 +107,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         });
 
         // Listen for quantity field changes.
-        var qFieldSelect = GeoRefine.app.facetsEditor.view.qFieldSelect;
+        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
         qFieldSelect.model.on('change:selection', function(){
             var fieldCid = qFieldSelect.model.get('selection');
             var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(fieldCid);
@@ -177,10 +130,10 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
     var actionHandlers =  {};
 
     // Initialize summary bar.  Sets filters, qfield.
-    actionHandlers.summaryBarInitialize = function(opts){
+    actionHandlers.summaryBar_initialize = function(opts){
 
         // Set quantity field.
-        var qfield_cid = GeoRefine.app.facetsEditor.view.qFieldSelect.model.get('selection');
+        var qfield_cid = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
         var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
 
         GeoRefine.app.summaryBar.model.set({quantity_field: qfield }, {silent: true});
@@ -192,12 +145,12 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
     };
 
     // Connect summaryBar.
-    actionHandlers.summaryBarConnect = function(opts){
+    actionHandlers.summaryBar_connect = function(opts){
         connectSummaryBar(opts);
     };
 
     // getData action handler.
-    actionHandlers.summaryBarGetData = function(opts){
+    actionHandlers.summaryBar_getData = function(opts){
         // Call get data.
         if (GeoRefine.app.summaryBar.model.getData){
             return GeoRefine.app.summaryBar.model.getData(opts);
@@ -222,7 +175,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
 
     // Objects to expose.
     var summaryBarUtil = {
-        setUpSummaryBar: setUpSummaryBar,
+        decorateSummaryBar: decorateSummaryBar,
         actionHandlers: actionHandlers,
         alterStateHooks: [
             summaryBar_alterState
