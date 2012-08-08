@@ -37,16 +37,11 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         _.each(['primary', 'base'], function(facetCategory){
             var facetCollectionView = facetsEditorView.subViews[facetCategory + "_facets"];
             if (facetCollectionView){
-                // Decorate and connect any initial facets.
-                _.each(facetCollectionView.registry, function(facetView, id){
-                    decorateFacet(facetView);
-                    connectFacet(facetView);
-                });
 
-                // Decorate and connect newly added facets.
-                facetCollectionView.on('addFacetView', function(view){
-                    decorateFacet(view);
-                    connectFacet(view);
+                // Initialize and connect any initial facets.
+                _.each(facetCollectionView.registry, function(facetView, id){
+                    initializeFacet(facetView);
+                    connectFacet(facetView);
                 });
 
                 // Disconnect facets when removed.
@@ -57,11 +52,29 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
             }
         });
 
-        // Initialize w/ getData calls???
-        // @TODO: later, for the case of when
-        // data in the db would be dynamic.
+    };
 
+    // Define postInitialize hook.
+    var facetsEditor_postInitialize = function(){
 
+        // For each facet category...
+        _.each(['primary', 'base'], function(facetCategory){
+            var facetCollectionView = GeoRefine.app.facetsEditor.subViews[facetCategory + "_facets"];
+            if (facetCollectionView){
+                // Decorate, connect, and initialize newly created facets.
+                facetCollectionView.on('addFacetView', function(view){
+                    initializeFacet(view);
+                    connectFacet(view);
+                    if(view.model.getData){
+                        var opts = {};
+                        if (view.model.get('type') == 'numeric'){
+                            opts.updateRange = true;
+                        }
+                        view.model.getData(opts);
+                    }
+                });
+            }
+        });
     };
 
     // Define functions for decorating facets.
@@ -140,7 +153,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                     var choices = [];
                     _.each(results['keyed_results'], function(result){
                         var bucketLabel = result['label'];
-                        var bminmax = functionsUtil.parseBucketLabelMax(bucketLabel);
+                        var bminmax = functionsUtil.parseBucketLabel(bucketLabel);
 
                         if (bminmax.min < range_min || range_min == null){
                             range_min = bminmax.min;
@@ -150,9 +163,10 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                            range_max = bminmax.max; 
                         }
 
+
                         if (result['data']['base']){
                             var base_bucket = {
-                                bucket: bucket_label,
+                                bucket: bucketLabel,
                                 min: bminmax.min,
                                 max: bminmax.max,
                                 count: result['data']['base'][count_entity['ID']]
@@ -174,17 +188,18 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                     base_histogram = _.sortBy(base_histogram, function(b){return b.count});
                     primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
 
-                    _this.set({
-                        base_histogram: base_histogram,
-                        filtered_histogram: primary_histogram,
-                    });
-
                     if (opts.updateRange){
                         _this.get('range').set({
                             min: range_min,
                             max: range_max
                         });
                     }
+
+                    _this.set({
+                        base_histogram: base_histogram,
+                        filtered_histogram: primary_histogram,
+                    });
+
 
                 }
             });
@@ -474,6 +489,32 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
 
     };
 
+    // Initialize a facet.  Sets filters, qfield.
+    var initializeFacet = function(facet){
+        // Decorate the facet.
+        decorateFacet(facet);
+
+        // Set quantity field.
+        var qfield_cid = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
+        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
+        facet.model.set({quantity_field: qfield }, {silent: true});
+
+        // Set filters.
+        updateFacetModelPrimaryFilters(facet.model, {silent: true});
+        filtersUtil.updateModelFilters(facet.model, 'base', {silent: true});
+
+        // Set totals.
+        if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){
+            var data = GeoRefine.app.summaryBar.model.get('data');
+            if (data){
+                var total = parseFloat(data.total);
+                if (! isNaN(total)){
+                    facet.model.set('total', total);
+                }
+            }
+        }
+    };
+
     // Helper function to get facetView.
     var getFacetViewFromEditor = function(opts){
         var facetCollection = GeoRefine.app.facetsEditor.subViews[opts.category + '_facets'];
@@ -515,40 +556,16 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         }
     };
 
-    // Initialize a facet.  Sets filters, qfield.
+    // Initialize a facet.  Decorates, sets filters, qfield.
     actionHandlers.facets_initializeFacet = function(opts){
-        // Shortcut to facetsEditor.
-        var facetsEditor = GeoRefine.app.facetsEditor;
-
-        // Get facet model.
         var facet = getFacetViewFromEditor(opts);
-
-        // Set quantity field.
-        var qfield_cid = facetsEditor.qFieldSelect.model.get('selection');
-        var qfield = facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
-        facet.model.set({quantity_field: qfield }, {silent: true});
-
-        // Set filters.
-        updateFacetModelPrimaryFilters(facet.model, {silent: true});
-        filtersUtil.updateModelFilters(facet.model, 'base', {silent: true});
-
-        // Set totals.
-        if (GeoRefine.app.summaryBar && GeoRefine.app.summaryBar.model){
-            var data = GeoRefine.app.summaryBar.model.get('data');
-            if (data){
-                var total = parseFloat(data.total);
-                if (! isNaN(total)){
-                    facet.model.set('total', total);
-                }
-            }
-        }
+        initializeFacet(facet); 
     };
 
-    // Connect facet.
+    // Connect a facet.  Sets filters, qfield.
     actionHandlers.facets_connectFacet = function(opts){
-        // Get facet.
-        var facet = GeoRefine.app.facets.registry[opts.id];
-        connectFacet(facet, opts);
+        var facet = getFacetViewFromEditor(opts);
+        connectFacet(facet); 
     };
 
     // getData action handler.
@@ -640,12 +657,18 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         setUpFacetsEditor: setUpFacetsEditor,
         connectFacet: connectFacet,
         actionHandlers: actionHandlers,
+
         alterStateHooks: [
             facetEditor_alterState,
             facets_alterState
         ],
+
         deserializeConfigStateHooks: [
             facetsEditor_deserializeConfigState
+        ],
+
+        postInitializeHooks: [
+            facetsEditor_postInitialize
         ]
     };
     return facetsUtil;

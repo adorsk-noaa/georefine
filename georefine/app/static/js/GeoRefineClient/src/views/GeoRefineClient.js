@@ -78,7 +78,17 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             */
 
             this.resize();
-            this.loadState();
+            var stateDeferred = this.loadState();
+
+            stateDeferred.done(function(){
+                GeoRefine.app.initialized = true;
+                // Call post initialize hooks.
+                _.each([GeoRefineViewsUtil.facetsUtil], function(module){
+                    _.each(module.postInitializeHooks, function(hook){
+                        hook();
+                    });
+                });
+            });
 
 			return this;
 		},
@@ -141,6 +151,15 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             {
                                 type: 'action',
                                 handler: 'facets_initializeFacet',
+                                opts: {
+                                    category: 'base',
+                                    id: 'tstep'
+                                }
+                            },
+                            // Connect facet.
+                            {
+                                type: 'action',
+                                handler: 'facets_connectFacet',
                                 opts: {
                                     category: 'base',
                                     id: 'tstep'
@@ -212,6 +231,15 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             {
                                 type: 'action',
                                 handler: 'facets_initializeFacet',
+                                opts: {
+                                    category: 'primary',
+                                    id: 'initSubstrates'
+                                }
+                            },
+                            // Connect facet.
+                            {
+                                type: 'action',
+                                handler: 'facets_connectFacet',
                                 opts: {
                                     category: 'primary',
                                     id: 'initSubstrates'
@@ -297,10 +325,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 ]
             };
             var action = stateUtil.processActionQueue(actionQueue);
-            var deferred = action();
 
-            // Load after quantity field state is set up.
-            $.when(deferred).then(function(){
+            var deferred = $.when(action());
+            
+            deferred.then(function(){
+                // Set initialized state.
                 console.log("All Done.");
                 /*
                 var serializedState = stateUtil.serializeState();
@@ -311,6 +340,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 console.log(JSON.stringify(serializedState));
                 */
             });
+
+            return deferred;
         },
 
     });
