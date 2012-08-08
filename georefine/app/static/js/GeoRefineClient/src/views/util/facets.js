@@ -45,7 +45,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                 });
 
                 // Disconnect facets when removed.
-                facetCollectionView.off('removeFacetView', function(view){
+                facetCollectionView.on('removeFacetView', function(view){
                     disconnectFacet(view)
                 });
 
@@ -487,6 +487,35 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
             }, facetView.model);
         }
 
+    };
+
+
+    // Disconnect a facet.
+    var disconnectFacet = function(facet){
+        console.log("disconnecting");
+
+        // Remove qfield callback.
+        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
+        qFieldSelect.model.off(null, null, facet.model);
+
+        // Remove summaryBar callback.
+        GeoRefine.app.summaryBar.model.off(null, null, facet.model);
+
+        // For each filter group...
+        _.each(['base', 'primary'], function(filterGroupCategory){
+            _.each(facet.model.get(filterGroupCategory + '_filter_groups'), function(filterGroupId, key){
+                var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
+
+                // Remove callback.
+                filterGroup.off(null, null, facet.model);
+
+                // Remove from group.
+                filterGroup.remove(facet.model);
+
+                // Trigger change in group filters.
+                filterGroup.trigger('change:filters');
+            });
+        });
     };
 
     // Initialize a facet.  Sets filters, qfield.
