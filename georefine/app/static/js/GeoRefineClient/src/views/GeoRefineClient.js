@@ -72,10 +72,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 			$(this.el).html(html);
             GeoRefineViewsUtil.filtersUtil.setUpFilterGroups();
             GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
-            /*
             GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
             GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
-            */
 
             this.resize();
             var stateDeferred = this.loadState();
@@ -256,7 +254,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             }
                         ]
                     },
-                    /*
 
                     // Setup Data views.
                     {
@@ -321,7 +318,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             }
                         ]
                     }
-                    */
                 ]
             };
             var action = stateUtil.processActionQueue(actionQueue);
