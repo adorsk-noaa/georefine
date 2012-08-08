@@ -71,8 +71,9 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                     var results = data.results;
                     var count_entity = qfield.get('outer_query')['SELECT'][0];
 
-                    var selected = results['totals']['selected'][0][count_entity['ID']];
-                    var total = results['totals']['total'][0][count_entity['ID']];
+                    var selected = results['totals']['selected'][0][count_entity['ID']] || 0.0;
+                    var total = results['totals']['total'][0][count_entity['ID']] || 0.0;
+
                     model.set('data', {
                         "selected": selected,
                         "total": total
