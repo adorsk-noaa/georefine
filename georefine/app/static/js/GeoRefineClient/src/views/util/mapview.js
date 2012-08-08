@@ -55,6 +55,24 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         getLayerConnector(layer, false)(layer);
     };
 
+    // Connect/disconnect a map editor.
+    var connectMapEditor = function(mapEditor){
+        // Connect enabled layers.
+        _.each(mapEditor.mapView.layerRegistry, function(layer){
+            if (! layer.model.get('disabled')){
+                connectLayer(layer);
+            }
+        });
+        
+    };
+
+    var disconnectMapEditor = function(mapEditor){
+        // Disconnect layers.
+        _.each(mapEditor.mapView.layerRegistry, function(layer){
+            disconnectLayer(layer);
+        });
+    };
+
 
 
     // This function will be used by local data layers to set their
@@ -142,10 +160,10 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
             layer.model.set('visible', ! layer.model.get('disabled'));
             // Connect or disconnect layer.
             if (layer.model.get('disabled')){
-                disconnectLayer(layer.model);
+                disconnectLayer(layer);
             }
             else{
-                connectLayer(layer.model);
+                connectLayer(layer);
             }
         };
         layer.model.on('change:disabled', function(){
@@ -161,7 +179,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
         // Listen for filter changes.
         _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = mapConfig[filterCategory + "_filter_groups"];
+            var groupIds = layer.model.get(filterCategory + "_filter_groups");
             _.each(groupIds, function(groupId){
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filterGroup.on('change:filters', function(){
@@ -224,7 +242,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         layerDecorators['default'](layer);
 
         // Set service url.
-        var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, procLayer.workspace);
+        var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, layer.model.get('workspace'));
         layer.model.set('service_url', service_url);
     };
 
@@ -266,7 +284,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
     // Decorate a map editor.
     var decorateMapEditor = function(mapEditor){
         // Decorate the map layers.
-        _.each(mapEditor.mapView.layer_views, function(layer){
+        _.each(mapEditor.mapView.layerRegistry, function(layer){
             decorateLayer(layer);
         });
     };
@@ -276,7 +294,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         decorateMapEditor(mapEditor);
 
         // Initialize layers (if enabled).
-        _.each(mapEditor.mapView.layer_views, function(layer){
+        _.each(mapEditor.mapView.layerRegistry, function(layer){
             if (! layer.model.get('disabled')){
                 initializeLayer(layer);
             }
@@ -396,20 +414,23 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         return layerModel;
     };
 
-    var getMapEditorLayerModels = function(mapEditor, opts){
-        var layerModels = [];
+    var getMapEditorLayers = function(mapEditor, opts){
+        var layers = [];
         _.each(opts.layers, function(layer){
-            var layerModel = mapEditor.view.mapView.layers.get(layer.id);
-            layerModels.push(layerModel);
+            var layer = mapEditor.mapView.layerRegistry.get(layer.id);
+            layers.push(layer);
         });
-        return layerModels;
+        return layer;
     };
 
     // Objects to expose.
     var mapViewUtil = {
         createMapEditor: createMapEditor,
         createMapEditorModel: createMapEditorModel,
-        getMapEditorLayerModels: getMapEditorLayerModels
+        initializeMapEditor: initializeMapEditor,
+        connectMapEditor: connectMapEditor,
+        connectMapEditor: connectMapEditor,
+        getMapEditorLayers: getMapEditorLayers
     };
     return mapViewUtil;
 });

@@ -55,6 +55,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     var initializeDataView = function(dataView){
         var initializer = dataViewInitializers[dataView.model.get('type')];
         if (initializer){
+            console.log("here")
             initializer(dataView);
         }
     };
@@ -78,6 +79,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         }
     };
     var connectDataView = function(dataView){
+        console.log("connecting");
         connect = getDataViewConnector(dataView, true);
         if (connect){
             connect(dataView);
@@ -254,8 +256,8 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         var dataView = GeoRefine.app.dataViews.registry[opts.id];
         var mapEditor = dataView.dataView;
         _.each(opts.layers, function(layer){
-            var layerModel = mapViewUtil.getMapEditorLayerModels(mapEditor, {layers: [layer]}).pop();
-            layerModel.set(layer.attributes);
+            var layer = mapViewUtil.getMapEditorLayers(mapEditor, {layers: [layer]}).pop();
+            layer.model.set(layer.attributes);
         });
     };
 
