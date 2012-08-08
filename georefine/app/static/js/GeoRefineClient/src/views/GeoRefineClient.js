@@ -268,15 +268,21 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     // Create map.
                                     {
                                         type: 'action',
-                                        handler: 'dataViewsCreateDataView',
+                                        handler: 'dataViews_createDataView',
                                         opts: {
                                             id: 'initialMap',
-                                            type: 'map',
+                                            dataView: {
+                                                type: 'map'
+                                            },
+                                            window: {
+                                                title: "Map"
+                                            }
                                         }
                                     },
+                                /*
                                     {
                                         type: 'action',
-                                        handler: 'dataViewsMapSetLayerAttributes',
+                                        handler: 'dataViews_setMapLayerAttributes',
                                         opts: {
                                             id: 'initialMap',
                                             layers: [
@@ -289,8 +295,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                             ]
                                         }
                                     }
+                                    */
                                 ]
                             },
+                        /*
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -316,6 +324,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             }
+                            */
                         ]
                     }
                 ]
@@ -330,8 +339,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 /*
                 var serializedState = stateUtil.serializeState();
                 console.log("serializedState is: ", serializedState);
-                */
-                /*
                 console.log("json state: ");
                 console.log(JSON.stringify(serializedState));
                 */

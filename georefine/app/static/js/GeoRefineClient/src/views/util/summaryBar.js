@@ -158,32 +158,11 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         }
     };
 
-    // Define alterState hook for saving summaryBar state.
-    var summaryBar_alterState = function(state){
-        // Serialize summary bar and save to state.
-        state.summaryBar = serializationUtil.serialize(GeoRefine.app.summaryBar.model, state.serializationRegistry);
-    };
-
-    // Define deserializeConfigState hook for loading summaryBar state.
-    var summaryBar_deserializeConfigState = function(configState, state){
-
-        // Create model for summary bar.
-        var summaryBarModel = new Backbone.Model(configState.summaryBar);
-
-        // Set summary bar in state object.
-        state.summaryBar = summaryBarModel;
-    };
 
     // Objects to expose.
     var summaryBarUtil = {
         decorateSummaryBar: decorateSummaryBar,
-        actionHandlers: actionHandlers,
-        alterStateHooks: [
-            summaryBar_alterState
-        ],
-        deserializeConfigStateHooks: [
-            summaryBar_deserializeConfigState
-        ]
+        actionHandlers: actionHandlers
     };
     return summaryBarUtil;
 });

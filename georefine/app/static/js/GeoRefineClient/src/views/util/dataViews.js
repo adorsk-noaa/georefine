@@ -12,22 +12,170 @@ define([
 function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializationUtil){
 
     var setUpDataViews = function(){
+        // Shortcut to dataViews state.
+        var dvState = GeoRefine.app.state.dataViews || {};
+
         // Initialize counter.
-        GeoRefine.app.dataViews.counter = 0;
+        GeoRefine.app.dataViews.counter = dvState.counter || 0;
 
         // Initialize defaults.
-        GeoRefine.app.dataViews.defaults = {
+        GeoRefine.app.dataViews.defaults = dvState.defaults || {
             width: 500,
             height: 500
         };
 
-        // Initialize registry.
-        GeoRefine.app.dataViews.registry = {};
+        // Initialize collection.
+        GeoRefine.app.dataViews.dataViews = dvState.dataViews || new Backbone.Collection();
+
+        // Create any initial data views.
+        _.each(GeoRefine.app.dataViews.dataViews, function(dataView){
+            addFloatingDataView(dataView);
+        });
     };
 
-    var createDataViewWindow = function(dataView, opts){
+    var setUpWindows = function(){
+        $.window.prepare({
+            "dock": "right",
+            "dockArea": $('.data-views', this.el),
+            "handleScrollbar": false
+        });
+    };
+
+    // Define data view factory functions.
+    var dataViewFactories = {};
+    dataViewFactories['map'] = mapViewUtil.createMapEditor;
+    dataViewFactories['chart'] = chartsUtil.createChartEditor;
+
+    // Define data view initialization functions.
+    var dataViewInitializers = {};
+    dataViewInitializers['map'] = mapViewUtil.initializeMapEditor;
+    dataViewInitializers['chart'] = chartsUtil.initializeChartEditor;
+
+    // Dispatcher function for initializing.
+    var initializeDataView = function(dataView){
+        var initializer = dataViewInitializers[dataView.model.get('type')];
+        if (initializer){
+            initializer(dataView);
+        }
+    };
+
+    // Define data view connect functions.
+    var dataViewConnectors = {};
+    dataViewConnectors['map'] = {
+        connect: mapViewUtil.connectMapEditor,
+        disconnect: mapViewUtil.disconnectMapEditor
+    };
+    dataViewConnectors['chart'] = {
+        connect: chartsUtil.connectChartEditor,
+        disconnect: chartsUtil.disconnectChartEditor
+    };
+
+    // Dispatcher function for connecting.
+    var getDataViewConnector = function(dataView, connect){
+        var connector = dataViewConnectors[dataView.model.get('type')];
+        if (connector){
+            return (connect) ? connector.connect : connector.disconnect;
+        }
+    };
+    var connectDataView = function(dataView){
+        connect = getDataViewConnector(dataView, true);
+        if (connect){
+            connect(dataView);
+        }
+    };
+    var disconnectDataView = function(dataView){
+        disconnect = getDataViewConnector(dataView, false);
+        if (disconnect){
+            disconnect(dataView);
+        }
+    };
+
+
+    // View that combines DataView and Window models.
+    var FloatingDataViewView = Backbone.View.extend({
+
+        initialize: function(){
+
+            this.initialRender();
+
+            // Connect window events to data view.
+            this.window.on("resize", function(){
+                Util.util.fillParent(this.dataView.el);
+                this.dataView.trigger('resize');
+            }, this);
+
+            this.window.on("resizeStop", function(){
+                this.dataView.trigger('resizeStop');
+                Util.util.unsetWidthHeight(this.dataView.el);
+            }, this);
+
+            _.each(['pagePositionChange', 'deactive', 'activate'], function(event){
+                this.window.on(event, function(){
+                    this.dataView.trigger(event);
+                }, this);
+            }, this);
+
+            this.window.on("close", this.remove, this);
+
+            // Resize.
+            this.window.resize();
+            this.window.resizeStop();
+
+            this.dataView.trigger('ready');
+
+            // Bump counter.
+            GeoRefine.app.dataViews.counter += 1;
+        },
+
+        initialRender: function(){
+            this.renderDataView();
+            this.renderWindow();
+            $(this.window.getBody()).append(this.dataView.el);
+        },
+
+        renderDataView: function(){
+            var factory = dataViewFactories[this.model.get('dataView').get('type')];
+            this.dataView = factory(this.model.get('dataView'));
+        },
+
+        renderWindow : function(){
+            var $dataViews = $('.data-views', GeoRefine.app.view.el);
+            var dvOffset = $dataViews.offset();
+
+            this.window = new Windows.views.WindowView({
+                model: this.model.get('window')
+            });
+        },
+
+        remove: function(){
+            this.trigger('remove');
+            this.dataView.trigger('remove');
+            this.window.trigger('remove');
+        }
+    });
+
+    var addFloatingDataView = function(model){
+        // Set default id if none given.
+        if (! model.id){
+            model.id = model.cid;
+        }
+
+        // Create floating data view.
+        var floatingDataView = new FloatingDataViewView({
+            model: model
+        });
+
+        // Initialize and connect data view.
+        initializeDataView(floatingDataView.dataView);
+        connectDataView(floatingDataView.dataView);
+
+    };
+
+    // Create default data view window model.
+    var createDefaultWindowModel = function(opts){
         opts = opts || {};
 
+        // Get data views container offset.
         $dataViews = $('.data-views', GeoRefine.app.view.el);
         var dvOffset = $dataViews.offset();
 
@@ -38,7 +186,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         opts.title = _s.sprintf("%d &middot; %s", GeoRefine.app.dataViews.counter, opts.title);
 
         // Merge with defaults.
-        var opts = _.extend({
+        opts = _.extend({
             "inline-block": true,
             "width": GeoRefine.app.dataViews.defaults.width,
             "height": GeoRefine.app.dataViews.defaults.height,
@@ -53,137 +201,56 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         opts.x += dvOffset.left;
         opts.y += dvOffset.top;
 
-        // Create window for data view.
-        var w =  new Windows.views.WindowView({
-            model: new Backbone.Model(opts)
-        });
+        // Create model.
+        var model = new Backbone.Model(opts);
 
-        // Connect window events to data view.
-        w.on("resize", function(){
-            Util.util.fillParent(dataView.el);
-            dataView.trigger('resize');
-        });
+        return model;
 
-        w.on("resizeStop", function(){
-            dataView.trigger('resizeStop');
-            Util.util.unsetWidthHeight(dataView.el);
-        });
-        w.on("dragStop", function(){dataView.trigger('pagePositionChange');});
-        w.on("minimize", function(){dataView.trigger('deactivate');});
-        w.on("cascade", function(){dataView.trigger('activate');});
-        w.on("close", function(){
-            dataView.trigger('remove');
-            w.model = null;
-            w.remove();
-        });
-
-        // Add the data view to the window and initialize.
-        $(w.getBody()).append(dataView.el);
-        w.resize();
-        w.resizeStop();
-        dataView.trigger('ready');
-
-        // Bump counter.
-        GeoRefine.app.dataViews.counter += 1;
-
-        return w;
     };
 
-    var setUpWindows = function(){
-        $.window.prepare({
-            "dock": "right",
-            "dockArea": $('.data-views', this.el),
-            "handleScrollbar": false
-        });
-    };
+    // Factories for creating default dataView models.
+    var dataViewModelFactories = {};
+    dataViewModelFactories['map'] = mapViewUtil.createMapEditorModel;
+    dataViewModelFactories['chart'] = chartsUtil.createChartEditorModel;
 
-    var createMapView = function(opts){
-        var mapEditor = mapViewUtil.createMapEditor();
-        
-        // Set initial extent if given.
-        if (opts.initialExtent){
-            mapEditor.view.map_view.model.set('initial_extent', opts.initialExtent);
+    createDataViewModel = function(opts){
+        opts = opts || {};
+
+        var factory = dataViewModelFactories[opts.type];
+        if (factory){
+            return factory(opts);
         }
 
-        // Set attributes on individual layers.
-        _.each(opts.layers, function(layer){
-            var layerModel = mapEditor.view.map_view.layers.get(layer.id);
-            layerModel.set(layer.attributes);
-        });
-
-        var w = createDataViewWindow(mapEditor.view, {
-            "title": "Map"
-        });
-
-        return {
-            dataView: mapEditor,
-            window: w
-        };
     };
 
-    var createChartView = function(opts){
-        var chartEditor = chartsUtil.createChartEditor();
-
-        // Update filters.
-
-        var schema = chartEditor.model.get('datasource').get('schema');
-
-        // Set category/quantity field attributes if given.
-        _.each(opts.fields, function(fieldAttributes){
-            var fields = schema.get(fieldAttributes.type);
-            var field = fields.get(fieldAttributes.id);
-            field.set(fieldAttributes);
-        });
-
-        // Select initial category/quantity fields.
-        _.each(["category", "quantity"], function(fieldType){
-            var initialField = opts["initial_" + fieldType + "_field"];
-            if (initialField){
-                var fields = schema.get(fieldType);
-                var field = fields.get(initialField.id);
-                var fieldSelector = chartEditor[_s.sprintf("%s_field_selector", field_type)];
-                fieldSelector.model.set("selected_field", field);
-            }
-        });
-
-        var w = createDataViewWindow(chartEditor.view, {
-            title: "Chart"
-        });
-
-        return {
-            dataView: chartEditor,
-            window: w
-        };
-    };
-
+    // Create a new data view from config defaults.
     var createDataView = function(opts){
         opts = opts || {};
-        opts.id = opts.id || Math.random();
-        var dataView = null;
-        switch(opts.type){
-            case 'map':
-                dataView = createMapView(opts);
-                break;
-            case 'chart':
-                dataView = createChartView(opts);
-                break;
+
+        // Get window model.
+        var windowModel = createDefaultWindowModel(opts.window);
+
+        // Create default dataView model for given type.
+        var dataViewModel = createDataViewModel(opts.dataView);
+
+        if (windowModel && dataViewModel){
+            // Create floating data view model.
+            var floatingDataViewModel = new Backbone.Model({
+                window: windowModel,
+                dataView: dataViewModel
+            });
+
+            // Create floating data view.
+            addFloatingDataView(floatingDataViewModel);
         }
-
-        // Register the data view.
-        GeoRefine.app.dataViews.registry[opts.id] = dataView;
-
-        // Unregister on remove.
-        dataView.dataView.view.on('remove', function(){
-            delete GeoRefine.app.dataViews.registry[opts.id];
-        });
     };
 
     var actionHandlers = {};
-    actionHandlers.dataViewsCreateDataView = function(opts){
+    actionHandlers.dataViews_createDataView = function(opts){
         createDataView(opts);
     };
 
-    actionHandlers.dataViewsMapSetLayerAttributes = function(opts){
+    actionHandlers.dataViews_setMapLayerAttributes = function(opts){
         var dataView = GeoRefine.app.dataViews.registry[opts.id];
         var mapEditor = dataView.dataView;
         _.each(opts.layers, function(layer){
@@ -192,7 +259,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         });
     };
 
-    actionHandlers.dataViewsChartsSelectFields = function(opts){
+    actionHandlers.dataViews_selectChartFields = function(opts){
         var dataView = GeoRefine.app.dataViews.registry[opts.id];
         var chartEditor = dataView.dataView;
         chartsUtil.selectFields(chartEditor, opts);

@@ -630,24 +630,8 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
     };
 
     // Define alterState hook for saving facetEditor state.
-    var facetEditor_alterState = function(state){
-        state.facetEditor = state.facetEditor || {};
-        // Save facet editor's selected field.
-        var qFieldSelect = GeoRefine.app.facetsEditor.view.qFieldSelect;
-        var fieldCid = qFieldSelect.model.get('selection');
-        var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(fieldCid);
-        state.facetEditor.selectedField = serializationUtil.serialize(selectedField, state.serializationRegistry);
-    };
-
-    // Define alterState hook for saving state of facets.
-    var facets_alterState = function(state){
-        state.facets = state.facets || {};
-
-        // Save summary attributes.
-        state.facets.facets = {};
-        _.each(GeoRefine.app.facets.registry, function(facet, id){
-            state.facets.facets[id] = serializationUtil.serialize(facet.model, state.serializationRegistry);
-        });
+    var facetsEditor_alterState = function(state){
+        state.facetsEditor = serializationUtil.serialize(GeoRefine.app.facetsEditor.model, state.serializationRegistry);
     };
 
     // Define deserializeConfigState hook for facets editor.
@@ -688,8 +672,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         actionHandlers: actionHandlers,
 
         alterStateHooks: [
-            facetEditor_alterState,
-            facets_alterState
+            facetsEditor_alterState,
         ],
 
         deserializeConfigStateHooks: [
