@@ -38,79 +38,92 @@
 
 .georefine-client{
 
-    .panel{
-        overflow: hidden;
-        padding: 0px;
-        position: absolute;
-        height: 100%;
-    }
 
     > .inner{
         width: 100%;
         height: 100%;
         position: relative;
-    }
 
-    @lp_w: 300px;
-    .left-panel{
-
-        > .inner{
-            width: @lp_w;
+        > .panel{
+            overflow: hidden;
+            padding: 0px;
+            position: absolute;
             height: 100%;
-            overflow-x: auto;
-            overflow-y: hidden;
         }
-    }
 
-    .right-panel{
-        left: @lp_w;
-        top: 0px;
-        right: 0px;
-        bottom: 0px;
+        @lp_w: 300px;
+        .left-panel{
 
-        > .inner {
+            > .inner{
+                width: @lp_w;
+                height: 100%;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+        }
 
-            @top_bar_h: 27px;
-            @launcher_bar_h: 27px;
+        .right-panel{
+            left: @lp_w;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
 
-            padding: 7px;
 
-            > .launchers {
-                width: 100%;
-                height: @launcher_bar_h;
+            > .header{
+                > h3{
+                    margin: 0 0px 5px 5px;
+                    padding: 5px;
+                    font-weight: normal;
+                    font-size: 16px;
+                    background-color: @chrome_secondary;
+                }
+
+                > .launchers {
+                    margin-left: 5px;
+                    height: 27px;
+                    border-bottom: thin solid @chrome_secondary;
+                }
+
+                overflow-y: scroll;
+                overflow-x: hidden;
             }
 
-            > .data-views-container{
-                position: absolute;
-                top: @launcher_bar_h + 7px;
-                bottom: 0px;
-                left: 0;
-                right: 0;
-                overflow: scroll;
-                // Pad for scrollbars.
-                padding: 0 20px 20px 0;
+            > .body{
+                position: relative;
+                width: 100%;
 
-                > .inner{
-                    position: relative;
-                    height: 100%;
-                    width: 100%;
+                > .data-views-container{
+                    position: absolute;
+                    top: 0;
+                    bottom: 0px;
+                    left: 5px;
+                    right: 0;
+                    overflow: scroll;
+                    // Pad for scrollbars.
+                    padding: 0 20px 20px 0;
 
-                    > .data-views-constraint{
-                        position: absolute;
-                        visibility: hidden;
-                        top: 0;
-                        left: 0;
-                        width: 3000px;
-                        height: 3000px;
-                    }
+                    > .inner{
+                        position: relative;
+                        height: 100%;
+                        width: 100%;
 
-                    > .data-views{
-                        position: absolute;
-                        top: 5px;
-                        bottom: 0;
-                        left: 5px;
-                        right: 5px;
-                        overflow: visible;
+                        > .data-views-constraint{
+                            position: absolute;
+                            visibility: hidden;
+                            top: 0;
+                            left: 0;
+                            width: 3000px;
+                            height: 3000px;
+                        }
+
+                        > .data-views{
+                            position: absolute;
+                            top: 5px;
+                            bottom: 0;
+                            left: 5px;
+                            right: 5px;
+                            overflow: visible;
+                        }
                     }
                 }
             }

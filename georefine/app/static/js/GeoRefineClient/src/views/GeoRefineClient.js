@@ -113,8 +113,17 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
         resize: function(){
             GeoRefine.app.facetsEditor.resize();
+            this.resizeRightPanel();
         },
 
+        resizeRightPanel: function(){
+            var $rp = $('> .inner > .right-panel', this.el);
+            // Get height of header.
+            var headerHeight = $('> .header', $rp).outerHeight(true);
+            // Set body height to be remainder.
+            var bodyHeight = $rp.height() - headerHeight;
+            $('> .body', $rp).height(bodyHeight);
+        },
 
         loadState: function(state){
 
