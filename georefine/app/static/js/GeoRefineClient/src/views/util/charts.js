@@ -6,9 +6,10 @@ define([
 	"Util",
     "Charts",
     "./requests",
-    "./functions"
+    "./functions",
+    "./filters"
 		],
-function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
+function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersUtil){
 
     // This function will be used by chart datasources to
     // get data.
@@ -130,17 +131,91 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
         });
     };
 
+    var connectChartEditor = function(chartEditor){
 
-    createChartEditor = function(){
-        var chartsConfig = GeoRefine.config.charts;
+        // Connect the datasource's query to filter changes.
+        var datasource = chartEditor.model.get('datasource');
+        var q = datasource.get('query');
+        _.each(['primary', 'base'], function(filterCategory){
+            var groupIds = datasource.get(filterCategory + "_filter_groups");
+            _.each(groupIds, function(groupId){
+                var filterGroup = GeoRefine.app.filterGroups[groupId];
+                filterGroup.on('change:filters', function(){
+                    var filters = _.clone(q.get(filterCategory + '_filters')) || {};
+                    filters[groupId] = filterGroup.getFilters();
+                    q.set(filterCategory + '_filters', filters);
+                }, q);
+
+                // Remove callback when query is removed.
+                q.on('remove', function(){
+                    filterGroup.off(null, null, q);
+                });
+            });
+        });
+    };
+
+    var disconnectChartEditor = function(chartEditor){
+        // Disconnect datasource's query from filter changes.
+        var q = chartEditor.model.get('datasource').get('query');
+        _.each(['primary', 'base'], function(filterCategory){
+            var groupIds = chartEditor.model.get(filterCategory + "_filter_groups");
+            _.each(groupIds, function(groupId){
+                var filterGroup = GeoRefine.app.filterGroups[groupId];
+                filterGroup.off(null, null, q);
+            });
+        });
+
+    };
+
+    var createChartEditor = function(model){
+        var chartEditorView = new Charts.views.ChartEditorView({
+            'model': model
+        });
+
+        return chartEditorView
+
+    };
+
+    var decorateChartEditor = function(chartEditor){
+        // Set number formatting on chart editor.
+        chartEditor.chart_view.formatQuantityLabel = function(formatString, value){
+            return Util.util.friendlyNumber(value,1);
+        };
+
+        // Set getData function on datasource.
+        var datasource = chartEditor.model.get('datasource');
+        datasource.getData = datasourceGetData;
+    };
+
+    var initializeChartEditor = function(chartEditor){
+        // Decorate the chart editor.
+        decorateChartEditor(chartEditor);
+
+        // Set filters on datasource query.
+        var q = chartEditor.model.get('datasource').get('query');
+        _.each(['base', 'primary'], function(filterCategory){
+            filtersUtil.updateModelFilters(q, filterCategory, {silent: true});
+        });
+    };
+
+    // Create chart editor from config defaults.
+    var createChartEditorModel = function(opts){
+        var chartsConfig = _.extend({}, GeoRefine.config.charts);
 
         // Create models for fields.
         var processedFields = {};
+
+        // For each field category...
         _.each(['category', 'quantity'], function(fieldType){
             var fields = chartsConfig[_s.sprintf('%s_fields', fieldType)] || [];
             var fieldModels = [];
+
+            // For each field...
             _.each(fields, function(field){
+                // Initialize entity model.
                 var entityModel = null;
+
+                // Create entity model for category field.
                 if (fieldType == 'category'){
                     var entityDefaults = {};
                     if (field.value_type == 'numeric'){
@@ -154,26 +229,33 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
                         _.extend(entityDefaults, field['KEY']['KEY_ENTITY'])
                         );
                 }
+                // Create entity model for quantity field.
                 else if (fieldType =='quantity'){
                     var entityDefaults = {
                         'min': 0,
-                'maxauto': true
+                        'maxauto': true
                     };
                     var quantityEntity = field['outer_query']['SELECT'][0];
                     entityModel = new Backbone.Model(
                             _.extend(entityDefaults, quantityEntity)
                             );
                 }
-                fieldModel = new Backbone.Model(_.extend({}, 
-                        field, 
-                        {
-                            'field_type': fieldType,
-                       'entity': entityModel 
-                        }));
 
-            fieldModels.push(fieldModel);
+                // Assmeble the field model.
+                fieldModel = new Backbone.Model(_.extend(
+                            {}, 
+                            field, 
+                            {
+                                'field_type': fieldType,
+                                'entity': entityModel 
+                            }
+                            ));
+
+                // Save the field model.
+                fieldModels.push(fieldModel);
             });
 
+            // Save the field collection.
             processedFields[fieldType] = new Backbone.Collection(fieldModels);
         });
 
@@ -185,55 +267,24 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
         });
 
         // Create datasource.
-        var datasource = new Charts.models.DataSourceModel({'schema':  schema });
-
-        // Set getData function.
-        datasource.getData = datasourceGetData;
-
-
-        // Connect the datasource's query to filter changes.
-        var q = datasource.get('query');
-        // Have layer model listen for filter changes.
-        _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = chartsConfig[filterCategory + "_filter_groups"];
-            _.each(groupIds, function(groupId){
-                var filterGroup = GeoRefine.app.filterGroups[groupId];
-                filterGroup.on('change:filters', function(){
-                    var filters = _.clone(q.get(filterCategory + '_filters')) || {};
-                    filters[groupId] = filterGroup.getFilters();
-                    q.set(filterCategory + '_filters', filters);
-                }, q);
-
-                // Remove callback when query is removed.
-                q.on('remove', function(){
-                    filterGroup.off(null, null, q);
-                });
-
-            });
+        var datasource = new Charts.models.DataSourceModel({
+            'schema':  schema ,
+            'primary_filter_groups': chartsConfig.primary_filter_groups,
+            'base_filter_groups': chartsConfig.base_filter_groups,
         });
 
         // Create chart model.
         var chartModel = new Charts.models.XYChartModel({});
 
-        // Create chart editor.
+        // Create chart editor model.
         var chartEditorModel = new Backbone.Model({
-            'chart': chartModel,
-            'datasource': datasource
-        });
-        var chartEditorView = new Charts.views.ChartEditorView({
-            'model': chartEditorModel
+            chart: chartModel,
+            datasource: datasource,
+            type: 'chart'
         });
 
-        // Set number formatting on chart editor.
-        chartEditorView.chart_view.formatQuantityLabel = function(formatString, value){
-            return Util.util.friendlyNumber(value,1);
-        };
-
-        return {
-            model: chartEditorModel,
-            view: chartEditorView
-        };
-    };
+        return chartEditorModel;
+    }
 
     var selectFields = function(chartEditor, opts){
         _.each(['category', 'quantity'], function(fieldCategory){
@@ -245,21 +296,19 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil){
                 var fieldModel = fields.get(fieldOpts.id);
 
                 // Select field in its category's selector.
-                var selector = chartEditor.view.fieldSelectors[fieldCategory];
+                var selector = chartEditor.fieldSelectors[fieldCategory];
                 selector.field_select.model.set('selection', fieldModel.cid);
             }
         });
     };
 
-    // Define function for getting state of a chart editor.
-    var chartEditor_getState = function(chartEditor){
-        var state = {};
-        return state;
-    };
-
     // Objects to expose.
     var chartsUtil = {
         createChartEditor: createChartEditor,
+        createChartEditorModel: createChartEditorModel,
+        connectChartEditor: connectChartEditor,
+        disconnectChartEditor: disconnectChartEditor,
+        initializeChartEditor: initializeChartEditor,
         selectFields: selectFields
     };
     return chartsUtil;

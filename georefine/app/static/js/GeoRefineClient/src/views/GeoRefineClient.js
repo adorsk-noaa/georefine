@@ -260,6 +260,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         type: 'actionQueue',
                         async: true,
                         actions: [
+                        /*
                             // Mapview.
                             {
                                 type: 'actionQueue',
@@ -296,7 +297,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             },
-                        /*
+                            */
                             // ChartView.
                             {
                                 type: 'actionQueue',
@@ -305,15 +306,20 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     // Create chart.
                                     {
                                         type: 'action',
-                                        handler: 'dataViewsCreateDataView',
+                                        handler: 'dataViews_createDataView',
                                         opts: {
                                             id: 'initialChart',
-                                            type: 'chart',
+                                            dataView: {
+                                                type: 'chart'
+                                            },
+                                            window: {
+                                                title: "Chart"
+                                            }
                                         }
                                     },
                                     {
                                         type: 'action',
-                                        handler: 'dataViewsChartsSelectFields',
+                                        handler: 'dataViews_selectChartFields',
                                         opts: {
                                             id: 'initialChart',
                                             categoryField: {id: 'substrates'},
@@ -322,7 +328,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     }
                                 ]
                             }
-                            */
                         ]
                     }
                 ]
