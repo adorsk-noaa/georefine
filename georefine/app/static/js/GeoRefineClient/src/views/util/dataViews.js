@@ -24,19 +24,18 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
             height: 500
         };
 
-        // Initialize registry.
-        GeoRefine.app.dataViews.registry = dvState.registry || {};
+        // Initialize floating data views registry.
+        GeoRefine.app.dataViews.floatingDataViews = dvState.floatingDataViews|| {};
 
         // Create any initial data views.
-        _.each(GeoRefine.app.dataViews.registry, function(dataView){
-            addFloatingDataView(dataView);
+        _.each(GeoRefine.app.dataViews.floatingDataViews, function(floatingDataViewModel){
+            addFloatingDataView(floatingDataViewModel);
         });
     };
 
     var setUpWindows = function(){
+        console.log($('.data-views-panel > .dock', this.el));
         $.window.prepare({
-            "dock": "right",
-            "dockArea": $('.data-views', this.el),
             "handleScrollbar": false
         });
     };
@@ -143,7 +142,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
             var dvOffset = $dataViews.offset();
 
             this.window = new Windows.views.WindowView({
-                model: this.model.get('window')
+                model: this.model.get('window'),
+                minimizable: false,
+                maximizable: false,
+                caller: $dataViews,
+                containment: $('.data-views-constraint'),
             });
         },
 
@@ -166,7 +169,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         });
         
         // Register the floating data view.
-        GeoRefine.app.dataViews.registry[model.id] = floatingDataView;
+        GeoRefine.app.dataViews.floatingDataViews[model.id] = floatingDataView;
 
         // Initialize and connect data view.
         initializeDataView(floatingDataView.dataView);
@@ -272,7 +275,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     };
 
     actionHandlers.dataViews_setMapLayerAttributes = function(opts){
-        var dataView = GeoRefine.app.dataViews.registry[opts.id];
+        var dataView = GeoRefine.app.dataViews.floatingDataViews[opts.id];
         var mapEditor = dataView.dataView;
         _.each(opts.layers, function(layerOpts){
             var layer = mapViewUtil.getMapEditorLayers(mapEditor, {layers: [layerOpts]}).pop();
@@ -281,7 +284,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     };
 
     actionHandlers.dataViews_selectChartFields = function(opts){
-        var dataView = GeoRefine.app.dataViews.registry[opts.id];
+        var dataView = GeoRefine.app.dataViews.floatingDataViews[opts.id];
         var chartEditor = dataView.dataView;
         chartsUtil.selectFields(chartEditor, opts);
     };
@@ -289,13 +292,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     // Define alterState hook to add states of data views.
     dataViews_alterState = function(state){
         state.dataViews = state.dataViews || {};
+        state.dataViews.floatingDataViews = state.dataViews.floatingDataViews || {};
 
-        state.dataViews.dataViews = {};
-        _.each(GeoRefine.app.dataViews.registry, function(dataView, id){
-            state.dataViews.dataViews[id] = {
-                dataView: serializationUtil.serialize(dataView.dataView.model, state.serializationRegistry),
-                window: serializationUtil.serialize(dataView.window.model, state.serializationRegistry)
-            }
+        _.each(GeoRefine.app.dataViews.floatingDataViews, function(fdv, id){
+            var serializedFdv = serializationUtil.serialize(fdv.model, state.serializationRegistry);
+            state.dataViews.floatingDataViews[id] = serializedFdv; 
         });
     };
 

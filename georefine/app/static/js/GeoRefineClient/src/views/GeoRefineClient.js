@@ -337,12 +337,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             deferred.then(function(){
                 // Set initialized state.
                 console.log("All Done.");
-                /*
                 var serializedState = stateUtil.serializeState();
                 console.log("serializedState is: ", serializedState);
                 console.log("json state: ");
                 console.log(JSON.stringify(serializedState));
-                */
             });
 
             return deferred;

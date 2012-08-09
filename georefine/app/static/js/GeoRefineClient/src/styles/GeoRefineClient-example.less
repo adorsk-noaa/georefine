@@ -39,61 +39,83 @@
 .georefine-client{
 
     .panel{
-		overflow: hidden;
-		padding: 0px;
-		position: absolute;
-		height: 100%;
-	}
+        overflow: hidden;
+        padding: 0px;
+        position: absolute;
+        height: 100%;
+    }
 
-	> .inner{
-		width: 100%;
-		height: 100%;
-		position: relative;
-	}
+    > .inner{
+        width: 100%;
+        height: 100%;
+        position: relative;
+    }
 
     @lp_w: 300px;
-	.left-panel{
+    .left-panel{
 
-		> .inner{
-			width: @lp_w;
+        > .inner{
+            width: @lp_w;
             height: 100%;
             overflow-x: auto;
             overflow-y: hidden;
-		}
-	}
-	
-	.right-panel{
-		left: @lp_w;
-		top: 0px;
-		right: 0px;
-		bottom: 0px;
+        }
+    }
 
-		> .inner {
+    .right-panel{
+        left: @lp_w;
+        top: 0px;
+        right: 0px;
+        bottom: 0px;
 
-			@top_bar_h: 27px;
-			@launcher_bar_h: 27px;
+        > .inner {
+
+            @top_bar_h: 27px;
+            @launcher_bar_h: 27px;
 
             padding: 7px;
 
-			> .launchers {
-				width: 100%;
-				height: @launcher_bar_h;
-			}
+            > .launchers {
+                width: 100%;
+                height: @launcher_bar_h;
+            }
 
-			> .data-views-container{
-				position: absolute;
-				top: @launcher_bar_h + 7px;
-				bottom: 0px;
-				width: 100%;
+            > .data-views-container{
+                position: absolute;
+                top: @launcher_bar_h + 7px;
+                bottom: 0px;
+                left: 0;
+                right: 0;
+                overflow: scroll;
+                // Pad for scrollbars.
+                padding: 0 20px 20px 0;
 
-				> .data-views{
-					height: 100%;
-					width: 100%;
-				}
-			}
-		}
-	}	
+                > .inner{
+                    position: relative;
+                    height: 100%;
+                    width: 100%;
 
+                    > .data-views-constraint{
+                        position: absolute;
+                        visibility: hidden;
+                        top: 0;
+                        left: 0;
+                        width: 3000px;
+                        height: 3000px;
+                    }
+
+                    > .data-views{
+                        position: absolute;
+                        top: 5px;
+                        bottom: 0;
+                        left: 5px;
+                        right: 5px;
+                        overflow: visible;
+                    }
+                }
+            }
+        }
+    }
 
 }
 
