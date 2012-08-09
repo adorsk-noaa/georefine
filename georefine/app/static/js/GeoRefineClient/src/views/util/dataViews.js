@@ -186,7 +186,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         opts.title = opts.title || 'Window';
 
         // Add window number to title.
-        opts.title = _s.sprintf("%d &middot; %s", GeoRefine.app.dataViews.counter, opts.title);
+        opts.title = _s.sprintf("%d | %s", GeoRefine.app.dataViews.counter, opts.title);
 
         // Merge with defaults.
         opts = _.extend({
@@ -226,15 +226,32 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
 
     };
 
-    // Create a new data view from config defaults.
-    var createDataView = function(opts){
+    // Create a new floating data view from config defaults.
+    var createFloatingDataView = function(opts){
         opts = opts || {};
+        opts.dataView = opts.dataView || {};
+        opts.window = opts.window || {};
+
+        // Set default title for window , based on type.
+        if (! opts.window.title){
+            var title;
+            switch (opts.dataView.type){
+                case 'map':
+                    title = 'Map';
+                    break;
+                case 'chart':
+                    title = 'Chart';
+                    break;
+            }
+            opts.window.title = title;
+        }
 
         // Get window model.
         var windowModel = createDefaultWindowModel(opts.window);
 
         // Create default dataView model for given type.
         var dataViewModel = createDataViewModel(opts.dataView);
+
 
         if (windowModel && dataViewModel){
             // Create floating data view model.
@@ -250,8 +267,8 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     };
 
     var actionHandlers = {};
-    actionHandlers.dataViews_createDataView = function(opts){
-        createDataView(opts);
+    actionHandlers.dataViews_createFloatingDataView = function(opts){
+        createFloatingDataView(opts);
     };
 
     actionHandlers.dataViews_setMapLayerAttributes = function(opts){
@@ -287,7 +304,7 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         actionHandlers: actionHandlers,
         setUpDataViews: setUpDataViews,
         setUpWindows: setUpWindows,
-        createDataView: createDataView,
+        createFloatingDataView: createFloatingDataView,
         alterStateHooks: [
             dataViews_alterState
         ]

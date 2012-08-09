@@ -96,14 +96,18 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
 
 		addMapView: function(){
-            GeoRefineViewsUtil.dataViewsUtil.createDataView({
-                type: 'map'
+            GeoRefineViewsUtil.dataViewsUtil.createFloatingDataView({
+                dataView: {
+                    type: 'map',
+                }
             });
 		},
 
 		addChartView: function(){
-            GeoRefineViewsUtil.dataViewsUtil.createDataView({
-                type: 'chart'
+            GeoRefineViewsUtil.dataViewsUtil.createFloatingDataView({
+                dataView: {
+                    type: 'chart'
+                }
             });
 		},
 
@@ -269,14 +273,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     // Create map.
                                     {
                                         type: 'action',
-                                        handler: 'dataViews_createDataView',
+                                        handler: 'dataViews_createFloatingDataView',
                                         opts: {
                                             id: 'initialMap',
                                             dataView: {
                                                 type: 'map'
-                                            },
-                                            window: {
-                                                title: "Map"
                                             }
                                         }
                                     },
@@ -306,14 +307,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                                     // Create chart.
                                     {
                                         type: 'action',
-                                        handler: 'dataViews_createDataView',
+                                        handler: 'dataViews_createFloatingDataView',
                                         opts: {
                                             id: 'initialChart',
                                             dataView: {
                                                 type: 'chart'
-                                            },
-                                            window: {
-                                                title: "Chart"
                                             }
                                         }
                                     },
