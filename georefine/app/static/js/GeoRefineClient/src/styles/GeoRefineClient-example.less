@@ -44,85 +44,127 @@
         height: 100%;
         position: relative;
 
-        > .panel{
-            overflow: hidden;
-            padding: 0px;
+        @header_h: 50px;
+        > .header {
             position: absolute;
-            height: 100%;
-        }
-
-        @lp_w: 300px;
-        .left-panel{
+            top: 0;
+            left: 0;
+            right: 0;
+            height: @header_h;
 
             > .inner{
-                width: @lp_w;
+                position: relative;
+                width: 100%;
                 height: 100%;
-                overflow-x: auto;
-                overflow-y: hidden;
+
+                > .controls{
+                    position: absolute;
+                    right: 25px;
+                    bottom: 0;
+                    height: 30px;
+
+                    > .control{
+                        .button;
+                        display: inline-block;
+                        vertical-align: center;
+                    }
+                }
             }
         }
 
-        .right-panel{
-            left: @lp_w;
-            top: 0px;
-            right: 0px;
-            bottom: 0px;
+        > .body{
+            position: absolute;
+            top: @header_h;
+            bottom: 0;
+            left: 0;
+            right: 0;
 
-
-            > .header{
-                > h3{
-                    margin: 0 0px 5px 5px;
-                    padding: 5px;
-                    font-weight: normal;
-                    font-size: 16px;
-                    background-color: @chrome_secondary;
-                }
-
-                > .launchers {
-                    margin-left: 5px;
-                    height: 27px;
-                    border-bottom: thin solid @chrome_secondary;
-                }
-
-                overflow-y: scroll;
-                overflow-x: hidden;
-            }
-
-            > .body{
+            > .inner{
                 position: relative;
                 width: 100%;
+                height: 100%;
 
-                > .data-views-container{
+                > .panel{
+                    overflow: hidden;
+                    padding: 0px;
                     position: absolute;
-                    top: 0;
-                    bottom: 0px;
-                    left: 5px;
-                    right: 0;
-                    overflow: scroll;
-                    // Pad for scrollbars.
-                    padding: 0 20px 20px 0;
+                    height: 100%;
+                }
+
+                @lp_w: 300px;
+                .left-panel{
 
                     > .inner{
-                        position: relative;
+                        width: @lp_w;
                         height: 100%;
-                        width: 100%;
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                    }
+                }
 
-                        > .data-views-constraint{
-                            position: absolute;
-                            visibility: hidden;
-                            top: 0;
-                            left: 0;
-                            width: 3000px;
-                            height: 3000px;
+                .right-panel{
+                    left: @lp_w;
+                    top: 0px;
+                    right: 0px;
+                    bottom: 0px;
+
+
+                    > .header{
+                        > h3{
+                            margin: 0 0px 5px 5px;
+                            padding: 5px;
+                            font-weight: normal;
+                            font-size: 16px;
+                            background-color: @chrome_secondary;
                         }
 
-                        > .data-views{
+                        > .launchers {
+                            margin-left: 5px;
+                            height: 27px;
+                            border-bottom: thin solid @chrome_secondary;
+                        }
+
+                        overflow-y: scroll;
+                        overflow-x: hidden;
+                    }
+
+                    > .body{
+                        position: relative;
+                        width: 100%;
+
+                        > .data-views-container{
                             position: absolute;
-                            top: 5px;
-                            bottom: 0;
+                            top: 0;
+                            bottom: 0px;
                             left: 5px;
-                            right: 5px;
-                            overflow: visible;
+                            right: 0;
+                            overflow: scroll;
+                            // Pad for scrollbars.
+                            padding: 0 20px 20px 0;
+
+                            > .inner{
+                                position: relative;
+                                height: 100%;
+                                width: 100%;
+
+                                > .data-views-constraint{
+                                    position: absolute;
+                                    visibility: hidden;
+                                    top: 0;
+                                    left: 0;
+                                    width: 3000px;
+                                    height: 3000px;
+                                }
+
+                                > .data-views{
+                                    position: absolute;
+                                    top: 5px;
+                                    bottom: 0;
+                                    left: 5px;
+                                    right: 5px;
+                                    overflow: visible;
+                                }
+                            }
                         }
                     }
                 }

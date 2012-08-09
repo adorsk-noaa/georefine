@@ -15,13 +15,12 @@ define([
 		],
 function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, GeoRefineViewsUtil, template){
 
-
-
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
 			"click .add-map-button": "addMapView",
-			"click .add-chart-button": "addChartView"
+			"click .add-chart-button": "addChartView",
+			"click .get-link-button": "onClickGetLink"
 		},
 
 		initialize: function(opts){
@@ -112,17 +111,24 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
         resize: function(){
-            GeoRefine.app.facetsEditor.resize();
+            this.resizeLefPanel();
             this.resizeRightPanel();
         },
 
+        resizeLefPanel: function(){
+            GeoRefine.app.facetsEditor.resize();
+        },
+
         resizeRightPanel: function(){
-            var $rp = $('> .inner > .right-panel', this.el);
+            var $rp = $('.georefine-app-right-panel', this.el);
             // Get height of header.
             var headerHeight = $('> .header', $rp).outerHeight(true);
             // Set body height to be remainder.
             var bodyHeight = $rp.height() - headerHeight;
             $('> .body', $rp).height(bodyHeight);
+        },
+
+        onClickGetLink: function(){
         },
 
         loadState: function(state){
