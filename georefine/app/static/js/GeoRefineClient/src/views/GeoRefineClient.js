@@ -75,6 +75,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
 
             this.resize();
+            /*
             var stateDeferred = this.loadState();
 
             stateDeferred.done(function(){
@@ -86,6 +87,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     });
                 });
             });
+            */
 
 			return this;
 		},
@@ -129,6 +131,58 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
         },
 
         onClickGetLink: function(){
+            console.log("getlink");
+
+            // Make tooltip.
+            var $tooltipBody= $('<div>Body</div>');
+            $('.get-link-button', this.el).qtip({
+                content: {
+                    text: $tooltipBody
+                },
+                position: {
+                    my: 'top right',
+                    at: 'bottom right'
+                },
+                show: {
+                    event: 'click',
+                    ready: true
+                },
+                events: {
+                    render: function(event, api){
+                        // Toggle when target is clicked.
+                        $(api.elements.target).on('click', function(clickEvent){
+                            // Stop propagation.
+                            clickEvent.stopPropagation();
+                            clickEvent.stopImmediatePropagation();
+
+                            // Toggle the menu.
+                            api.toggle();
+                        });
+                    }
+                }
+            });
+
+            // Get state.
+            var serializedState = GeoRefineViewsUtil.stateUtil.serializeState();
+            var jsonState = JSON.stringify(serializedState);
+
+            window.s = jsonState;
+
+            // Get deferred for making key for state.
+            var deferred = $.ajax({
+                url: GeoRefine.app.keyedStringsEndpoint,
+                type: 'POST',
+                data: {'s': jsonState},
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+            });
+
+
+            // When deferred completes, fill in tooltip.
+            deferred.then(function(){
+                console.log("done key", arguments);
+            });
+
         },
 
         loadState: function(state){
