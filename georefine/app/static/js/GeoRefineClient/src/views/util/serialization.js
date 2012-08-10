@@ -126,8 +126,11 @@ function($, Backbone, _, _s, Util){
 
             // For each attr in the serializedModel...
             _.each(serializedModel, function(value, attr){
-                // Save the deserialized value to the attrs.
-                attrs[attr] = deserialize(value, deserializedRegistry, serializedRegistry);
+                // If attr is not 'cid'...
+                if (attr != 'cid'){
+                    // Save the deserialized value to the attrs.
+                    attrs[attr] = deserialize(value, deserializedRegistry, serializedRegistry);
+                }
             });
 
             // Create a model from the attributes.
