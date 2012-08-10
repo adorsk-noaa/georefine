@@ -15,7 +15,7 @@
 
     <init-param>
       <param-name>python.home</param-name>
-	  <param-value>/home/adorsk/projects/gr/jenv2.5.3b1</param-value>
+	  <param-value>/home/adorsk/projects/gr/jenv2.5.3</param-value>
     </init-param>
 
     <init-param>
