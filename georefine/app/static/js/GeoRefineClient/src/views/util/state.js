@@ -82,21 +82,10 @@ function($, Backbone, _, _s, Util, filtersUtil, facetsUtil, summaryBarUtil, data
             hook(configState, state);
         });
 
+        // Add initial actions from config.
+        state.initialActionQueue = configState.initialActionQueue;
+
         return state;
-    };
-
-
-    // TESTING! Test handler.
-    actionHandlers['testHandler'] = function(opts){
-        console.log("executing", JSON.stringify(opts));
-        return $.Deferred(function(){
-            var _this = this;
-            setTimeout(function(){
-                console.log('testHandler', JSON.stringify(opts));
-                _this.resolve();
-            }, opts.delay || 200);
-        });
-
     };
 
     // Convert an action definition to an action function.

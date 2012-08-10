@@ -34,7 +34,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     };
 
     var setUpWindows = function(){
-        console.log($('.data-views-panel > .dock', this.el));
         $.window.prepare({
             "handleScrollbar": false
         });
@@ -116,14 +115,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
 
             this.window.on("close", this.remove, this);
 
-            // Resize.
-            this.window.resize();
-            this.window.resizeStop();
-
-            this.dataView.trigger('ready');
-
             // Bump counter.
             GeoRefine.app.dataViews.counter += 1;
+
+            // Listen for ready event.
+            this.on("ready", this.onReady, this);
         },
 
         initialRender: function(){
@@ -150,6 +146,16 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
             });
         },
 
+        onReady: function(){
+            // Trigger dataview ready.
+            this.dataView.trigger('ready');
+
+            // Resize.
+            this.window.resize();
+            this.window.resizeStop();
+
+        },
+
         remove: function(){
             this.trigger('remove');
             this.dataView.trigger('remove');
@@ -174,6 +180,11 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         // Initialize and connect data view.
         initializeDataView(floatingDataView.dataView);
         connectDataView(floatingDataView.dataView);
+
+        // Trigger ready if initialized.
+        if (GeoRefine.app.initialized){
+            floatingDataView.trigger('ready');
+        }
 
     };
 
@@ -300,6 +311,14 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         });
     };
 
+    // Trigger ready on existing data views after initialize.
+    dataViews_postInitialize = function(){
+        _.each(GeoRefine.app.dataViews.floatingDataViews, function(fdv){
+            console.log("dvpi triggering ready");
+            fdv.trigger('ready');
+        });
+    };
+
     // Objects to expose.
     var dataViewUtil = {
         actionHandlers: actionHandlers,
@@ -308,7 +327,10 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
         createFloatingDataView: createFloatingDataView,
         alterStateHooks: [
             dataViews_alterState
-        ]
+        ],
+        postInitializeHooks : [
+            dataViews_postInitialize
+            ]
     };
     return dataViewUtil;
 });

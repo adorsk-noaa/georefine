@@ -24,7 +24,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
 		initialize: function(opts){
+            opts = opts || {};
 			$(this.el).addClass('georefine-client');
+
+            // Listen for ready event.
+            this.on('ready', this.onReady, this);
 
             // Initialize global namespace variable.
             GeoRefine.app = {
@@ -39,32 +43,81 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 state: {}
             };
 
-            // If no serialized state object was given, get state from config.
-            if (! opts.serializedState){
+            // Set endpoints
+            GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+            GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks', GeoRefine.config.context_root);
+            GeoRefine.app.mapEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+
+            // Parse url hash for options.
+            var hash = window.location.hash;
+
+            // Parse state key.
+            if (keyMatch = /\/stateKey=(.*)\//.exec(hash)){
+                opts.stateKey = keyMatch[1];
+            }
+
+            // Deferred object for handling state load.
+            var stateDeferred = $.Deferred();
+
+            // If a state key was given...
+            if (opts.stateKey){
+                // Load the state from the server.
+                $.ajax({
+                    url: GeoRefine.app.keyedStringsEndpoint + '/getString/' + opts.stateKey,
+                    type: 'GET',
+                    success: function(data){
+                        // Deserialize and save the resulting state string.
+                        serializedState = JSON.parse(data.s);
+                        GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
+                        // Resolve the deferred.
+                        stateDeferred.resolve();
+                    }
+                });
+            }
+
+            // Otherwise if serialized state was passed in options...
+            else if (opts.serializedState){
+                GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeState(opts.serializedState);
+                // Resolve the deferred.
+                stateDeferred.resolve();
+            }
+
+            // Otherwise, get state from config.
+            else{
                 var configState = GeoRefine.config.defaultInitialState;
                 GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeConfigState(configState);
-                GeoRefine.app.config = GeoRefine.config;
-            }
-            // Otherwise deserialize serialized state.
-            else{
-                serializedState = opts.serializedState;
-                GeoRefine.app.state = GeoRefineViewsUtil.stateUtil.deserializeState(serializedState);
-                // Set config from state.
-                GeoRefine.app.config = serializedState.config;
+                // Resolve the deferred.
+                stateDeferred.resolve();
             }
 
-        
-            // Set endpoints.
-            GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.app.config.context_root, GeoRefine.app.config.project_id);
-            GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks/getKey/', GeoRefine.app.config.context_root);
-            GeoRefine.app.mapEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.app.config.context_root, GeoRefine.app.config.project_id);
+            // When stateDeferred resolves, continue...
+            var _this = this;
+            stateDeferred.then(function(){
+                // Do initial render.
+                _this.initialRender();
 
-            // Do initial render.
-			this.initialRender();
+                // Process initial actions.
+                var actionsDeferred = _this.executeInitialActions();
 
-            // Listen for ready event.
-			this.on('ready', this.onReady, this);
-		},
+                // When actions are done...
+                actionsDeferred.done(function(){
+                    // Set initialized.
+                    GeoRefine.app.initialized = true;
+
+                    // Trigger ready.
+                    _this.trigger("ready");
+
+                    // Call post initialize hooks.
+                    _.each(GeoRefineViewsUtil, function(module){
+                        _.each(module.postInitializeHooks, function(hook){
+                            hook();
+                        });
+                    });
+
+                });
+
+            });
+        },
 
 		initialRender: function(){
 			var html = _.template(template, {model: this.model});
@@ -75,26 +128,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
 
             this.makeShareLinkTooltip();
-
-            this.resize();
-            /*
-            var stateDeferred = this.loadState();
-
-            stateDeferred.done(function(){
-                GeoRefine.app.initialized = true;
-                // Call post initialize hooks.
-                _.each([GeoRefineViewsUtil.facetsUtil], function(module){
-                    _.each(module.postInitializeHooks, function(hook){
-                        hook();
-                    });
-                });
-            });
-            */
-
-			return this;
 		},
 
 		onReady: function(){
+            console.log("gr ready");
+            this.resize();
 		},
 
 
@@ -179,7 +217,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         var jsonState = JSON.stringify(serializedState);
 
                         deferred = $.ajax({
-                            url: GeoRefine.app.keyedStringsEndpoint,
+                            url: GeoRefine.app.keyedStringsEndpoint + '/getKey/',
                             type: 'POST',
                             data: {'s': jsonState},
                         });
@@ -187,15 +225,14 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                         // When key request finishes...
                         deferred.then(function(data){
                             // Assemble link url from key.
-                            // @TODO
-                            var linkUrl = data.key;
-
+                            var keyStateHash = _s.sprintf('#/stateKey=%s/', data.key);
+                            var linkUrl = window.location.origin + window.location.pathname + keyStateHash;
                             // Fill in link url in the tooltip after a slight delay.
                             setTimeout(function(){
                                 $('input.link', $ttBody).val(linkUrl);
                                 $('input.link', $ttBody).removeClass('loading');
                                 $('input.link', $ttBody).prop('disabled', false);
-                            }, 2000);
+                            }, 1500);
 
                         });
                     }
@@ -203,232 +240,24 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             });
         },
 
-        loadState: function(state){
+        executeInitialActions: function(){
 
-            // Shortcut.
-            var stateUtil = GeoRefineViewsUtil.stateUtil;
+            var deferred = $.Deferred();
 
-            var actionQueue = {
-                async: false,
-                actions: [
-                    // Setup quantity field.
-                    {
-                        type: 'action',
-                        handler: 'facets_facetsEditorSetQField',
-                        opts: {
-                            id: 'result.x:sum'
-                        }
-                    },
-
-                    // Setup timestep facet.
-                    {
-                        type: 'actionQueue',
-                        async: false,
-                        actions: [
-                            // Create facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_addFacet',
-                                opts: {
-                                    fromDefinition: true,
-                                    category: 'base',
-                                    defId: 'timestep',
-                                    facetId: 'tstep'
-                                }
-                            },
-                            // Initialize facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_initializeFacet',
-                                opts: {
-                                    category: 'base',
-                                    id: 'tstep'
-                                }
-                            },
-                            // Connect facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_connectFacet',
-                                opts: {
-                                    category: 'base',
-                                    id: 'tstep'
-                                }
-                            },
-                            // Load data.
-                            {
-                                type: 'action',
-                                handler: 'facets_getData',
-                                opts: {
-                                    category: 'base',
-                                    id: 'tstep'
-                                }
-                            },
-                            // Select first choice.
-                            {
-                                type: 'action',
-                                handler: 'facets_setSelection',
-                                opts: {
-                                    category: 'base',
-                                    id: 'tstep',
-                                    index: 1
-                                }
-                            },
-
-                        ]
-                    },
-
-                    // Setup summary bar.
-                    {
-                        type: 'actionQueue',
-                        async: false,
-                        actions: [
-                            // Initialize summary bar.
-                            {
-                                type: 'action',
-                                handler: 'summaryBar_initialize',
-                            },
-                            // Connect summary bar.
-                            {
-                                type: 'action',
-                                handler: 'summaryBar_connect',
-                            },
-                            // Get data for summary bar.
-                            {
-                                type: 'action',
-                                handler: 'summaryBar_getData',
-                            },
-                        ]
-                    },
-
-                    // Setup substrate facets.
-                    {
-                        type: 'actionQueue',
-                        async: false,
-                        actions: [
-                            // Create facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_addFacet',
-                                opts: {
-                                    fromDefinition: true,
-                                    category: 'primary',
-                                    defId: 'substrates',
-                                    facetId: 'initSubstrates'
-                                }
-                            },
-                            // Initialize facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_initializeFacet',
-                                opts: {
-                                    category: 'primary',
-                                    id: 'initSubstrates'
-                                }
-                            },
-                            // Connect facet.
-                            {
-                                type: 'action',
-                                handler: 'facets_connectFacet',
-                                opts: {
-                                    category: 'primary',
-                                    id: 'initSubstrates'
-                                }
-                            },
-                            // Load data.
-                            {
-                                type: 'action',
-                                handler: 'facets_getData',
-                                opts: {
-                                    category: 'primary',
-                                    id: 'initSubstrates'
-                                }
-                            }
-                        ]
-                    },
-
-                    // Setup Data views.
-                    {
-                        type: 'actionQueue',
-                        async: true,
-                        actions: [
-                        /*
-                            // Mapview.
-                            {
-                                type: 'actionQueue',
-                                async: false,
-                                actions: [
-                                    // Create map.
-                                    {
-                                        type: 'action',
-                                        handler: 'dataViews_createFloatingDataView',
-                                        opts: {
-                                            id: 'initialMap',
-                                            dataView: {
-                                                type: 'map'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        type: 'action',
-                                        handler: 'dataViews_setMapLayerAttributes',
-                                        opts: {
-                                            id: 'initialMap',
-                                            layers: [
-                                                {
-                                                    id: 'x',
-                                                    attributes: {
-                                                        disabled: false
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            */
-                            // ChartView.
-                            {
-                                type: 'actionQueue',
-                                async: false,
-                                actions: [
-                                    // Create chart.
-                                    {
-                                        type: 'action',
-                                        handler: 'dataViews_createFloatingDataView',
-                                        opts: {
-                                            id: 'initialChart',
-                                            dataView: {
-                                                type: 'chart'
-                                            }
-                                        }
-                                    },
-                                    {
-                                        type: 'action',
-                                        handler: 'dataViews_selectChartFields',
-                                        opts: {
-                                            id: 'initialChart',
-                                            categoryField: {id: 'substrates'},
-                                            quantityField: {id: 'result.cell.area:sum'}
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            };
-            var action = stateUtil.processActionQueue(actionQueue);
-
-            var deferred = $.when(action());
-            
-            deferred.then(function(){
-                // Set initialized state.
-                console.log("All Done.");
-                var serializedState = stateUtil.serializeState();
-                console.log("serializedState is: ", serializedState);
-                console.log("json state: ");
-                console.log(JSON.stringify(serializedState));
-            });
+            console.log(GeoRefine);
+            // If there were initial actions, process them.
+            if (GeoRefine.app.state.initialActionQueue){
+                console.log('yo');
+                var actionsFunc = GeoRefineViewsUtil.stateUtil.processActionQueue(GeoRefine.app.state.initialActionQueue);
+                // Resolve the deferred when actions complete.
+                $.when(actionsFunc()).then(function(){
+                    deferred.resolve();
+                });
+            }
+            // Otherwise resolve the deferred immediately.
+            else{
+                deferred.resolve();
+            }
 
             return deferred;
         },
