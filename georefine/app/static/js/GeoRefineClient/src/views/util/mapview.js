@@ -118,7 +118,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
         // Get shortened parameters key.
         $.ajax({
-            url: GeoRefine.app.keyedStringsEndpoint + '/getKey',
+            url: GeoRefine.app.keyedStringsEndpoint + '/getKey/',
             type: 'POST',
             data: {'s': model.get('query_parameters')},
             // After we get the key back, add it as a query parameter.
