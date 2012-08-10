@@ -12,15 +12,15 @@ define([
 	"Util",
 	"./util/main",
 	"text!./templates/GeoRefineClient.html",
+	"text!./templates/shareLinkTooltip.html"
 		],
-function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, GeoRefineViewsUtil, template){
+function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, GeoRefineViewsUtil, template, shareLinkTooltipTemplate){
 
 	var GeoRefineClientView = Backbone.View.extend({
 
 		events: {
 			"click .add-map-button": "addMapView",
 			"click .add-chart-button": "addChartView",
-			"click .get-link-button": "onClickGetLink"
 		},
 
 		initialize: function(opts){
@@ -73,6 +73,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             GeoRefineViewsUtil.facetsUtil.setUpFacetsEditor();
             GeoRefineViewsUtil.dataViewsUtil.setUpWindows();
             GeoRefineViewsUtil.dataViewsUtil.setUpDataViews();
+
+            this.makeShareLinkTooltip();
 
             this.resize();
             /*
@@ -130,59 +132,72 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             $('> .body', $rp).height(bodyHeight);
         },
 
-        onClickGetLink: function(){
-            console.log("getlink");
-
-            // Make tooltip.
-            var $tooltipBody= $('<div>Body</div>');
-            $('.get-link-button', this.el).qtip({
+        makeShareLinkTooltip: function(){
+            var $ttBody = $(_.template(shareLinkTooltipTemplate, {}));
+            $('.share-link-button', this.el).qtip({
                 content: {
-                    text: $tooltipBody
+                    text: $ttBody
                 },
                 position: {
                     my: 'top right',
                     at: 'bottom right'
                 },
                 show: {
-                    event: 'click',
-                    ready: true
+                    event: 'click'
+                },
+                hide: {
+                    fixed: true,
+                    event: 'unfocus'
                 },
                 events: {
                     render: function(event, api){
                         // Toggle when target is clicked.
                         $(api.elements.target).on('click', function(clickEvent){
                             // Stop propagation.
-                            clickEvent.stopPropagation();
-                            clickEvent.stopImmediatePropagation();
+                            clickEvent.preventDefault();
 
                             // Toggle the menu.
                             api.toggle();
                         });
+                    },
+
+                    show: function(event, api){
+                        // Hide the link.
+                        $('input.link', $ttBody).hide();
+
+                        // Show loading.
+                        $('.loading', $ttBody).show();
+
+                        // Get state.
+                        var serializedState = GeoRefineViewsUtil.stateUtil.serializeState();
+                        var jsonState = JSON.stringify(serializedState);
+
+                        // Execute key request.
+                        var deferred = $.ajax({
+                            url: GeoRefine.app.keyedStringsEndpoint,
+                            type: 'POST',
+                            data: {'s': jsonState},
+                        });
+
+                        // When key request finishes...
+                        deferred.then(function(data){
+                            // Assemble link url from key.
+                            // @TODO
+                            var linkUrl = data.key;
+
+                            // Fill in link url in the tooltip.
+                            $('input.link', $ttBody).val(linkUrl);
+
+                            // Deactivate loading.
+                            $('.loading', $ttBody).hide();
+
+                            // Show the link.
+                            $('input.link', $ttBody).show();
+
+                        });
                     }
                 }
             });
-
-            // Get state.
-            var serializedState = GeoRefineViewsUtil.stateUtil.serializeState();
-            var jsonState = JSON.stringify(serializedState);
-
-            window.s = jsonState;
-
-            // Get deferred for making key for state.
-            var deferred = $.ajax({
-                url: GeoRefine.app.keyedStringsEndpoint,
-                type: 'POST',
-                data: {'s': jsonState},
-                dataType: "json",
-                contentType: "application/json; charset=utf-8",
-            });
-
-
-            // When deferred completes, fill in tooltip.
-            deferred.then(function(){
-                console.log("done key", arguments);
-            });
-
         },
 
         loadState: function(state){

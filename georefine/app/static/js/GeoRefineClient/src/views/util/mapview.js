@@ -121,8 +121,6 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
             url: GeoRefine.app.keyedStringsEndpoint,
             type: 'POST',
             data: {'s': model.get('query_parameters')},
-            dataType: "json",
-            contentType: "application/json; charset=utf-8",
             // After we get the key back, add it as a query parameter.
             // and set the service_url.
             success: function(data, status, xhr){
