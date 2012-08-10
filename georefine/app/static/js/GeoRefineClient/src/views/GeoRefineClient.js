@@ -140,7 +140,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 },
                 position: {
                     my: 'top right',
-                    at: 'bottom right'
+                    at: 'bottom right',
+                    adjust: {
+                        y: 5
+                    }
                 },
                 show: {
                     event: 'click'
@@ -148,6 +151,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 hide: {
                     fixed: true,
                     event: 'unfocus'
+                },
+                style: {
+                    classes: 'share-link-tooltip',
+                    tip: false
                 },
                 events: {
                     render: function(event, api){
@@ -162,18 +169,16 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     },
 
                     show: function(event, api){
-                        // Hide the link.
-                        $('input.link', $ttBody).hide();
-
-                        // Show loading.
-                        $('.loading', $ttBody).show();
+                        // Set loading text.
+                        $('input.link', $ttBody).prop('disabled', true);
+                        $('input.link', $ttBody).val('  loading...');
+                        $('input.link', $ttBody).addClass('loading');
 
                         // Get state.
                         var serializedState = GeoRefineViewsUtil.stateUtil.serializeState();
                         var jsonState = JSON.stringify(serializedState);
 
-                        // Execute key request.
-                        var deferred = $.ajax({
+                        deferred = $.ajax({
                             url: GeoRefine.app.keyedStringsEndpoint,
                             type: 'POST',
                             data: {'s': jsonState},
@@ -185,14 +190,12 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                             // @TODO
                             var linkUrl = data.key;
 
-                            // Fill in link url in the tooltip.
-                            $('input.link', $ttBody).val(linkUrl);
-
-                            // Deactivate loading.
-                            $('.loading', $ttBody).hide();
-
-                            // Show the link.
-                            $('input.link', $ttBody).show();
+                            // Fill in link url in the tooltip after a slight delay.
+                            setTimeout(function(){
+                                $('input.link', $ttBody).val(linkUrl);
+                                $('input.link', $ttBody).removeClass('loading');
+                                $('input.link', $ttBody).prop('disabled', false);
+                            }, 2000);
 
                         });
                     }
