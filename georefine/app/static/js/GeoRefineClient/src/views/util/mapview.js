@@ -355,10 +355,10 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
                     layers: new Backbone.Collection(),
                     options: {
                         allOverlays: true,
-                    maxExtent: mapConfig.max_extent,
-                    restrictedExtent: mapConfig.max_extent,
-                    resolutions: mapConfig.resolutions,
-                    theme: null
+                        maxExtent: mapConfig.max_extent,
+                        restrictedExtent: mapConfig.max_extent,
+                        resolutions: mapConfig.resolutions,
+                        theme: null
                     },
                     graticule_intervals: [2]
                 }, 

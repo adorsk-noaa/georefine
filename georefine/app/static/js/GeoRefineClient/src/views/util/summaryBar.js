@@ -12,15 +12,18 @@ define([
 function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serializationUtil){
 
     decorateSummaryBar = function(){
+        // Don't do anything if already decorated.
+        if (GeoRefine.app.summaryBar.decorated){
+            return;
+        }
 
         var model = GeoRefine.app.summaryBar.model;
         
         // Define getData function.
         model.getData = function(){
-            var _this = this;
 
             // Shortcuts.
-            var qfield = _this.get('quantity_field');
+            var qfield = this.get('quantity_field');
             if (! qfield){
                 return;
             }
@@ -62,11 +65,11 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
 
             var requests = [totals_request];
 
+            var _this = this;
             var deferred = $.ajax({
                 url: GeoRefine.app.requestsEndpoint,
                 type: 'POST',
                 data: {'requests': JSON.stringify(requests)},
-                error: Backbone.wrapError(function(){}, _this, {}),
                 success: function(data, status, xhr){
                     var results = data.results;
                     var count_entity = qfield.get('outer_query')['SELECT'][0];
@@ -74,7 +77,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                     var selected = results['totals']['selected'][0][count_entity['ID']] || 0.0;
                     var total = results['totals']['total'][0][count_entity['ID']] || 0.0;
 
-                    model.set('data', {
+                    _this.set('data', {
                         "selected": selected,
                         "total": total
                     });
@@ -86,10 +89,18 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
 
         // Set formatter.
         GeoRefine.app.summaryBar.formatter = formatUtil.GeoRefineFormatter;
+        
+        // Set decorated.
+        GeoRefine.app.summaryBar.decorated = true;
 
     };
 
     var connectSummaryBar = function(opts){
+        // Don't do anything if already connected.
+        if (GeoRefine.app.summaryBar.connected){
+            return;
+        }
+
         // Listen for filter changes.
         _.each(['primary', 'base'], function(filterCategory){
             var groupIds = GeoRefine.app.summaryBar.model.get(filterCategory + "_filter_groups");
@@ -110,8 +121,8 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         // Listen for quantity field changes.
         var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
         qFieldSelect.model.on('change:selection', function(){
-            var fieldCid = qFieldSelect.model.get('selection');
-            var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(fieldCid);
+            var qfield_id = qFieldSelect.model.get('selection');
+            var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
             this.set('quantity_field', selectedField);
         }, GeoRefine.app.summaryBar.model);
 
@@ -126,16 +137,18 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                 GeoRefine.app.summaryBar.model.getData();
             });
         }
+
+        // Set connected.
+        GeoRefine.app.summaryBar.connected = true;
     };
 
-    var actionHandlers =  {};
-
-    // Initialize summary bar.  Sets filters, qfield.
-    actionHandlers.summaryBar_initialize = function(opts){
+    var initializeSummaryBar = function(){
+        // Decorate.
+        decorateSummaryBar();
 
         // Set quantity field.
-        var qfield_cid = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
-        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').getByCid(qfield_cid);
+        var qfield_id = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
+        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
 
         GeoRefine.app.summaryBar.model.set({quantity_field: qfield }, {silent: true});
 
@@ -143,6 +156,13 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         _.each(['base', 'primary'], function(filterCategory){
             filtersUtil.updateModelFilters(GeoRefine.app.summaryBar.model, filterCategory, {silent: true});
         });
+    };
+
+    var actionHandlers =  {};
+
+    // Initialize summary bar.  Sets filters, qfield.
+    actionHandlers.summaryBar_initialize = function(opts){
+        initializeSummaryBar();
     };
 
     // Connect summaryBar.
@@ -161,7 +181,8 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
 
     // Objects to expose.
     var summaryBarUtil = {
-        decorateSummaryBar: decorateSummaryBar,
+        connectSummaryBar: connectSummaryBar,
+        initializeSummaryBar: initializeSummaryBar,
         actionHandlers: actionHandlers
     };
     return summaryBarUtil;

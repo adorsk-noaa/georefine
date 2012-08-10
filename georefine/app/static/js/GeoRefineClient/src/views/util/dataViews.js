@@ -314,7 +314,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
     // Trigger ready on existing data views after initialize.
     dataViews_postInitialize = function(){
         _.each(GeoRefine.app.dataViews.floatingDataViews, function(fdv){
-            console.log("dvpi triggering ready");
             fdv.trigger('ready');
         });
     };

@@ -12,10 +12,11 @@ function($, Backbone, _, _s, Util, serializationUtil){
     var setUpFilterGroups = function(){
         GeoRefine.app.filterGroups = GeoRefine.app.state.filterGroups;
 
-        // Define getFilters method for each filter group.
-        // @TODO! Move this into a separate function, rather than having
-        // it be a method of the filter group.
-        _.each(GeoRefine.app.filterGroups, function(filterGroup){
+        // Decorate filter groups.
+        _.each(GeoRefine.app.filterGroups, function(filterGroup, filterGroupId){
+            // Define getFilters method for each filter group.
+            // @TODO! Move this into a separate function, rather than having
+            // it be a method of the filter group ?
             filterGroup.getFilters = function(){
                 var filters = [];
                 _.each(filterGroup.models, function(model){
@@ -24,7 +25,7 @@ function($, Backbone, _, _s, Util, serializationUtil){
                         filters.push({
                             'source': {
                                 'type': model.getFilterType ? model.getFilterType() : null,
-                            'cid': model.cid
+                            'id': model.id
                             },
                             'filters': modelFilters
                         });
@@ -32,6 +33,17 @@ function($, Backbone, _, _s, Util, serializationUtil){
                 });
                 return filters;
             };
+
+            // Add registration function to set id on new members, for 
+            // determining filter sources w/in the group.
+            filterGroup.on('add', function(model){
+                var filterGroupIds = model.get("filterGroupIds") || {};
+                if (! filterGroupIds[filterGroupId]){
+                    filterGroupIds[filterGroupId] = Date.now() + Math.random();
+                }
+                model.set("filterGroupIds", filterGroupIds);
+            });
+
         });
     };
 

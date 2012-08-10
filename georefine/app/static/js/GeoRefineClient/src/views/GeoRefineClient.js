@@ -101,21 +101,26 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
                 // When actions are done...
                 actionsDeferred.done(function(){
+
                     // Set initialized.
                     GeoRefine.app.initialized = true;
 
                     // Trigger ready.
                     _this.trigger("ready");
 
-                    // Call post initialize hooks.
-                    _.each(GeoRefineViewsUtil, function(module){
-                        _.each(module.postInitializeHooks, function(hook){
-                            hook();
-                        });
-                    });
+                    _this.postInitialize();
 
                 });
 
+            });
+        },
+
+        postInitialize: function(){
+            // Call post initialize hooks.
+            _.each(GeoRefineViewsUtil, function(module){
+                _.each(module.postInitializeHooks, function(hook){
+                    hook();
+                });
             });
         },
 
@@ -131,7 +136,6 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
 		onReady: function(){
-            console.log("gr ready");
             this.resize();
 		},
 
@@ -244,10 +248,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
             var deferred = $.Deferred();
 
-            console.log(GeoRefine);
             // If there were initial actions, process them.
             if (GeoRefine.app.state.initialActionQueue){
-                console.log('yo');
                 var actionsFunc = GeoRefineViewsUtil.stateUtil.processActionQueue(GeoRefine.app.state.initialActionQueue);
                 // Resolve the deferred when actions complete.
                 $.when(actionsFunc()).then(function(){
