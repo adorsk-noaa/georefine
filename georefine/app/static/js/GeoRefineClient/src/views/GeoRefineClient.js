@@ -157,21 +157,21 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 		},
 
         resize: function(){
-            this.resizeLefPanel();
-            this.resizeRightPanel();
+            this.resizeLeftCell();
+            this.resizeRightCell();
         },
 
-        resizeLefPanel: function(){
-            GeoRefine.app.facetsEditor.resize();
+        resizeLeftCell: function(){
+            GeoRefine.app.facetsEditor.trigger('resize');
         },
 
-        resizeRightPanel: function(){
-            var $rp = $('.georefine-app-right-panel', this.el);
+        resizeRightCell: function(){
+            var $rc = $('.right-cell', this.el);
             // Get height of header.
-            var headerHeight = $('> .header', $rp).outerHeight(true);
+            var headerHeight = $('> .inner > .header', $rc).outerHeight(true);
             // Set body height to be remainder.
-            var bodyHeight = $rp.height() - headerHeight;
-            $('> .body', $rp).height(bodyHeight);
+            var bodyHeight = $rc.height() - headerHeight;
+            $('> .inner > .body', $rc).height(bodyHeight);
         },
 
         makeShareLinkTooltip: function(){
