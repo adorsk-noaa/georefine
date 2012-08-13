@@ -10,7 +10,7 @@ UPLOAD_FOLDER = '/tmp'
 
 ALLOWED_EXTENSIONS = set(['txt'])
 
-SERVER_NAME = "localhost:8080"
+#SERVER_NAME = "localhost:8080"
 
 APPLICATION_ROOT = "georefine"
 

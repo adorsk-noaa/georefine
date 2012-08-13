@@ -17,7 +17,8 @@ class PrefixFix(object):
 		return self.app(environ, start_response)
 
 app.wsgi_app = PrefixFix(app.wsgi_app, '/georefine')
-app.config['SERVER_NAME'] = 'localhost:5000'
+#app.config['SERVER_NAME'] = 'localhost:5000'
+app.config['SERVER_NAME'] = None
 app.config['APPLICATION_ROOT'] = 'georefine'
 app.config['DEBUG'] = True
 #app.run(debug=True)
