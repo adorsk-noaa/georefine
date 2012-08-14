@@ -128,11 +128,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     _this.trigger('resize');
                 }, 200);
             };
-            $(window).on('resize', onWindowResize);
-            // Remove callback when this is removed.
-            this.on('remove', function(){
-                $(window).off('resize', onWindowResize);
-            }, this);
+            $(window).resize(onWindowResize);
 
             // Call post initialize hooks.
             _.each(GeoRefineViewsUtil, function(module){
