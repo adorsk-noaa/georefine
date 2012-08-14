@@ -116,6 +116,24 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
         },
 
         postInitialize: function(){
+            // Listen for window resize events.
+            this.on('resize', this.resize, this);
+            var _this = this;
+            var onWindowResize = function(){
+                if (_this._windowResizeTimeout){
+                    clearTimeout(_this.windowResizeTimeout);
+                }
+                _this.windowResizeTimeout = setTimeout(function(){
+                    _this._windowResizeTimeout = false;
+                    _this.trigger('resize');
+                }, 200);
+            };
+            $(window).on('resize', onWindowResize);
+            // Remove callback when this is removed.
+            this.on('remove', function(){
+                $(window).off('resize', onWindowResize);
+            }, this);
+
             // Call post initialize hooks.
             _.each(GeoRefineViewsUtil, function(module){
                 _.each(module.postInitializeHooks, function(hook){

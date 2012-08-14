@@ -553,7 +553,6 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
     // Helper function to get facetView.
     var getFacetViewFromEditor = function(opts){
         var facetCollection = GeoRefine.app.facetsEditor.subViews.facets;
-        console.log("fc is: ", facetCollection);
         return facetCollection.registry[opts.id];
     };
 
