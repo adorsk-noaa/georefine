@@ -19,8 +19,6 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         // Get facets editor model from state, or create a new model. 
         var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
-        console.log("fem is: ", facetsEditorModel);
-
         // Create facets editor view.
         var facetsEditorView = new Facets.views.FacetsEditorView({
             el: $('.facets-editor', GeoRefine.app.view.el),
