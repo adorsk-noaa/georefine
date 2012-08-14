@@ -19,6 +19,8 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         // Get facets editor model from state, or create a new model. 
         var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
+        console.log("fem is: ", facetsEditorModel);
+
         // Create facets editor view.
         var facetsEditorView = new Facets.views.FacetsEditorView({
             el: $('.facets-editor', GeoRefine.app.view.el),
@@ -31,47 +33,40 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         GeoRefine.app.summaryBar = facetsEditorView.subViews.summaryBar;
 
         // Setup initial facets.
-        _.each(['primary', 'base'], function(facetCategory){
-            var facetCollectionView = facetsEditorView.subViews[facetCategory + "_facets"];
-            if (facetCollectionView){
+        var facetCollectionView = facetsEditorView.subViews.facets;
+        if (facetCollectionView){
+            // Initialize and connect any initial facets.
+            _.each(facetCollectionView.registry, function(facetView, id){
+                initializeFacet(facetView);
+                connectFacet(facetView);
+            });
 
-                // Initialize and connect any initial facets.
-                _.each(facetCollectionView.registry, function(facetView, id){
-                    initializeFacet(facetView);
-                    connectFacet(facetView);
-                });
-
-                // Disconnect facets when removed.
-                facetCollectionView.on('removeFacetView', function(view){
-                    disconnectFacet(view)
-                });
-
-            }
-        });
+            // Disconnect facets when removed.
+            facetCollectionView.on('removeFacetView', function(view){
+                disconnectFacet(view)
+            });
+        }
 
     };
 
     // Define postInitialize hook.
     var facetsEditor_postInitialize = function(){
 
-        // For each facet category...
-        _.each(['primary', 'base'], function(facetCategory){
-            var facetCollectionView = GeoRefine.app.facetsEditor.subViews[facetCategory + "_facets"];
-            if (facetCollectionView){
-                // Initialize and connect newly created facets.
-                facetCollectionView.on('addFacetView', function(view){
-                    initializeFacet(view);
-                    connectFacet(view);
-                    if(view.model.getData){
-                        var opts = {};
-                        if (view.model.get('type') == 'numeric'){
-                            opts.updateRange = true;
-                        }
-                        view.model.getData(opts);
+        // Initialize and connect newly created facets.
+        var facetCollectionView = GeoRefine.app.facetsEditor.subViews.facets;
+        if (facetCollectionView){
+            facetCollectionView.on('addFacetView', function(view){
+                initializeFacet(view);
+                connectFacet(view);
+                if(view.model.getData){
+                    var opts = {};
+                    if (view.model.get('type') == 'numeric'){
+                        opts.updateRange = true;
                     }
-                });
-            }
-        });
+                    view.model.getData(opts);
+                }
+            });
+        }
 
         // Initialize and connect the summary bar.
         summaryBarUtil.initializeSummaryBar();
@@ -559,7 +554,8 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
 
     // Helper function to get facetView.
     var getFacetViewFromEditor = function(opts){
-        var facetCollection = GeoRefine.app.facetsEditor.subViews[opts.category + '_facets'];
+        var facetCollection = GeoRefine.app.facetsEditor.subViews.facets;
+        console.log("fc is: ", facetCollection);
         return facetCollection.registry[opts.id];
     };
 
@@ -590,10 +586,10 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                 // Create model from definition.
                 var facetModel = facetsEditor.createFacetModelFromDef(facetDef);
 
-                // Add to primary facet collection.
+                // Add to facet collection.
                 // This will trigger handlers (see above)
                 // to decorate and connect the facet.
-                facetsEditor.model.get(opts.category + '_facets').add(facetModel);
+                facetsEditor.model.get('facets').add(facetModel);
             }
         }
     };
