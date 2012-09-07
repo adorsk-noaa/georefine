@@ -7,7 +7,7 @@ metadata = MetaData()
 session = scoped_session(sessionmaker(bind=engine))
 
 def init_db():
-    metadata.create_all(bind=engine)
+    metadata.create_all(bind=engine, checkfirst=True)
 
 def clear_db():
 	metadata.drop_all(bind=engine)

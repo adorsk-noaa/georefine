@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 import georefine.flask_config as flask_config
-import db
+from georefine.app import db as db
 import os
 import logging
 from georefine.config import config as gr_config
