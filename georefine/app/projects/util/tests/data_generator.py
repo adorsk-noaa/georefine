@@ -72,6 +72,8 @@ def generate_map_layer_data_files(data_dir):
         layer_id = "layer%s" % i
         layer_dir = os.path.join(layers_dir, layer_id)
         os.mkdir(layer_dir)
+
+        # Write shapefile.
         shp_file = os.path.join(layer_dir, "%s.shp" % layer_id)
         c = fiona.collection(shp_file, "w", driver='ESRI Shapefile', 
                              crs={'no_defs': True, 'ellps': 'WGS84', 
@@ -99,3 +101,34 @@ def generate_map_layer_data_files(data_dir):
             }
             c.write(record)
         c.close()
+
+        # Write SLD.
+        sld_file = os.path.join(layer_dir, "%s.sld" % layer_id)
+        open(sld_file, "w").write(get_sld(layer_id))
+
+def get_sld(layer_id):
+    return """
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<StyledLayerDescriptor version="1.0.0" 
+    xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd" 
+    xmlns="http://www.opengis.net/sld" 
+    xmlns:ogc="http://www.opengis.net/ogc" 
+    xmlns:xlink="http://www.w3.org/1999/xlink" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NamedLayer>
+    <Name>%s</Name>
+    <UserStyle>
+      <Title>Simple polygon</Title>
+      <FeatureTypeStyle>
+        <Rule>
+          <PolygonSymbolizer>
+            <Fill>
+              <CssParameter name="fill">#800080</CssParameter>
+            </Fill>
+          </PolygonSymbolizer>
+        </Rule>
+      </FeatureTypeStyle>
+    </UserStyle>
+  </NamedLayer>
+</StyledLayerDescriptor>
+""" % layer_id

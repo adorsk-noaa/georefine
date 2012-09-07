@@ -173,7 +173,11 @@ def setUpData(project):
             db.session.execute(table.insert().values(**processed_row))
         db.session.commit()
 
-        sld = ""
+        # Read SLD (if any).
+        sld = None
+        sld_file = os.path.join(map_layers_dir, layer, "%s.sld" % layer)
+        if os.path.isfile(sld_file):
+            sld = open(sld_file, "rb").read()
 
         # Create and saver layer model.
         layer_model = MapLayer(
