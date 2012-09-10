@@ -5,9 +5,10 @@ from werkzeug import secure_filename
 from jinja2 import Markup
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
-from georefine.app.projects.models import Project
+from georefine.app.projects.models import Project, MapLayer
 from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
+from georefine.app.projects.util import layer_services as layer_services
 from georefine.app.keyed_strings import util as ks_util
 import os
 import tarfile
@@ -16,9 +17,12 @@ bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='te
 context_root = "/%s" % app.config['APPLICATION_ROOT']
 geoserver_url = "/geoserver"
 
+def get_project(project_id):
+    return db.session.query(Project).get(project_id)
+
 @bp.route('/view/client/<int:project_id>/')
 def georefine_client(project_id):
-    project = Project.query.get(project_id)
+    project = get_project(project_id)
     project.app_config = projects_manage.getProjectAppConfig(project)
     georefine_config = {
         "context_root": context_root,
@@ -34,27 +38,6 @@ def georefine_client(project_id):
     }
     json_georefine_config = json.dumps(georefine_config)
     return render_template("projects/georefine_client.html", context_root=context_root, georefine_config=Markup(json_georefine_config))
-
-@bp.route('/test_facets/<int:project_id>/')
-def test_facets(project_id):
-    project = Project.query.get(project_id)
-    project.app_config = projects_manage.getProjectAppConfig(project)
-    json_facets = json.dumps(project.app_config.get('facets', '{}'))
-    return render_template("projects/test_facets.html", context_root=context_root, project_id=project.id, facets=Markup(json_facets))
-
-@bp.route('/test_charts/<int:project_id>/')
-def test_charts(project_id):
-    project = Project.query.get(project_id)
-    project.app_config = projects_manage.getProjectAppConfig(project)
-    json_charts = json.dumps(project.app_config.get('charts', '{}'))
-    return render_template("projects/test_charts.html", context_root=context_root, project_id=project.id, charts=Markup(json_charts))
-
-@bp.route('/test_map/<int:project_id>/')
-def test_map(project_id):
-    project = Project.query.get(project_id)
-    project.app_config = projects_manage.getProjectAppConfig(project)
-    json_map = json.dumps(project.app_config.get('map', '{}'))
-    return render_template("projects/test_map.html", context_root=context_root, project_id=project.id, map=Markup(json_map), geoserver_url=geoserver_url)
 
 @bp.route('/')
 def home():
@@ -96,7 +79,7 @@ def create_project():
 
 @bp.route('/execute_queries/<int:project_id>/', methods=['GET', 'POST'])
 def execute_queries(project_id):
-    project = Project.query.get(project_id)
+    project = get_project(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
@@ -111,7 +94,7 @@ def execute_queries(project_id):
 
 @bp.route('/execute_keyed_queries//<int:project_id>/', methods=['GET', 'POST'])
 def execute_keyed_queries(project_id):
-    project = Project.query.get(project_id)
+    project = get_project(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
@@ -130,7 +113,7 @@ def execute_keyed_queries(project_id):
 # @TODO: Kludge to get stuff working for now, clean this up later.
 @bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
 def execute_requests(project_id):
-    project = Project.query.get(project_id)
+    project = get_project(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     if request.method == 'POST':
@@ -155,7 +138,7 @@ def execute_requests(project_id):
 
 @bp.route('/get_map/<int:project_id>/', methods=['GET'])
 def get_map(project_id):
-    project = Project.query.get(project_id)
+    project = get_project(project_id)
     project.schema = projects_manage.getProjectSchema(project)
 
     # Parse parameters.
@@ -176,16 +159,41 @@ def get_map(project_id):
     params = str_params
 
     # Parse WMS parameters.
-    MAP_PARAMETERS = {}
-    for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT', 'SRS']:
-        value = request.args.get(wms_parameter)
-        if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
-            value = int(value)
-        MAP_PARAMETERS[wms_parameter] = value
+    wms_parameters = get_wms_parameters(request.args)
 
     map_image = projects_services.get_map(
             project, 
-            MAP_PARAMETERS = MAP_PARAMETERS,
+            MAP_PARAMETERS=wms_parameters,
             **params
             )
-    return Response(map_image, mimetype=MAP_PARAMETERS['FORMAT'])
+    return Response(map_image, mimetype=wms_parameters['FORMAT'])
+
+def get_wms_parameters(parameters):
+    wms_parameters = {}
+    for wms_parameter in [
+        'BBOX', 
+        'FORMAT', 
+        'WIDTH', 
+        'HEIGHT', 
+        'TRANSPARENT', 
+        'SRS'
+    ]:
+        value = parameters.get(wms_parameter)
+        if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
+            value = int(value)
+        wms_parameters[wms_parameter] = value
+    return wms_parameters
+
+def get_layer(layer_id):
+    return db.session.query(MapLayer).filter(
+        MapLayer.layer_id == layer_id).one()
+
+@bp.route('/layer/<layer_id>/wms', methods=['GET'])
+def layer_wms(layer_id):
+    layer = get_layer(layer_id)
+    wms_parameters = get_wms_parameters(request.args)
+    map_image = layer_services.get_map(
+        layer=layer,
+        wms_parameters=wms_parameters
+    )
+    return Response(map_image, mimetype=wms_parameters['FORMAT'])
