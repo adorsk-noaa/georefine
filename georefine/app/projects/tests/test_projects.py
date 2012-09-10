@@ -41,6 +41,6 @@ class ProjectsTest(unittest.TestCase):
         r = self.app.get("/projects/get_map/%s/" % project_id, query_string=data)
         print r.headers
         print r.data
-    
+
 if __name__ == '__main__':
     unittest.main()

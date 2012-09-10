@@ -1,39 +1,26 @@
 import mapscript as ms
-import sys, os, re, struct
-import colorsys
-import bisect
 
-
-output_formats = {
-    'image/gif': {
-        'driver': 'GD/GIF',
-        'mimetype': 'image/gif',
-        'imagemode': ms.MS_IMAGEMODE_RGBA,
-        'extension': 'gif',
-        'transparent': ms.MS_ON
-    }
-}
 
 class MapScriptRenderer(object):
 
     def renderLayers(self, 
-                     mapfile=None,
+                     map_parameters={},
                      wms_parameters={},
                      layers=[]
                  ):
-        mapObj = self.get_mapObj(mapfile=mapfile)
+        mapObj = self.get_mapObj(**map_parameters)
 
         for layer in layers:
-            layerObj = self.get_layerObj(**layer)
-            mapObj.insertLayer(layerObj)
+            layerObj = self.get_layerObj(mapObj=mapObj, **layer)
 
-        wms_request = ms.OWSRequest()
-        for k, v in wms_parameters.items():
-            wms_request.setParameter(k,v)
-        mapObj.loadOWSParameters(wms_request)
+        if wms_parameters:
+            wms_request = ms.OWSRequest()
+            for k, v in wms_parameters.items():
+                wms_request.setParameter(str(k),str(v))
+            mapObj.loadOWSParameters(wms_request)
 
         img = mapObj.draw()
-        return img.getBytes()
+        return img
 
     def get_rectObj(self, bounds=[-180.0, -90.0, 180.0, 90.0]):
         if isinstance(bounds, str):
@@ -57,10 +44,16 @@ class MapScriptRenderer(object):
         if kwargs.has_key('projection'):
             mapObj.setProjection(kwargs['projection'])
         else:
-            mapObj.setProjection = "init=epsg:4326"
+            mapObj.setProjection("init=epsg:4326")
+
+        for attr in ['width', 'height']:
+            if kwargs.has_key(attr):
+                setattr(mapObj, attr, kwargs[attr])
 
         mapObj.name = "MAP"
         mapObj.status = ms.MS_ON
+
+        mapObj.web.metadata.set('ows_enable_request', '*')
 
         return mapObj
 
@@ -70,8 +63,8 @@ class MapScriptRenderer(object):
         for attr in ['mimetype', 'imagemode', 'extension', 'transparent']:
             setattr(outputFormatObj, attr, format_def[attr])
 
-    def get_layerObj(self, **kwargs):
-        layerObj = ms.layerObj()
+    def get_layerObj(self, mapObj=None, **kwargs):
+        layerObj = ms.layerObj(mapObj)
         layerObj.status = ms.MS_ON
         layerObj.metadata.set('ows_enable_request', '*')
         layerObj.type = getattr(ms, 'MS_LAYER_%s' % kwargs['type'])
@@ -95,9 +88,13 @@ class MapScriptRenderer(object):
             layerObj.units = getattr(ms, 'MS_%s', kwargs['units'])
 
         if kwargs.get('sld'):
-            layerObj.applySLD(kwargs['sld'])
+            sld = kwargs['sld']
+            layerObj.applySLD(sld['doc'], sld.get('stylelayer'))
 
         if kwargs.get('projection'):
             layerObj.setProjection(kwargs['projection'])
             
         return layerObj
+
+    def imgObj_to_bytes(self, img):
+        return img.getBytes()

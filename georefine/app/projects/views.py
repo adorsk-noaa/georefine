@@ -171,12 +171,16 @@ def get_map(project_id):
 def get_wms_parameters(parameters):
     wms_parameters = {}
     for wms_parameter in [
+        'SERVICE', 
+        'VERSION', 
+        'REQUEST', 
         'BBOX', 
         'FORMAT', 
         'WIDTH', 
         'HEIGHT', 
         'TRANSPARENT', 
-        'SRS'
+        'SRS',
+        'LAYERS'
     ]:
         value = parameters.get(wms_parameter)
         if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
