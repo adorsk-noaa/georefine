@@ -1,6 +1,9 @@
 import unittest
 import sys
 from georefine.util.mapping.ms_renderer import MapScriptRenderer
+from PIL import Image
+from cStringIO import StringIO
+
 
 
 class MapScriptRendererTest(unittest.TestCase):
@@ -21,6 +24,10 @@ class MapScriptRendererTest(unittest.TestCase):
                 'data': 'geom FROM world_borders USING UNIQUE gid USING srid=4326',
                 'projection': 'init=epsg:4326',
                 'type': 'POLYGON',
+                'sld': {
+                    'doc': self.get_sld(),
+                    'stylelayer': 'foo'
+                }
             }
         ]
 
@@ -36,12 +43,39 @@ class MapScriptRendererTest(unittest.TestCase):
                 'HEIGHT':'640',
                 }
 
-        img = renderer.renderLayers(
-            mapfile="/home/adorsk/t/test.map",
+        imgObj = renderer.renderLayers(
             wms_parameters=wms_parameters,
             layers=layers
         )
-        print img
+        assert imgObj.__class__.__name__ == 'imageObj'
+
+        im = Image.open(StringIO(renderer.imgObj_to_bytes(imgObj))).show()
+
+    def get_sld(self):
+        return """<?xml version="1.0" encoding="ISO-8859-1"?>
+    <StyledLayerDescriptor version="1.0.0" 
+        xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd" 
+        xmlns="http://www.opengis.net/sld" 
+        xmlns:ogc="http://www.opengis.net/ogc" 
+        xmlns:xlink="http://www.w3.org/1999/xlink" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <NamedLayer>
+        <Name>foo</Name>
+        <UserStyle>
+          <Title>SLD Cook Book: Simple polygon</Title>
+          <FeatureTypeStyle>
+            <Rule>
+              <PolygonSymbolizer>
+                <Fill>
+                  <CssParameter name="fill">#800080</CssParameter>
+                </Fill>
+              </PolygonSymbolizer>
+            </Rule>
+          </FeatureTypeStyle>
+        </UserStyle>
+      </NamedLayer>
+    </StyledLayerDescriptor>
+    """
 
 if __name__ == '__main__':
     unittest.main()
