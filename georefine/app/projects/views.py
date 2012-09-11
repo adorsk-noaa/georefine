@@ -71,7 +71,7 @@ def create_project():
             tar = tarfile.open(tmp_filename)
             tar.extractall(project_dir)
             tar.close()
-            return "file is: {}".format(filename)
+            return "file is: {}, project is: {}".format(filename, project.id)
     else:
         flash('bad file')
     
