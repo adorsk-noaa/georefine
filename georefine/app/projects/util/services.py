@@ -1,14 +1,17 @@
 from georefine.app import db
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects
-from georefine.util.sa.sa_dao import SA_DAO
+from georefine.util.dao.gr_sa_dao import GeoRefine_SA_DAO
 import platform
 if platform.system() == 'Java':
     from georefine.util.mapping.gt_renderer import GeoToolsMapRenderer, mapSqlAlchemyConnectionParameters
 import copy
 
 def get_dao(project):
-    return SA_DAO(connection=db.session.bind, schema=project.schema)
+    return GeoRefine_SA_DAO(
+        connection=db.session.bind, 
+        schema=project.schema
+    )
 
 
 # @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
