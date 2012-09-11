@@ -90,7 +90,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         requestsUtil.addFiltersToQuery(model, ['primary_filters', 'base_filters'], inner_q);
         var outer_q = {
             'ID': 'outer',
-            'FROM': [{'ID': 'inner', 'TABLE': inner_q}]
+            'FROM': [{'ID': 'inner', 'SOURCE': inner_q}]
         };
         requestsUtil.extendQuery(outer_q, model.get('outer_query'));
 

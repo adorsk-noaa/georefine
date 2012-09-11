@@ -95,7 +95,7 @@ function($, Backbone, _, _s, Util, filtersUtil){
         // Initialize the outer query.
         var outer_q = {
             'ID': query_id || 'outer',
-            'FROM': [{'ID': 'inner', 'TABLE': inner_query}],
+            'FROM': [{'ID': 'inner', 'SOURCE': inner_query}],
             'SELECT_GROUP_BY': true,
             'GROUP_BY': []
         };

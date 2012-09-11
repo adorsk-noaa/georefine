@@ -37,7 +37,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
             requestsUtil.addFiltersToQuery(model, ['primary_filters', 'base_filters'], selected_inner_q);
             var selected_q = {
                 'ID': 'selected',
-                'FROM': [{'ID': 'inner', 'TABLE': selected_inner_q}],
+                'FROM': [{'ID': 'inner', 'SOURCE': selected_inner_q}],
                 'SELECT_GROUP_BY': true,
             };
             requestsUtil.extendQuery(selected_q, qfield.get('outer_query'));
@@ -51,7 +51,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
             requestsUtil.addFiltersToQuery(model, ['base_filters'], total_inner_q);
             var total_q = {
                 'ID': 'total',
-                'FROM': [{'ID': 'inner', 'TABLE': total_inner_q}],
+                'FROM': [{'ID': 'inner', 'SOURCE': total_inner_q}],
                 'SELECT_GROUP_BY': true,
             };
             requestsUtil.extendQuery(total_q, qfield.get('outer_query'));
