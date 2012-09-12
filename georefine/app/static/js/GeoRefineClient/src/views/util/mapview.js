@@ -15,18 +15,18 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
     layerConnectors['default'] = {
         connect: function(layer){
-            if (layer.model.get('source') == 'local_getmap'){
+            if (layer.model.get('source') == 'georefine_data_layer'){
                 return connectLocalDataLayer(layer);
             }
         },
         disconnect: function(layer){
-            if (layer.model.get('source') == 'local_getmap'){
+            if (layer.model.get('source') == 'georefine_data_layer'){
                 return disconnectLocalDataLayer(layer);
             }
         }
     };
 
-    layerConnectors['local_getmap'] = {
+    layerConnectors['georefine_data_layer'] = {
         connect: function(layer){
             // Change query parameters when layer parameters change.
             layer.model.on('change:data_entity change:primary_filters change:base_filters', layer.model.updateQueryParameters, layer.model);
@@ -125,7 +125,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
             // and set the service_url.
             success: function(data, status, xhr){
                 var url_params = [_s.sprintf('PARAMS_KEY=%s', data.key)];
-                var service_url = GeoRefine.app.mapEndpoint + '?' + url_params.join('&') + '&';
+                var service_url = GeoRefine.app.dataLayerEndpoint + '?' + url_params.join('&') + '&';
 
                 // Resolve after load end.
                 var onLoadEnd = function(){
@@ -172,7 +172,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
     };
 
     // Local getmap layer decorator.
-    layerDecorators['local_getmap'] = function(layer){
+    layerDecorators['georefine_data_layer'] = function(layer){
 
         // Call default decorator.
         layerDecorators['default'](layer);
@@ -236,16 +236,6 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
         }
     };
 
-    layerDecorators['local_geoserver'] = function(layer){
-
-        // Call default decorator.
-        layerDecorators['default'](layer);
-
-        // Set service url.
-        var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, layer.model.get('workspace'));
-        layer.model.set('service_url', service_url);
-    };
-
     var decorateLayer = function(layer){
         var decorator = layerDecorators[layer.model.get('source')];
         if (! decorator){
@@ -256,7 +246,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
     // Define layer initializers.
     var layerInitializers = {};
-    layerInitializers['local_getmap'] = function(layer){
+    layerInitializers['georefine_data_layer'] = function(layer){
         // Set filters.
         _.each(['base', 'primary'], function(filterCategory){
             filtersUtil.updateModelFilters(layer.model, filterCategory, {silent: true});
@@ -398,7 +388,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
                 ));
 
         // Handle customizations for specific layer types.
-        if (layerDef.source == 'local_getmap'){
+        if (layerDef.source == 'georefine_data_layer'){
             _.each(['data_entity', 'geom_entity', 'geom_id_entity'], function(entity_attr){
                 if (layerDef[entity_attr]){
                     var entityModel = new Backbone.Model(layerDef[entity_attr]);
@@ -406,8 +396,8 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
                 }
             });
         }
-        else if (layerDef.source == 'local_geoserver'){
-            var service_url = _s.sprintf("%s/%s/wms", GeoRefine.config.geoserver_url, layerDef.workspace);
+        else if (layerDef.source == 'georefine_wms_layer'){
+            var service_url = _s.sprintf("%s/%s/wms", GeoRefine.app.WMSLayerEndpoint, layerModel.id);
             layerModel.set('service_url', service_url);
         }
 

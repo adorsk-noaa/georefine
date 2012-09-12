@@ -15,7 +15,6 @@ import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
 context_root = "/%s" % app.config['APPLICATION_ROOT']
-geoserver_url = "/geoserver"
 
 def get_project(project_id):
     return db.session.query(Project).get(project_id)
@@ -26,7 +25,6 @@ def georefine_client(project_id):
     project.app_config = projects_manage.getProjectAppConfig(project)
     georefine_config = {
         "context_root": context_root,
-        "geoserver_url": geoserver_url,
         "project_id": project_id,
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
@@ -51,9 +49,13 @@ def create_project():
 
         # Create a directory for the project.
         # @TODO: change this to use project id or uuid later.
-        project_dir = os.path.join(gr_conf['PROJECT_FILES_DIR'], project.name)
-        os.mkdir(project_dir)
 
+        db.session.add(project)
+        db.session.commit()
+
+        project_dir = os.path.join(
+            gr_conf['PROJECT_FILES_DIR'], str(project.id))
+        os.mkdir(project_dir)
         project.dir = project_dir
         db.session.add(project)
         db.session.commit()
@@ -71,6 +73,11 @@ def create_project():
             tar = tarfile.open(tmp_filename)
             tar.extractall(project_dir)
             tar.close()
+
+            # Setup the project's tables and data.
+            projects_manage.setUpSchema(project)
+            projects_manage.setUpData(project)
+
             return "file is: {}, project is: {}".format(filename, project.id)
     else:
         flash('bad file')
@@ -188,13 +195,15 @@ def get_wms_parameters(parameters):
         wms_parameters[wms_parameter] = value
     return wms_parameters
 
-def get_layer(layer_id):
-    return db.session.query(MapLayer).filter(
-        MapLayer.layer_id == layer_id).one()
+def get_layer(project_id, layer_id):
+    return db.session.query(MapLayer)\
+            .filter(MapLayer.layer_id == layer_id)\
+            .filter(MapLayer.project_id == project_id)\
+            .one()
 
-@bp.route('/layer/<layer_id>/wms', methods=['GET'])
-def layer_wms(layer_id):
-    layer = get_layer(layer_id)
+@bp.route('/<int:project_id>/layer/<layer_id>/wms', methods=['GET'])
+def layer_wms(project_id, layer_id):
+    layer = get_layer(project_id, layer_id)
     wms_parameters = get_wms_parameters(request.args)
     map_image = layer_services.get_map(
         layer=layer,

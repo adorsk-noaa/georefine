@@ -39,8 +39,8 @@ def setUpData(project):
     schema = getProjectSchema(project)
 
     # Load data (in order defined by schema).
-    for t in schema['ordered_tables']:
-        table = t['table']
+    for t in schema['ordered_sources']:
+        table = t['source']
 
         # Get the filename for the table.
         table_filename = os.path.join(project.dir, 'data', "%s.csv" % (t['id']))
@@ -90,21 +90,25 @@ def setUpData(project):
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
             # Insert values.
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
-            db.session.execute(t['table'].insert().values(**processed_row))
+            db.session.execute(t['source'].insert().values(**processed_row))
 
         table_file.close()
         db.session.commit()
 
-    # Ingest map layers.
-    map_layers_dir = os.path.join(project.dir, 'data', "map_layers")
+    ingest_map_layers(project, schema)
+
+def ingest_map_layers(project, schema):
+    map_layers_dir = os.path.join(
+        project.dir, 'data', "map_layers", "data", "shapefiles"
+    )
+
     if not os.path.isdir(map_layers_dir):
         return
+
     for layer in os.listdir(map_layers_dir):
-        # Get reader for layer.
         shp_file = os.path.join(map_layers_dir, layer, "%s.shp" % layer)
         reader = shp_util.get_shapefile_reader(shp_file)
 
-        # Setup table for layer.
         tname = "p_%s__l_%s" % (project.id, layer)
         geom_type = eval("%s(2)" % reader.schema['geometry'])
         if reader.schema['geometry'] == 'Polygon':
