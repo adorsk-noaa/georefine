@@ -35,7 +35,6 @@ def get_map(layer, wms_parameters={}, **kwargs):
         from georefine.util.mapping.ms_renderer import MapScriptRenderer
         renderer = MapScriptRenderer()
 
-
         if 'postgres' in db.engine.url.drivername:
             connectiontype = 'POSTGIS'
             ms_connection_str = "host=%s password=%s dbname=%s user=%s" % (

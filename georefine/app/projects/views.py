@@ -159,18 +159,18 @@ def get_map(project_id):
         json_params = request.args.get('PARAMS')
 
     params = json.loads(json_params)
+
     # Fix for unicode keys (py2.5 doesn't like them).
     str_params = {}
     for k,v in params.items():
         str_params[str(k)] = v
     params = str_params
 
-    # Parse WMS parameters.
     wms_parameters = get_wms_parameters(request.args)
 
     map_image = projects_services.get_map(
             project, 
-            MAP_PARAMETERS=wms_parameters,
+            wms_parameters=wms_parameters,
             **params
             )
     return Response(map_image, mimetype=wms_parameters['FORMAT'])
