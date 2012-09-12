@@ -60,12 +60,15 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
 
             sql = dao.get_sql(QUERY)
 
-            ms_data_str = ("%s FROM (%s) as subq"
-                           " USING UNIQUE %s USING srid=4326"
+            ms_data_str = ("geom FROM"
+                           " (SELECT ST_SetSRID(subq.%s, 4326) as geom"
+                           ", subq.%s as geom_id, *"
+                           " FROM (%s) as subq) as wrapped_subq" 
+                           " USING UNIQUE geom_id USING srid=4326"
                            % (
                                GEOM_ENTITY['ID'], 
-                               sql, 
-                               GEOM_ID_ENTITY['ID']
+                               GEOM_ID_ENTITY['ID'],
+                               sql
                            )
                           )
 
