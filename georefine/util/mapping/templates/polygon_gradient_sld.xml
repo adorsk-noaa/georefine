@@ -1,0 +1,64 @@
+<StyledLayerDescriptor version="1.0.0" 
+    xsi:schemaLocation="http://www.opengis.net/sld StyledLayerDescriptor.xsd" 
+    xmlns="http://www.opengis.net/sld" 
+    xmlns:ogc="http://www.opengis.net/ogc" 
+    xmlns:xlink="http://www.w3.org/1999/xlink" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <NamedLayer>
+        <Name>{{layer_name}}</Name>
+        <UserStyle>
+            <Title>Polygon Gradient</Title>
+            <FeatureTypeStyle>
+                <Rule>
+                    {% set color_class = color_classes[0] %}
+                    <ogc:Filter>
+                            <ogc:PropertyIsGreaterThanOrEqualTo>
+                                <ogc:PropertyName>{{value_attr}}</ogc:PropertyName>
+                                <ogc:Literal>{{color_class[0]}}</ogc:Literal>
+                            </ogc:PropertyIsGreaterThanOrEqualTo>
+                    </ogc:Filter>
+                    <PolygonSymbolizer>
+                        <Fill>
+                            <CssParameter name="fill">{{color_class[2]}}</CssParameter>
+                        </Fill>
+                    </PolygonSymbolizer>
+                </Rule>
+                {% for color_class in color_classes[1:-1] %}
+                <Rule>
+                    <ogc:Filter>
+                        <ogc:And>
+                            <ogc:PropertyIsGreaterThanOrEqualTo>
+                                <ogc:PropertyName>{{value_attr}}</ogc:PropertyName>
+                                <ogc:Literal>{{color_class[0]}}</ogc:Literal>
+                            </ogc:PropertyIsGreaterThanOrEqualTo>
+                            <ogc:PropertyIsLessThan>
+                                <ogc:PropertyName>{{value_attr}}</ogc:PropertyName>
+                                <ogc:Literal>{{color_class[1]}}</ogc:Literal>
+                            </ogc:PropertyIsLessThan>
+                        </ogc:And>
+                    </ogc:Filter>
+                    <PolygonSymbolizer>
+                        <Fill>
+                            <CssParameter name="fill">{{color_class[2]}}</CssParameter>
+                        </Fill>
+                    </PolygonSymbolizer>
+                </Rule>
+                {% endfor %}
+                <Rule>
+                    {% set color_class = color_classes[-1] %}
+                    <ogc:Filter>
+                            <ogc:PropertyIsGreaterThanOrEqualTo>
+                                <ogc:PropertyName>{{value_attr}}</ogc:PropertyName>
+                                <ogc:Literal>{{color_class[1]}}</ogc:Literal>
+                            </ogc:PropertyIsGreaterThanOrEqualTo>
+                    </ogc:Filter>
+                    <PolygonSymbolizer>
+                        <Fill>
+                            <CssParameter name="fill">{{color_class[2]}}</CssParameter>
+                        </Fill>
+                    </PolygonSymbolizer>
+                </Rule>
+            </FeatureTypeStyle>
+        </UserStyle>
+    </NamedLayer>
+</StyledLayerDescriptor>
