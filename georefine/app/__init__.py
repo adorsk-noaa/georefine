@@ -1,17 +1,14 @@
-from flask import Flask, render_template
 import georefine.flask_config as flask_config
 from georefine.app import db as db
-import os
-import logging
 from georefine.config import config as gr_config
+
+from flask import Flask, render_template
+from flask_admin import Admin
 
 app = Flask(__name__)
 app.config.from_object(flask_config)
 
-file_handler = logging.FileHandler(gr_config['LOGFILE'])
-file_handler.setLevel(logging.WARNING)
-file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-app.logger.addHandler(file_handler) 
+admin = Admin(app)
 
 @app.errorhandler(404)
 def not_found(error):
@@ -20,6 +17,9 @@ def not_found(error):
 @app.teardown_request
 def shutdown_session(exception=None):
 	db.session.remove()
+
+from georefine.app.projects.admin import ProjectsAdmin
+admin.add_view(ProjectsAdmin(db.session))
 
 from georefine.app.projects.views import bp as projects_bp
 app.register_blueprint(projects_bp)

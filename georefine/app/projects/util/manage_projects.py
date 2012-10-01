@@ -2,7 +2,7 @@ from georefine.app.projects.models import Project, MapLayer
 from georefine.app import db
 import georefine.util.shapefile as shp_util
 import georefine.util.gis as gis_util
-from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy import Column, Float, Integer, String, MetaData
 from geoalchemy import *
 from geoalchemy.geometry import Geometry
 import os, shutil, csv
@@ -97,18 +97,19 @@ def setUpData(project):
 
     ingest_map_layers(project, schema)
 
-def ingest_map_layers(project, schema):
+def get_project_layers_schema(project):
+    schema = {
+        'metadata': MetaData(),
+        'sources': {},
+        'ordered_sources': []
+    }
+
     map_layers_dir = os.path.join(
         project.dir, 'data', "map_layers", "data", "shapefiles"
     )
-
-    if not os.path.isdir(map_layers_dir):
-        return
-
     for layer in os.listdir(map_layers_dir):
         shp_file = os.path.join(map_layers_dir, layer, "%s.shp" % layer)
         reader = shp_util.get_shapefile_reader(shp_file)
-
         tname = "p_%s__l_%s" % (project.id, layer)
         geom_type = eval("%s(2)" % reader.schema['geometry'])
         if reader.schema['geometry'] == 'Polygon':
@@ -126,6 +127,27 @@ def ingest_map_layers(project, schema):
             table_cols.append(Column(p, col_type))
         table = Table(tname, schema['metadata'], *table_cols)
         GeometryDDL(table)
+
+        schema['sources'][layer] = table
+        schema['ordered_sources'].append(table)
+
+    return schema
+
+def ingest_map_layers(project, schema):
+    layers_schema = get_project_layers_schema(project)
+
+    map_layers_dir = os.path.join(
+        project.dir, 'data', "map_layers", "data", "shapefiles"
+    )
+
+    if not os.path.isdir(map_layers_dir):
+        return
+
+    for layer in os.listdir(map_layers_dir):
+        shp_file = os.path.join(map_layers_dir, layer, "%s.shp" % layer)
+        reader = shp_util.get_shapefile_reader(shp_file)
+
+        table = layers_schema['sources'][layer]
         table.create(bind=db.session.bind)
 
         # Ingest layer data.
@@ -187,7 +209,7 @@ def ingest_map_layers(project, schema):
         layer_model = MapLayer(
             layer_id=layer,
             project=project,
-            tbl=tname,
+            tbl=table.name,
             sld=sld
         )
         db.session.add(layer_model)
