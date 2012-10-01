@@ -2,7 +2,7 @@ import georefine.flask_config as flask_config
 from georefine.app import db as db
 from georefine.config import config as gr_config
 
-from flask import Flask, render_template
+from flask import Flask, render_template, escape
 from flask_admin import Admin
 
 app = Flask(__name__)
@@ -17,6 +17,14 @@ def not_found(error):
 @app.teardown_request
 def shutdown_session(exception=None):
 	db.session.remove()
+
+
+from .login import login_manager
+from flask_login import current_user
+
+@app.route('/')
+def index():
+    return "da index, current user is: '%s'" % escape(str(current_user))
 
 from georefine.app.projects.admin import ProjectsAdmin
 admin.add_view(ProjectsAdmin(db.session))

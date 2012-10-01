@@ -9,6 +9,7 @@ import flask_admin
 from flask_admin.base import expose
 from flask_admin.contrib import sqlamodel
 from flask.ext.admin.babel import gettext, ngettext, lazy_gettext
+from flask_login import login_required, current_user
 import flask_wtf
 from werkzeug import secure_filename
 import tempfile
@@ -30,6 +31,9 @@ class ProjectsAdmin(sqlamodel.ModelView):
             endpoint=endpoint, 
             **kwargs
         )
+
+    def is_accessible(self):
+        return current_user.is_authenticated()
 
     def create_form(self, form, obj=None):
         """ Modify project creation form to add file field. """
