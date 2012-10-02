@@ -1,7 +1,7 @@
 from georefine.app import db 
 from sqlalchemy import (Table, Column, Integer, String, Text, ForeignKey,
                         PickleType)
-from sqlalchemy.orm import mapper, relationship
+from sqlalchemy.orm import mapper, relationship, backref
 
 
 class Project(object):
@@ -37,6 +37,13 @@ maplayer_table = Table('project_maplayers', db.metadata,
         Column('sld', Text),
         )
 mapper(MapLayer, maplayer_table, properties={
-    'project': relationship(Project, backref="maplayers")
+    'project': relationship(
+        Project, 
+        single_parent=True,
+        backref=backref(
+            "maplayers",
+            cascade="all, delete-orphan"
+        )
+    )
 })
 

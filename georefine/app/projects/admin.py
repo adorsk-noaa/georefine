@@ -113,30 +113,41 @@ class ProjectsAdmin(sqlamodel.ModelView):
             :param model:
                 Model to delete
         """
+
+        con, trans, session = db.get_session_w_external_trans(self.session)
+
         # Remove project maplayers.
         try:
-            layers_schema =  projects_manage.get_project_layers_schema(model)
-            layers_schema['metadata'].drop_all(bind=self.session.connection())
+            model.layers_schema['metadata'].drop_all(bind=session.connection())
         except Exception, e:
             flash(gettext('Could not remove project layer tables. %(error)s', 
                           error=str(e)), 'error')
+            trans.rollback()
+            con.close()
             return False
 
         # Remove project tables.
         try:
-            schema =  projects_manage.getProjectSchema(model)
-            schema['metadata'].drop_all(bind=self.session.connection())
+            model.schema['metadata'].drop_all(bind=session.connection())
+            model.layers_schema['metadata'].drop_all(bind=session.connection())
         except Exception, e:
             flash(gettext('Could not remove project tables. %(error)s', 
                           error=str(e)), 'error')
-            return False
-            
-        # Remove project directory.
-        try:
-            shutil.rmtree(model.dir)
-        except Exception, e:
-            flash(gettext('Could not remove project directory. %(error)s', 
-                          error=str(e)), 'error')
+            trans.rollback()
+            con.close()
             return False
 
-        return super(self.__class__, self).delete_model(model)
+        try:
+            self.on_model_delete(model)
+            self.session.flush()
+            self.session.delete(model)
+            self.session.commit()
+        except Exception, ex:
+            flash(gettext('Failed to delete model. %(error)s', error=str(ex)), 'error')
+            trans.rollback()
+            con.close()
+            return False
+
+        trans.commit()
+        con.close()
+        return True
