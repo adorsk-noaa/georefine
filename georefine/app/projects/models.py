@@ -1,17 +1,22 @@
 from georefine.app import db 
-from sqlalchemy import (Table, Column, Integer, String, Text, ForeignKey)
+from sqlalchemy import (Table, Column, Integer, String, Text, ForeignKey,
+                        PickleType)
 from sqlalchemy.orm import mapper, relationship
 
+
 class Project(object):
-    def __init__(self, id=None, name=None, dir=None):
+    def __init__(self, id=None, name=None, schema=None, app_config=None):
         self.id = id
         self.name = name
-        self.dir = dir
+        self.schema = schema
+        self.app_config = app_config
 
 project_table = Table('project_projects', db.metadata,
         Column('id', Integer, primary_key=True),
         Column('name', String),
-        Column('dir', String),
+        Column('schema', PickleType),
+        Column('app_config', PickleType),
+        Column('layers_schema', PickleType),
         )
 mapper(Project, project_table)
 

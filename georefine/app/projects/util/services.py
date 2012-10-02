@@ -1,6 +1,5 @@
 from georefine.app import db
 from georefine.app.projects.models import Project
-from georefine.app.projects.util import manage_projects
 from georefine.util.dao.gr_sa_dao import GeoRefine_SA_DAO
 import platform
 import copy

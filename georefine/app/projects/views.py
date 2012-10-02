@@ -6,7 +6,6 @@ from jinja2 import Markup
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project, MapLayer
-from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
 from georefine.app.projects.util import layer_services as layer_services
 from georefine.app.keyed_strings import util as ks_util
@@ -22,7 +21,6 @@ def get_project(project_id):
 @bp.route('/view/client/<int:project_id>/')
 def georefine_client(project_id):
     project = get_project(project_id)
-    project.app_config = projects_manage.getProjectAppConfig(project)
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
@@ -41,53 +39,9 @@ def georefine_client(project_id):
 def home():
     return 'home'
 
-@bp.route('/create_project/', methods=['GET', 'POST'])
-def create_project():
-    form = CreateProjectForm(request.form)
-    if form.validate_on_submit():
-        project = Project(name=form.name.data)
-
-        # Create a directory for the project.
-        # @TODO: change this to use project id or uuid later.
-
-        db.session.add(project)
-        db.session.commit()
-
-        project_dir = os.path.join(
-            gr_conf['PROJECT_FILES_DIR'], str(project.id))
-        os.mkdir(project_dir)
-        project.dir = project_dir
-        db.session.add(project)
-        db.session.commit()
-
-        project_file = request.files['project_file']
-        if project_file:
-            filename = secure_filename(project_file.filename)
-
-            # HACK.
-            # @TODO: fix this later.
-            tmp_filename = os.path.join('/tmp', filename)
-            project_file.save(tmp_filename)
-
-            # Unpack the project file to the project dir.
-            tar = tarfile.open(tmp_filename)
-            tar.extractall(project_dir)
-            tar.close()
-
-            # Setup the project's tables and data.
-            projects_manage.setUpSchema(project)
-            projects_manage.setUpData(project)
-
-            return "file is: {}, project is: {}".format(filename, project.id)
-    else:
-        flash('bad file')
-    
-    return render_template("projects/create_project.html", form=form)
-
 @bp.route('/execute_queries/<int:project_id>/', methods=['GET', 'POST'])
 def execute_queries(project_id):
     project = get_project(project_id)
-    project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
@@ -102,7 +56,6 @@ def execute_queries(project_id):
 @bp.route('/execute_keyed_queries//<int:project_id>/', methods=['GET', 'POST'])
 def execute_keyed_queries(project_id):
     project = get_project(project_id)
-    project.schema = projects_manage.getProjectSchema(project)
 
     # Parse request parameters.
     key_def = json.loads(request.args.get('KEY', '{}'))
@@ -121,7 +74,6 @@ def execute_keyed_queries(project_id):
 @bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
 def execute_requests(project_id):
     project = get_project(project_id)
-    project.schema = projects_manage.getProjectSchema(project)
 
     if request.method == 'POST':
         request_defs = json.loads(request.form.get('requests'), '[]')
@@ -146,7 +98,6 @@ def execute_requests(project_id):
 @bp.route('/get_map/<int:project_id>/', methods=['GET'])
 def get_map(project_id):
     project = get_project(project_id)
-    project.schema = projects_manage.getProjectSchema(project)
 
     # Parse parameters.
     json_params = ""

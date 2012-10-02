@@ -11,3 +11,9 @@ def init_db():
 
 def clear_db():
 	metadata.drop_all(bind=engine)
+
+def get_session_w_external_trans(orig_session):
+    con = orig_session.bind.connect()
+    trans = con.begin()
+    new_session = sessionmaker()(bind=con)
+    return con, trans, new_session

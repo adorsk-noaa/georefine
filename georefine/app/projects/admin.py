@@ -1,4 +1,5 @@
 from georefine.config import config as gr_conf
+from georefine.app import db
 from . import models
 from .util import manage_projects as projects_manage
 from .util import services as projects_services
@@ -16,6 +17,7 @@ import tempfile
 import os
 import shutil
 import tarfile
+import traceback
 
 
 class ProjectsAdmin(sqlamodel.ModelView):
@@ -44,50 +46,65 @@ class ProjectsAdmin(sqlamodel.ModelView):
             def __init__(self, *args, **kwargs):
                 super(self.__class__, self).__init__(*args, **kwargs)
 
-        return ProjectCreationForm(form, obj)
+        return ProjectCreationForm(form, obj, csrf_enabled=False)
     
 
     def create_model(self, form):
+        con, trans, session = db.get_session_w_external_trans(self.session)
         try:
             model = self.model()
             form.populate_obj(model)
-            self.session.add(model)
-            self.session.commit()
-        except Exception, ex:
-            flash(gettext('Failed to create model. %(error)s', error=str(ex)), 'error')
-            return False
 
-        # Setup project directory.
-        project_dir = os.path.join(gr_conf['PROJECT_FILES_DIR'], str(model.id))
-        os.mkdir(project_dir)
-        model.dir = project_dir
-        self.session.add(model)
-        self.session.commit()
-
-        # Upload project file.
-        project_file = request.files.get('project_file')
-        if project_file:
+            # Ingest project file.
+            project_file = request.files.get('project_file')
             filename = secure_filename(project_file.filename)
 
-            # HACK.
-            # @TODO: fix this later.
-            tmp_dir = tempfile.mkdtemp(prefix="gr.")
-            tmp_filename = os.path.join(tmp_dir, filename)
+            tmp_dir1 = tempfile.mkdtemp(prefix="gr1.")
+            tmp_filename = os.path.join(tmp_dir1, filename)
             project_file.save(tmp_filename)
 
-            # Unpack the project file to the project dir.
+            # Unpack the project file.
+            tmp_dir2 = tempfile.mkdtemp(prefix="gr2.")
             tar = tarfile.open(tmp_filename)
-            tar.extractall(project_dir)
+            tar.extractall(tmp_dir2)
             tar.close()
 
-            # Setup the project's tables and data.
-            projects_manage.setUpSchema(model)
-            projects_manage.setUpData(model)
-            return True
-        else:
-            flash(gettext('Failed to create project. %(error)s', 
-                          error="No file."), 'error')
+            session.add(model)
+            session.commit()
+
+        except Exception, ex:
+            flash(
+                gettext('Failed to create model. %(error)s, %(tb)s', 
+                        error=str(ex), tb=traceback.format_exc()), 'error')
+            trans.rollback()
+            con.close()
             return False
+
+        # Setup the project's tables and data.
+        try:
+            projects_manage.setUpSchema(model, tmp_dir2, session)
+            projects_manage.setUpAppConfig(model, tmp_dir2)
+            projects_manage.setUpMapLayers(model, tmp_dir2, session)
+            projects_manage.setUpData(model, tmp_dir2, session)
+
+        except Exception, ex:
+            print "-" * 60
+            traceback.print_exc()
+            print "-" * 60
+            flash(
+                gettext(
+                    'Unable to setup model schema or data. %(error)s, %(tb)s', 
+                    error=str(ex), tb=traceback.format_exc()
+                ), 
+                'error'
+            )
+            trans.rollback()
+            con.close()
+            return False
+
+        trans.commit()
+        con.close()
+        return True
 
     def delete_model(self, model):
         """

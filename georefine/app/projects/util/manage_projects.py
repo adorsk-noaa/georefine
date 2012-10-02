@@ -7,43 +7,33 @@ from geoalchemy import *
 from geoalchemy.geometry import Geometry
 import os, shutil, csv
 
-def getProjectSchema(project):
-    schema_file = os.path.join(project.dir, 'schema.py')
-    schema_source = open(schema_file, 'rb').read()
-    compiled_schema = compile(schema_source, '<schema>', 'exec') 
-    schema = {}
-    exec compiled_schema in schema
-
-    # Prefix tables w/ project id.
+def setUpSchema(project, data_dir, session=db.session): 
+    schema_code = open(os.path.join(data_dir, "schema.py"), "rb").read()
+    compiled_schema = compile(schema_code, '<schema>', 'exec') 
+    schema_objs = {}
+    exec compiled_schema in schema_objs
+    schema = schema_objs['schema']
     for t in schema['metadata'].tables.values():
         t.name = "projects%s_%s" % (project.id, t.name)
+    schema['metadata'].create_all(bind=session.bind)
+    project.schema = schema
 
-    return schema
+def setUpAppConfig(project, data_dir): 
+    app_config_code = open(os.path.join(data_dir, "app_config.py"), "rb").read()
+    compiled_app_config= compile(app_config_code, '<app_config>', 'exec') 
+    app_config_objs = {}
+    exec compiled_app_config in app_config_objs
+    project.app_config = app_config_objs['app_config']
 
-def getProjectAppConfig(project):
-    app_config_file = os.path.join(project.dir, 'app_config.py')
-    app_config_source = open(app_config_file, 'rb').read()
-    compiled_app_config= compile(app_config_source, '<app_config>', 'exec') 
-    app_config = {}
-    exec compiled_app_config in app_config
-
-    return app_config
-
-def setUpSchema(project): 
-    schema = getProjectSchema(project)
-    
-    # Create tables.
-    schema['metadata'].create_all(bind=db.session.bind)
-
-def setUpData(project):
-    schema = getProjectSchema(project)
+def setUpData(project, data_dir, session=db.session):
+    schema = project.schema
 
     # Load data (in order defined by schema).
     for t in schema['ordered_sources']:
         table = t['source']
 
         # Get the filename for the table.
-        table_filename = os.path.join(project.dir, 'data', "%s.csv" % (t['id']))
+        table_filename = os.path.join(data_dir, 'data', "%s.csv" % (t['id']))
 
         # Read rows from data file.
         table_file = open(table_filename, 'rb') 
@@ -90,23 +80,22 @@ def setUpData(project):
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
             # Insert values.
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
-            db.session.execute(t['source'].insert().values(**processed_row))
+            session.execute(t['source'].insert().values(**processed_row))
 
         table_file.close()
-        db.session.commit()
+        session.commit()
 
-    ingest_map_layers(project, schema)
-
-def get_project_layers_schema(project):
-    schema = {
+def setUpMapLayers(project, data_dir, session=db.session): 
+    layers_schema = {
         'metadata': MetaData(),
         'sources': {},
         'ordered_sources': []
     }
 
     map_layers_dir = os.path.join(
-        project.dir, 'data', "map_layers", "data", "shapefiles"
+        data_dir, 'data', "map_layers", "data", "shapefiles"
     )
+
     for layer in os.listdir(map_layers_dir):
         shp_file = os.path.join(map_layers_dir, layer, "%s.shp" % layer)
         reader = shp_util.get_shapefile_reader(shp_file)
@@ -125,30 +114,12 @@ def get_project_layers_schema(project):
             elif p_type == 'str':
                 col_type = String
             table_cols.append(Column(p, col_type))
-        table = Table(tname, schema['metadata'], *table_cols)
+        table = Table(tname, layers_schema['metadata'], *table_cols)
         GeometryDDL(table)
 
-        schema['sources'][layer] = table
-        schema['ordered_sources'].append(table)
-
-    return schema
-
-def ingest_map_layers(project, schema):
-    layers_schema = get_project_layers_schema(project)
-
-    map_layers_dir = os.path.join(
-        project.dir, 'data', "map_layers", "data", "shapefiles"
-    )
-
-    if not os.path.isdir(map_layers_dir):
-        return
-
-    for layer in os.listdir(map_layers_dir):
-        shp_file = os.path.join(map_layers_dir, layer, "%s.shp" % layer)
-        reader = shp_util.get_shapefile_reader(shp_file)
-
-        table = layers_schema['sources'][layer]
-        table.create(bind=db.session.bind)
+        layers_schema['sources'][layer] = table
+        layers_schema['ordered_sources'].append(table)
+        table.create(bind=session.bind)
 
         # Ingest layer data.
         for record in reader.records():
@@ -193,11 +164,13 @@ def ingest_map_layers(project, schema):
                         # Process value if not blank.
                         if not is_blank:
                             processed_row[c.name] = cast(row[key])
+
                 except Exception, err:
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
 
-            db.session.execute(table.insert().values(**processed_row))
-        db.session.commit()
+            session.execute(table.insert().values(**processed_row))
+
+        session.commit()
 
         # Read SLD (if any).
         sld = None
@@ -212,24 +185,7 @@ def ingest_map_layers(project, schema):
             tbl=table.name,
             sld=sld
         )
-        db.session.add(layer_model)
-        db.session.commit()
+        session.add(layer_model)
+        session.commit()
 
-def tearDownSchema(schema): 
-    schema['metadata'].drop_all(bind=db.session.bind)
-
-def deleteProject(project_id, delete_project_dir=True):
-    project = db.session.query(Project).filter(Project.id == project_id).one()
-    schema = getProjectSchema(project)
-    tearDownSchema(schema)
-
-    if delete_project_dir:
-        shutil.rmtree(project.dir)
-
-    db.session.delete(project)
-    db.session.commit()
-
-
-
-
-
+        project.layers_schema = layers_schema
