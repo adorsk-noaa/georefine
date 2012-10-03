@@ -111,7 +111,7 @@ function($, Backbone, _, _s, Util, filtersUtil){
         _.each(gb_attrs, function(gb_attr){
             outer_q['GROUP_BY'].push({
                 'ID': key[gb_attr]['ID'],
-                'EXPRESSION': _s.sprintf("{{inner.%s}}", key[gb_attr]['ID'])
+                'EXPRESSION': _s.sprintf("__inner__%s", key[gb_attr]['ID'])
             });
         });
 
