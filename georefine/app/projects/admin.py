@@ -86,6 +86,9 @@ class ProjectsAdmin(sqlamodel.ModelView):
             projects_manage.setUpAppConfig(model, tmp_dir2)
             projects_manage.setUpMapLayers(model, tmp_dir2, session)
             projects_manage.setUpData(model, tmp_dir2, session)
+            projects_manage.setUpStaticFiles(model, tmp_dir2)
+            session.add(model)
+            session.commit()
 
         except Exception, ex:
             print "-" * 60
@@ -137,6 +140,17 @@ class ProjectsAdmin(sqlamodel.ModelView):
             con.close()
             return False
 
+        # Remove project static files.
+        try:
+            shutil.rmtree(model.static_files_dir)
+        except:
+            flash(gettext('Could not remove project static files. %(error)s', 
+                          error=str(e)), 'error')
+            trans.rollback()
+            con.close()
+            return False
+
+        # Delete the project's db record.
         try:
             self.on_model_delete(model)
             self.session.flush()

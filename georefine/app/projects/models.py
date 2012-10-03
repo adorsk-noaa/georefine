@@ -17,6 +17,8 @@ project_table = Table('project_projects', db.metadata,
         Column('schema', PickleType),
         Column('app_config', PickleType),
         Column('layers_schema', PickleType),
+        Column('static_files_dir', String),
+        Column('static_files_url', String),
         )
 mapper(Project, project_table)
 

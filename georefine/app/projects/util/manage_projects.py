@@ -1,3 +1,4 @@
+import georefine.config as gr_config
 from georefine.app.projects.models import Project, MapLayer
 from georefine.app import db
 import georefine.util.shapefile as shp_util
@@ -189,3 +190,26 @@ def setUpMapLayers(project, data_dir, session=db.session):
         session.commit()
 
         project.layers_schema = layers_schema
+
+def setUpStaticFiles(project, data_dir):
+    # Make project dir in static files storage location.
+    project_static_dir = os.path.join(
+        gr_config.config['PROJECT_STATIC_FILES_DIR'],
+        "project_%s" % project.id
+    )
+    os.mkdir(project_static_dir)
+    
+    # Copy static files (if any).
+    static_dir_name = gr_config.config['PROJECT_STATIC_DIR_NAME']
+    static_files_dir = os.path.join(data_dir, static_dir_name)
+    if os.path.isdir(static_files_dir):
+        shutil.copytree(
+            static_files_dir, 
+            os.path.join(project_static_dir, static_dir_name)
+        )
+
+    # Save the project's static dir and url to the dir.
+    project.static_files_dir = project_static_dir
+    project.static_files_url = gr_config.config['PROJECT_STATIC_FILES_URL'](project)
+
+
