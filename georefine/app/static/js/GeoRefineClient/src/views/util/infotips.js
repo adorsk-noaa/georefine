@@ -14,7 +14,7 @@ function($, Backbone, _, _s, qtip){
             $(this).qtip({
                 overwrite: false,
                 content: {
-                    text: $('> .content', this)
+                    text: $('> .content', this).clone()
                 },
                 position: {
                     my: 'left center',
