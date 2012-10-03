@@ -7,9 +7,10 @@ define([
     "Charts",
     "./requests",
     "./functions",
-    "./filters"
+    "./filters",
+    "./format"
 		],
-function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersUtil){
+function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersUtil, formatUtil){
 
     // This function will be used by chart datasources to
     // get data.
@@ -168,7 +169,22 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
     };
 
     var createChartEditor = function(model){
-        var chartEditorView = new Charts.views.ChartEditorView({
+        // Customize chart editor view to add formatting to field selectors.
+        var GRChartEditorView = Charts.views.ChartEditorView.extend({
+            getFieldSelectorClass: function(){
+                SelectorBaseClass = Charts.views.ChartEditorView.prototype.getFieldSelectorClass.apply(this, arguments);
+                GRSelector = SelectorBaseClass.extend({
+                    formatter: function(){
+                        var orig = SelectorBaseClass.prototype.formatter.apply(this, arguments);
+                        return formatUtil.GeoRefineTokenFormatter(orig);
+                    }
+                });
+                return GRSelector;
+            }
+        });
+
+        //var chartEditorView = new Charts.views.ChartEditorView({
+        var chartEditorView = new GRChartEditorView({
             'model': model
         });
 
