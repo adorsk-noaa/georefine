@@ -24,6 +24,7 @@ def georefine_client(project_id):
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
+        "project_static_dir": gr_conf['PROJECT_STATIC_FILES_URL'](project),
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
         "charts": project.app_config.get('charts', {}),

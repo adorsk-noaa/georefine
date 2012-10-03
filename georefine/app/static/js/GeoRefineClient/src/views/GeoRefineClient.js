@@ -52,7 +52,7 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
 
             // Set tokens.
             GeoRefine.app.tokens = {
-                PROJECT_STATIC_DIR: '!!TEST_STATIC_DIR!!'
+                PROJECT_STATIC_DIR: GeoRefine.config.project_static_dir
             };
 
             // Parse url hash for options.
