@@ -14,7 +14,7 @@ function($, Backbone, _, _s, qtip){
             $(this).qtip({
                 overwrite: false,
                 content: {
-                    text: 'testing',
+                    text: $('> .content', this)
                 },
                 position: {
                     my: 'left center',
