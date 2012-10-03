@@ -28,7 +28,7 @@ function($, Backbone, _, _s, ui, GeoRefineClient){
             'f1': {
                 'id': 'f1',
                 'label': 'Facet 1',
-                'info' : 'Facet 1 info',
+                'info' : 'Facet 1 info, dir is: {{PROJECT_STATIC_DIR}}',
                 'type': 'list',
                 'KEY': {},
                 'primary_filter_groups': [],

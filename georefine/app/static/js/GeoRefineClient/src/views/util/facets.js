@@ -19,14 +19,16 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         // Get facets editor model from state, or create a new model. 
         var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
-        // Use a customized FacetCollectionView.
+        // Use a customized FacetCollectionView which adds a token formatter to each
+        // facet view class.
+        // This allows us to do things like adding in the project's static dir to a url.
         var GRFacetCollectionView = Facets.views.FacetCollectionView.extend({
             getFacetViewClass: function(){
                 BaseFacetClass = Facets.views.FacetCollectionView.prototype.getFacetViewClass.apply(this, arguments);
                 GRFacetClass = BaseFacetClass.extend({
                     formatter: function(){
-                        console.log("gr formatter");
                         var orig = BaseFacetClass.prototype.formatter.apply(this, arguments);
+                        return formatUtil.GeoRefineTokenFormatter(orig);
                     }
                 });
                 return GRFacetClass;

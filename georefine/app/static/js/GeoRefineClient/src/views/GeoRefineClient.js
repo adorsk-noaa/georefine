@@ -40,7 +40,8 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                 facets: {},
                 summaryBar: {},
                 dataViews: {},
-                state: {}
+                state: {},
+                tokens: {}
             };
 
             // Set endpoints
@@ -48,6 +49,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
             GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks', GeoRefine.config.context_root);
             GeoRefine.app.dataLayerEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
             GeoRefine.app.WMSLayerEndpoint = _s.sprintf('%s/projects/%s/layer', GeoRefine.config.context_root, GeoRefine.config.project_id);
+
+            // Set tokens.
+            GeoRefine.app.tokens = {
+                PROJECT_STATIC_DIR: '!!TEST_STATIC_DIR!!'
+            };
 
             // Parse url hash for options.
             var hash = window.location.hash;

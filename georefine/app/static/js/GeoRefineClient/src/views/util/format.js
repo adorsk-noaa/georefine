@@ -19,9 +19,24 @@ function($, Backbone, _, _s, Util){
         return _s.sprintf(f, s);
     };
 
+    var GeoRefineTokenFormatter = function(str){
+        // Replace tokens in a string.
+        var tokenRe = new RegExp('({{(.*?)}})', 'g');
+        var tokenized_str = str.replace(tokenRe, function(match, token, tokenId){
+            if (GeoRefine.app.tokens[tokenId]){
+                return GeoRefine.app.tokens[tokenId];
+            }
+            else{
+                return token;
+            }
+        });
+        return tokenized_str;
+    };
+
     // Objects to expose.
     var formatUtil = {
-        GeoRefineFormatter: GeoRefineFormatter
+        GeoRefineFormatter: GeoRefineFormatter,
+        GeoRefineTokenFormatter: GeoRefineTokenFormatter
     };
     return formatUtil;
 });
