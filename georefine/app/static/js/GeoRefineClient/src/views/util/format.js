@@ -20,17 +20,22 @@ function($, Backbone, _, _s, Util){
     };
 
     var GeoRefineTokenFormatter = function(str){
-        // Replace tokens in a string.
-        var tokenRe = new RegExp('({{(.*?)}})', 'g');
-        var tokenized_str = str.replace(tokenRe, function(match, token, tokenId){
-            if (GeoRefine.app.tokens[tokenId]){
-                return GeoRefine.app.tokens[tokenId];
-            }
-            else{
-                return token;
-            }
-        });
-        return tokenized_str;
+        if (str){
+            // Replace tokens in a string.
+            var tokenRe = new RegExp('({{(.*?)}})', 'g');
+            var tokenized_str = str.replace(tokenRe, function(match, token, tokenId){
+                if (GeoRefine.app.tokens[tokenId]){
+                    return GeoRefine.app.tokens[tokenId];
+                }
+                else{
+                    return token;
+                }
+            });
+            return tokenized_str;
+        }
+        else{
+            return str;
+        }
     };
 
     // Objects to expose.
