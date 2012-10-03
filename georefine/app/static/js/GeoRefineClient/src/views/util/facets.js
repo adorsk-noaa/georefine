@@ -19,8 +19,29 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         // Get facets editor model from state, or create a new model. 
         var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
+        // Use a customized FacetCollectionView.
+        var GRFacetCollectionView = Facets.views.FacetCollectionView.extend({
+            getFacetViewClass: function(){
+                BaseFacetClass = Facets.views.FacetCollectionView.prototype.getFacetViewClass.apply(this, arguments);
+                GRFacetClass = BaseFacetClass.extend({
+                    formatter: function(){
+                        console.log("gr formatter");
+                        var orig = BaseFacetClass.prototype.formatter.apply(this, arguments);
+                    }
+                });
+                return GRFacetClass;
+            }
+        });
+
+        // Use a customized facets editor class.
+        var GRFacetsEditorView = Facets.views.FacetsEditorView.extend({
+            getFacetCollectionViewClass: function(){
+                return GRFacetCollectionView;
+            }
+        });
+
         // Create facets editor view.
-        var facetsEditorView = new Facets.views.FacetsEditorView({
+        var facetsEditorView = new GRFacetsEditorView({
             el: $('.facets-editor', GeoRefine.app.view.el),
             model: facetsEditorModel,
         });
@@ -650,7 +671,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         var facetsEditorModel = new Backbone.Model();
 
         // Make collections and models for facet editor sub-collections.
-        _.each(['quantity_fields', 'base_facets', 'primary_facets', 'predefined_facets'], function(attr){
+        _.each(['quantity_fields', 'facets', 'predefined_facets'], function(attr){
             var collection = new Backbone.Collection();
             _.each(configState.facetsEditor[attr], function(modelDef){
                 var model = new Backbone.Model(_.extend({}, modelDef));
