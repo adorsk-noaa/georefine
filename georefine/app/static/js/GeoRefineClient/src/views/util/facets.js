@@ -37,6 +37,10 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
 
         // Use a customized facets editor class.
         var GRFacetsEditorView = Facets.views.FacetsEditorView.extend({
+            formatter: function(){
+                var orig = Facets.views.FacetsEditorView.prototype.formatter.apply(this, arguments);
+                return formatUtil.GeoRefineTokenFormatter(orig);
+            },
             getFacetCollectionViewClass: function(){
                 return GRFacetCollectionView;
             }
