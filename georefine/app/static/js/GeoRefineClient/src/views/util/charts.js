@@ -183,7 +183,6 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
             }
         });
 
-        //var chartEditorView = new Charts.views.ChartEditorView({
         var chartEditorView = new GRChartEditorView({
             'model': model
         });

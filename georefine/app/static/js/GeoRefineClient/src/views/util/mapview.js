@@ -6,9 +6,10 @@ define([
 	"Util",
     "MapView",
     "./requests",
-    "./filters"
+    "./filters",
+    "./format"
 		],
-function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
+function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUtil){
 
     // Define layer connectors.
     var layerConnectors = {};
@@ -264,7 +265,33 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil){
 
     // Create a map editor.
     var createMapEditor = function(model){
-        var mapEditorView = new MapView.views.MapEditorView({
+
+        // Customize map editor to add formatting to layer editors.
+        var BaseMapEditor = MapView.views.MapEditorView;
+        var GRMapEditorView = BaseMapEditor.extend({
+
+            getLayerCollectionEditorClass: function(){
+
+                var BaseCollectionEditor = BaseMapEditor.prototype.getLayerCollectionEditorClass.apply(this, arguments);
+                var GRCollectionEditor = BaseCollectionEditor.extend({
+
+                    getLayerEditorClass: function(){
+                        var BaseLayerEditor = BaseCollectionEditor.prototype.getLayerEditorClass.apply(this, arguments);
+                        var GRLayerEditor = BaseLayerEditor.extend({
+                            formatter: function(){
+                                var orig = SelectorBaseClass.prototype.formatter.apply(this, arguments);
+                                return formatUtil.GeoRefineTokenFormatter(orig);
+                            }
+                        });
+                        return GRLayerEditor;
+                    }
+                });
+
+                return GRCollectionEditor;
+            }
+        });
+
+        var mapEditorView = new GRMapEditorView({
             model: model
         });
 
