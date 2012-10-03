@@ -4,9 +4,10 @@ define([
 	"./requests",
 	"./filters",
 	"./state",
-	"./dataViews"
+	"./dataViews",
+	"./infotips"
 ], 
-function(facetsUtil, summaryBarUtil, requestsUtil, filtersUtil, stateUtil, dataViewsUtil){
+function(facetsUtil, summaryBarUtil, requestsUtil, filtersUtil, stateUtil, dataViewsUtil, infotipsUtil){
 
     var GeoRefineViewsUtil = {
 		facetsUtil: facetsUtil,
@@ -14,7 +15,8 @@ function(facetsUtil, summaryBarUtil, requestsUtil, filtersUtil, stateUtil, dataV
 		requestsUtil: requestsUtil,
 		filtersUtil: filtersUtil,
 		stateUtil: stateUtil,
-		dataViewsUtil: dataViewsUtil
+		dataViewsUtil: dataViewsUtil,
+		infotipsUtil: infotipsUtil
 	};
 
 	return GeoRefineViewsUtil;

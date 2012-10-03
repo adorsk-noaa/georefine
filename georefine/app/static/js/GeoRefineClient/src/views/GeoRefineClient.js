@@ -143,6 +143,11 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
                     hook();
                 });
             });
+
+            // Setup infotips.
+            GeoRefineViewsUtil.infotipsUtil.setUpInfotips({
+                el: this.el
+            });
         },
 
 		initialRender: function(){
