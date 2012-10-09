@@ -14,7 +14,7 @@ app.config.from_object(config)
 app.config.from_pyfile(os.path.join(app.instance_path, 'app_config.py'),
                        silent=True)
 
-from georefine.app import db
+import db
 
 admin = Admin(app)
 
