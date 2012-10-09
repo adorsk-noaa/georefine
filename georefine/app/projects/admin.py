@@ -1,5 +1,4 @@
-from georefine.config import config as gr_conf
-from georefine.app import db
+from georefine.app import app, db
 from . import models
 from .util import manage_projects as projects_manage
 from .util import services as projects_services

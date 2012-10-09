@@ -1,6 +1,5 @@
-import georefine.config as gr_config
 from georefine.app.projects.models import Project, MapLayer
-from georefine.app import db
+from georefine.app import app, db
 import georefine.util.shapefile as shp_util
 import georefine.util.gis as gis_util
 from sqlalchemy import Column, Float, Integer, String, MetaData
@@ -194,13 +193,13 @@ def setUpMapLayers(project, data_dir, session=db.session):
 def setUpStaticFiles(project, data_dir):
     # Make project dir in static files storage location.
     project_static_dir = os.path.join(
-        gr_config.config['PROJECT_STATIC_FILES_DIR'],
+        app.config['PROJECT_STATIC_FILES_DIR'],
         "project_%s" % project.id
     )
     os.mkdir(project_static_dir)
     
     # Copy static files (if any).
-    static_dir_name = gr_config.config['PROJECT_STATIC_DIR_NAME']
+    static_dir_name = app.config['PROJECT_STATIC_DIR_NAME']
     static_files_dir = os.path.join(data_dir, static_dir_name)
     if os.path.isdir(static_files_dir):
         shutil.copytree(
@@ -210,6 +209,6 @@ def setUpStaticFiles(project, data_dir):
 
     # Save the project's static dir and url to the dir.
     project.static_files_dir = project_static_dir
-    project.static_files_url = gr_config.config['PROJECT_STATIC_FILES_URL'](project)
+    project.static_files_url = app.config['PROJECT_STATIC_FILES_URL'](project)
 
 

@@ -3,8 +3,7 @@ sys.path.insert(0, '..')
 
 import getopt
 from georefine.app import app, db
-from georefine import config as gr_config
-from georefine import flask_config
+from georefine import config
 from werkzeug.serving import run_simple
 
 import logging
@@ -46,7 +45,7 @@ if __name__ == '__main__':
             db_url = value
 
     if db_url:
-        gr_config.config['DB_URI'] = db_url
+        config.SQLALCHEMY_DATABASE_URI = db_url
 
     do_init_db = do_init_db or (str(db.engine.url) == 'sqlite://')
     if do_init_db:

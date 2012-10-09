@@ -1,6 +1,5 @@
-import georefine.flask_config as flask_config
 from georefine.app import db as db
-from georefine.config import config as gr_config
+from georefine.config import config
 
 from flask import Flask, render_template, escape
 from flask_admin import Admin
@@ -9,7 +8,7 @@ import os
 
 
 app = Flask(__name__)
-app.config.from_object(flask_config)
+app.config.from_object(config)
 app.config.from_pyfile(os.path.join(app.instance_path, 'app_config.py'),
                        silent=True)
 

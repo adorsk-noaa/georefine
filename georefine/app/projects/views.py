@@ -1,5 +1,4 @@
 from georefine.app import app
-from georefine.config import config as gr_conf
 from flask import Blueprint, request, redirect, render_template, flash, g, session, url_for, jsonify, json, Response
 from werkzeug import secure_filename
 from jinja2 import Markup
@@ -24,7 +23,7 @@ def georefine_client(project_id):
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
-        "project_static_dir": gr_conf['PROJECT_STATIC_FILES_URL'](project),
+        "project_static_dir": app.config.PROJECT_STATIC_URL_GENERATOR(project),
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
         "charts": project.app_config.get('charts', {}),
