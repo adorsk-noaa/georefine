@@ -4,7 +4,7 @@ from flask import (request, render_template, redirect, url_for, flash,
 from flask_login import (LoginManager, current_user, login_required,
                             login_user, logout_user, UserMixin, AnonymousUser,
                             confirm_login, fresh_login_required)
-from flaskext.openid import OpenID
+from flask_openid import OpenID
 
 open_id = OpenID(app)
 
