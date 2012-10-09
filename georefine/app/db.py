@@ -1,8 +1,8 @@
-from georefine import config
+from georefine.app import app
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-engine = create_engine(config.SQLALCHEMY_DATABASE_URI, convert_unicode=True)
+engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], convert_unicode=True)
 metadata = MetaData()
 session = scoped_session(sessionmaker(bind=engine))
 

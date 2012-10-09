@@ -1,5 +1,4 @@
-from georefine.app import db as db
-from georefine.config import config
+from georefine import config
 
 from flask import Flask, render_template, escape
 from flask_admin import Admin
@@ -7,12 +6,18 @@ from flask_admin import Admin
 import os
 
 
-app = Flask(__name__)
+# Setup config stuff first to avoid circular import issues.
+this_dir = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(__name__, instance_path=os.path.join(this_dir, 'instance'))
 app.config.from_object(config)
 app.config.from_pyfile(os.path.join(app.instance_path, 'app_config.py'),
                        silent=True)
 
+from georefine.app import db
+
 admin = Admin(app)
+
 
 @app.errorhandler(404)
 def not_found(error):

@@ -56,8 +56,8 @@ if __name__ == '__main__':
             db.clear_db()
             db.init_db()
 
-    if hasattr(flask_config, 'APPLICATION_ROOT'):
-        prefix = flask_config.APPLICATION_ROOT
+    prefix = app.config.get('APPLICATION_ROOT')
+    if prefix:
         app.wsgi_app = PrefixFix(app.wsgi_app, '/' + prefix)
         app.config['APPLICATION_ROOT'] = prefix
         app.config['SESSION_COOKIE_PATH'] = '/' + prefix

@@ -1,6 +1,6 @@
-SQLALCHEMY_DATABASE_URI = ""
+SQLALCHEMY_DATABASE_URI = "db_uri_stub"
 
-SECRET_KEY = "KEYSTUB"
+SECRET_KEY = "key_stub"
 
 UPLOAD_FOLDER = '/tmp'
 
