@@ -5,6 +5,7 @@ from jinja2 import Markup
 from georefine.app import db
 from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project, MapLayer
+from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
 from georefine.app.projects.util import layer_services as layer_services
 from georefine.app.keyed_strings import util as ks_util
@@ -13,6 +14,25 @@ import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
 context_root = "/%s" % app.config['APPLICATION_ROOT']
+
+# Set default config settings if not set.
+app.config.setdefault('GR_STATIC_FOLDER', app.static_folder)
+app.config.setdefault('GR_PROJECTS_STATIC_FOLDER', os.path.join(
+    app.config['GR_STATIC_FOLDER'], "projects"))
+
+@app.before_first_request
+def setup_projects_static_dir():
+    if not os.path.exists(app.config['GR_PROJECTS_STATIC_FOLDER']):
+        os.mkdir(app.config['GR_PROJECTS_STATIC_FOLDER'])
+
+def url_for_project_static_dir(project):
+    """ Get the url for a project's static dir. """
+    if not app.config.get('GR_PROJECTS_STATIC_URL_PATH'):
+        project_full_path = \
+                projects_manage.get_project_static_folder_path(project)
+        project_rel_path = project_full_path.replace(
+            app.config['GR_STATIC_FOLDER'] + '/', '')
+        return url_for('static', filename=project_rel_path)
 
 def get_project(project_id):
     return db.session.query(Project).get(project_id)
@@ -23,7 +43,7 @@ def georefine_client(project_id):
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
-        "project_static_dir": app.config['PROJECT_STATIC_URL'](project),
+        "project_static_dir": url_for_project_static_dir(project),
         "filter_groups": project.app_config.get('filter_groups', {}),
         "facets": project.app_config.get('facets', {}),
         "charts": project.app_config.get('charts', {}),

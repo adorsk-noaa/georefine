@@ -192,14 +192,11 @@ def setUpMapLayers(project, data_dir, session=db.session):
 
 def setUpStaticFiles(project, data_dir):
     # Make project dir in static files storage location.
-    project_static_dir = os.path.join(
-        app.config['STATIC_DIR'],
-        "project_%s" % project.id
-    )
+    project_static_dir = get_project_static_folder_path(project)
     os.mkdir(project_static_dir)
     
     # Copy static files (if any).
-    static_dir_name = app.config['PROJECT_STATIC_DIR_NAME']
+    static_dir_name = 'static'
     static_files_dir = os.path.join(data_dir, static_dir_name)
     if os.path.isdir(static_files_dir):
         shutil.copytree(
@@ -207,8 +204,14 @@ def setUpStaticFiles(project, data_dir):
             os.path.join(project_static_dir, static_dir_name)
         )
 
-    # Save the project's static dir and url to the dir.
+    # Save the project's static dir.
     project.static_files_dir = project_static_dir
-    project.static_files_url = app.config['PROJECT_STATIC_URL'](project)
 
+def get_project_static_folder_path(project):
+    return os.path.join(
+        app.config['GR_PROJECTS_STATIC_FOLDER'],
+        get_project_static_folder_name(project)
+    )
 
+def get_project_static_folder_name(project):
+    return "project_%s" % project.id
