@@ -90,9 +90,6 @@ class ProjectsAdmin(sqlamodel.ModelView):
             session.commit()
 
         except Exception, ex:
-            print "-" * 60
-            traceback.print_exc()
-            print "-" * 60
             flash(
                 gettext(
                     'Unable to setup model schema or data. %(error)s, %(tb)s', 
