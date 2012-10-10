@@ -6,10 +6,10 @@ UPLOAD_FOLDER = '/tmp'
 
 ALLOWED_EXTENSIONS = set(['txt'])
 
-PROJECT_STATIC_FILES_URL = lambda p: "url_for_%s" % p.id
+PROJECT_STATIC_URL = lambda p: "url_for_%s" % p.id
 
-PROJECT_STATIC_DIR_NAME = "static_dir_stub"
+STATIC_DIR = "static_dir_stub"
 
-PROJECT_STATIC_FILES_DIR = "static_files_dir_stub"
+PROJECT_STATIC_DIR_NAME = "project_static_dir_name"
 
 APPLICATION_ROOT = "georefine"

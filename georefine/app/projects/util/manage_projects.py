@@ -193,7 +193,7 @@ def setUpMapLayers(project, data_dir, session=db.session):
 def setUpStaticFiles(project, data_dir):
     # Make project dir in static files storage location.
     project_static_dir = os.path.join(
-        app.config['PROJECT_STATIC_FILES_DIR'],
+        app.config['STATIC_DIR'],
         "project_%s" % project.id
     )
     os.mkdir(project_static_dir)
@@ -209,6 +209,6 @@ def setUpStaticFiles(project, data_dir):
 
     # Save the project's static dir and url to the dir.
     project.static_files_dir = project_static_dir
-    project.static_files_url = app.config['PROJECT_STATIC_FILES_URL'](project)
+    project.static_files_url = app.config['PROJECT_STATIC_URL'](project)
 
 
