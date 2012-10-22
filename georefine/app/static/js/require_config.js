@@ -3,7 +3,7 @@ if (typeof STATIC_BASEURL == 'undefined'){
 }
 
 if (typeof ASSETS_BASEURL == 'undefined'){
-    ASSETS_BASEURL = STATIC_BASEURL + 'sasi_assets/';
+    ASSETS_BASEURL = STATIC_BASEURL + 'assets/';
 }
 
 var JQPLOT_BASE = 'js/jqplot';

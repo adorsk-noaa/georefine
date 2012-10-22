@@ -13,7 +13,6 @@ import os
 import tarfile
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
-context_root = app.config['APPLICATION_ROOT']
 
 # Set default config settings if not set.
 app.config.setdefault('GR_STATIC_FOLDER', app.static_folder)
@@ -39,6 +38,7 @@ def get_project(project_id):
 
 @bp.route('/view/client/<int:project_id>/')
 def georefine_client(project_id):
+    context_root = app.config['APPLICATION_ROOT']
     project = get_project(project_id)
     georefine_config = {
         "context_root": context_root,
