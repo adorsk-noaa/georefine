@@ -328,10 +328,12 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
         // Get map config from config.
         var mapConfig = _.extend({}, GeoRefine.config.maps);
 
-        // Set default max extent on layers to be
-        // map's max extent.
         _.extend(mapConfig.default_layer_options, {
-            maxExtent: mapConfig.max_extent
+            // Set default max extent on layers to be
+            // map's max extent.
+            maxExtent: mapConfig.max_extent,
+            tileSize: new OpenLayers.Size(1024,1024),
+            buffer: 0
         });
 
         // Create layer collections from config.
