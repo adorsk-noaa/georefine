@@ -187,6 +187,10 @@ function($, Backbone, _, _s, Util){
                 }
             }
         }
+        // If object is null, return it as is.
+        else if (obj == null){
+            return obj;
+        }
         // Otherwise if the object is an array or object, iterate through its items.
         else if (typeof obj == 'object'){
             var deserializedObj = null;
