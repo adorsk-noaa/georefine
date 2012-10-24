@@ -53,7 +53,7 @@ def georefine_client(project_id):
         "defaultInitialState": project.app_config.get('defaultInitialState', {}),
     }
     json_georefine_config = json.dumps(georefine_config)
-    return render_template("projects/georefine_client.html", context_root=context_root, georefine_config=Markup(json_georefine_config))
+    return render_template("projects/georefine_client.html", app=app, context_root=context_root, georefine_config=Markup(json_georefine_config))
 
 @bp.route('/')
 def home():

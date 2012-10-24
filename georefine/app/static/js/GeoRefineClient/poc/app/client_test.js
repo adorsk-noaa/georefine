@@ -1,9 +1,9 @@
 require([
   "jquery",
-  "use!backbone",
-  "use!underscore",
+  "backbone",
+  "underscore",
   "_s",
-  "use!ui",
+  "ui",
   "GeoRefineClient"
 ],
 

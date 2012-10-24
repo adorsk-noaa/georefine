@@ -3,7 +3,7 @@ if (typeof STATIC_BASEURL == 'undefined'){
 }
 
 if (typeof ASSETS_BASEURL == 'undefined'){
-    ASSETS_BASEURL = STATIC_BASEURL + 'assets/';
+    ASSETS_BASEURL = STATIC_BASEURL + '/assets/';
 }
 
 var JQPLOT_BASE = 'js/jqplot';
@@ -13,7 +13,6 @@ var require = {
 
 	paths: {
 		text: ASSETS_BASEURL + "js/require.js/plugins/text",
-		use: ASSETS_BASEURL + "js/require.js/plugins/use",
 		jquery: ASSETS_BASEURL + "js/jquery",
 		underscore: ASSETS_BASEURL + "js/underscore",
 		backbone: ASSETS_BASEURL + "js/backbone",
@@ -29,33 +28,28 @@ var require = {
 		qtip: ASSETS_BASEURL + "js/jquery.qtip/jquery.qtip"
 	},
 	
-	use: {
-		backbone: {
-		  deps: ["use!underscore", "jquery"],
-		  attach: "Backbone"
+	shim: {
+		underscore: {
+		  exports: "_"
 		},
 
-		underscore: {
-		  attach: "_"
+		backbone: {
+		  deps: ["underscore", "jquery"],
+		  exports: "Backbone"
 		},
 
 		ui: {
 		  deps: ["jquery"],
-		  attach: "ui"
 		},
 
 		_s: {
-		  deps: ["use!underscore"],
-		  attach: "_s"
+		  deps: ["underscore"],
 		},
 
-		openlayers: {
-		  attach: "ol"
-		},
+		openlayers: {},
 
 		jqplot: {
 		  deps: ["jquery"],
-		  attach: "jqplot"
 		},
 
 		jqp_bar: {
@@ -70,19 +64,25 @@ var require = {
 		  deps: ["jqplot"],
 		},
 
-		flot: {
-		  deps: ["jquery"],
-		  attach: "flot"
-		},
-
 		jqwindow: {
 		  deps: ["jquery", "ui"]
 		},
 
 		qtip: {
 		  deps: ["jquery"]
-		}
+		},
 
+        uiExtras: {
+            deps: ["jquery", "ui"]
+        },
+
+		DataTables: {
+		  deps: ["jquery"]
+		},
+
+		jqForm: {
+		  deps: ["jquery"]
+		}
 	},
 
 	packages: [
