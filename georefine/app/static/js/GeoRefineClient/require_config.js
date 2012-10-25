@@ -6,7 +6,7 @@ if (typeof ASSETS_PATH == 'undefined'){
 }
 
 var config= {
-    baseUrl: ASSETS_PATH + '/assets',
+    baseUrl: GRC_BASE_PATH,
 	deps: [],
 	paths: {
 		requireLib: ASSETS_PATH + "/js/require.js/require",
@@ -15,7 +15,8 @@ var config= {
 		underscore: ASSETS_PATH + "/js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
 		ui: ASSETS_PATH + "/js/jquery.ui/jquery-ui",
-		_s: ASSETS_PATH + "/js/underscore.string",
+		'underscore.string': ASSETS_PATH + "/js/underscore.string",
+		_s: ASSETS_PATH + "/js/_s",
 		openlayers: ASSETS_PATH + "/js/openlayers/openlayers",
 		jqplot: ASSETS_PATH + "/js/jqplot/jquery.jqplot.min",
 		jqp_bar: ASSETS_PATH + "/js/jqplot/plugins/jqplot.barRenderer.min",
@@ -40,10 +41,6 @@ var config= {
 
 		ui: {
 		  deps: ["jquery"],
-		},
-
-		_s: {
-		  deps: ["underscore"],
 		},
 
 		openlayers: {},

@@ -5,12 +5,12 @@ vm = require('vm');
 
 requireConfig = {};
 BASE_URL = __dirname + '/';
-requireConfigPath = BASE_URL + 'config.js';
+requireConfigPath = BASE_URL + 'require_config.js';
 script = vm.createScript(fs.readFileSync(requireConfigPath));
 requireConfig = {}
 sandbox = {
   'require': requireConfig,
-  'BASE_PATH' : __dirname,
+  'GRC_BASE_PATH' : __dirname,
   'ASSETS_PATH' : __dirname + '/assets'
 };
 script.runInNewContext(sandbox);
@@ -28,3 +28,4 @@ for (var k in requireConfig){
 requirejs.optimize(buildConfig, function(buildResponse){
     console.log("done building");
 });
+

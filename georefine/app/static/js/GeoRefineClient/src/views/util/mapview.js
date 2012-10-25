@@ -332,7 +332,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
             // Set default max extent on layers to be
             // map's max extent.
             maxExtent: mapConfig.max_extent,
-            tileSize: new OpenLayers.Size(1024,1024),
+            tileSize: {w: 1024, h: 1024},
             buffer: 0
         });
 

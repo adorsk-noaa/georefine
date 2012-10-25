@@ -7,3 +7,5 @@ UPLOAD_FOLDER = '/tmp'
 ALLOWED_EXTENSIONS = set(['txt'])
 
 APPLICATION_ROOT = "georefine"
+
+#GRC_USE_MINIFIED = True
