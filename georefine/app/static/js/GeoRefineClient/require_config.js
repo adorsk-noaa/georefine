@@ -5,12 +5,18 @@ if (typeof ASSETS_PATH == 'undefined'){
     ASSETS_PATH = GRC_BASE_PATH;
 }
 
+if (typeof BASE_URL == 'undefined'){
+    BASE_URL = GRC_BASE_PATH;
+}
+
 var config= {
     baseUrl: GRC_BASE_PATH,
 	deps: [],
 	paths: {
 		requireLib: ASSETS_PATH + "/js/require.js/require",
 		text: ASSETS_PATH + "/js/require.js/plugins/text",
+		rless: ASSETS_PATH + "/js/rless",
+		less: ASSETS_PATH + "/js/less",
 		jquery: ASSETS_PATH + "/js/jquery",
 		underscore: ASSETS_PATH + "/js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
@@ -142,6 +148,11 @@ var config= {
 		  "name": "GeoRefineClient",
 		  "location": GRC_BASE_PATH + "/src"
 		},
+
+		{
+		  "name": "CommonStyles",
+		  "location": ASSETS_PATH + "/js/commonStyles/src"
+		}
 	]
 
 };
