@@ -30,7 +30,6 @@ var config= {
 		jqp_log_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.logAxisRenderer.min",
 		flot: ASSETS_PATH + "/js/flot/jquery.flot",
 		jqwindow: ASSETS_PATH + "/js/jquery.window/jquery.window",
-		qtip: ASSETS_PATH + "/js/jquery.qtip/jquery.qtip",
 		DataTables: ASSETS_PATH + "/js/DataTables/media/js/jquery.dataTables.min",
 		jqForm: ASSETS_PATH + "/js/jquery.form",
 	},
@@ -152,7 +151,13 @@ var config= {
 		{
 		  "name": "CommonStyles",
 		  "location": ASSETS_PATH + "/js/commonStyles/src"
-		}
+		},
+
+        {
+          "name": "qtip",
+          "location": ASSETS_PATH + "/js/jquery.qtip",
+          "main": "jquery.qtip",
+        }
 	]
 
 };

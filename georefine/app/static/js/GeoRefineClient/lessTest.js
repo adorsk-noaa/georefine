@@ -14,31 +14,13 @@ sandbox = {
   'ASSETS_PATH' : __dirname + '/assets'
 };
 script.runInNewContext(sandbox);
-
-buildConfig = {
-    name: "GeoRefineClient/app",
-    include: ['requireLib'],
-    out: BASE_URL + 'dist/GeoRefineClient.min.js'
-};
-
-for (var k in requireConfig){
-    buildConfig[k] = requireConfig[k];
-}
-
-/*
-requirejs.optimize(buildConfig, function(buildResponse){
-    console.log("done building");
-});
-*/
-
-// Build CSS.
-require('coffee-script');
-Froth = require('/home/adorsk/projects/froth.js/lib/froth.coffee');
-Frothc = require('/home/adorsk/projects/froth.js/lib/frothc.coffee');
 requirejs.config(requireConfig);
+
+require('coffee-script');
+froth = require('/home/adorsk/projects/froth.js/lib/froth.coffee');
+frothc = require('/home/adorsk/projects/froth.js/lib/frothc.coffee');
 less = require('/home/adorsk/tools/less.js/lib/less/index.js');
 less.rewritePath = function(path){
-    console.log("rewriting", path);
     path = path.replace(/^require:(.*)/, function(){
         newPath = requirejs.toUrl(arguments[1]);
         return newPath;
@@ -59,11 +41,6 @@ parser.parse(src, function(err, tree){
         console.error('err: ', err);
     }
     css = tree.toCSS();
-    Froth.set(css);
-    frothcConfig = {
-        outputDir: 'css',
-        bundle: true
-    };
-    Frothc.compile(Froth, frothcConfig);
+    console.log(css);
 });
 
