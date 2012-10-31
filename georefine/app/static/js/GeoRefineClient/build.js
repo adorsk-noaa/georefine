@@ -33,18 +33,17 @@ requirejs.optimize(buildConfig, function(buildResponse){
 
 // Build CSS.
 require('coffee-script');
-Froth = require('/home/adorsk/projects/froth.js/lib/froth.coffee');
-Frothc = require('/home/adorsk/projects/froth.js/lib/frothc.coffee');
 requirejs.config(requireConfig);
 less = require('/home/adorsk/tools/less.js/lib/less/index.js');
 less.rewritePath = function(path){
-    console.log("rewriting", path);
     path = path.replace(/^require:(.*)/, function(){
         newPath = requirejs.toUrl(arguments[1]);
         return newPath;
     });
     return path;
 };
+less.addBasePath = true;
+less.compileCss = true;
 
 srcDir = BASE_URL + '/src/styles';
 srcFile = srcDir + '/GeoRefineClient.less';
@@ -59,11 +58,11 @@ parser.parse(src, function(err, tree){
         console.error('err: ', err);
     }
     css = tree.toCSS();
-    Froth.set(css);
-    frothcConfig = {
-        outputDir: 'css',
-        bundle: true
-    };
-    Frothc.compile(Froth, frothcConfig);
+
+    bundler = require('./bundler.coffee');
+    bundler.bundle(css, {
+        outputDir: 'css'
+    });
+
 });
 
