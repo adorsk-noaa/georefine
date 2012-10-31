@@ -13,6 +13,7 @@ var require = {
 
 	paths: {
 		text: ASSETS_BASEURL + "js/require.js/plugins/text",
+		less: ASSETS_BASEURL + "js/less.js/dist/less-1.3.1",
 		jquery: ASSETS_BASEURL + "js/jquery",
 		underscore: ASSETS_BASEURL + "js/underscore",
 		backbone: ASSETS_BASEURL + "js/backbone",
