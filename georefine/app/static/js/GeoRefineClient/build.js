@@ -7,7 +7,7 @@ requireConfig = {};
 BASE_URL = __dirname + '/';
 requireConfigPath = BASE_URL + 'require_config.js';
 script = vm.createScript(fs.readFileSync(requireConfigPath));
-requireConfig = {}
+requireConfig = {};
 sandbox = {
   'require': requireConfig,
   'GRC_BASE_PATH' : __dirname,
@@ -16,53 +16,55 @@ sandbox = {
 script.runInNewContext(sandbox);
 
 buildConfig = {
-    name: "GeoRefineClient/app",
-    include: ['requireLib'],
-    out: BASE_URL + 'dist/GeoRefineClient.min.js'
+    include: ['GeoRefineClient'],
+    out: BASE_URL + 'dist/GeoRefineClient.min.js',
+    optimize: 'uglify'
 };
 
 for (var k in requireConfig){
     buildConfig[k] = requireConfig[k];
 }
 
-/*
+// First build JS.
 requirejs.optimize(buildConfig, function(buildResponse){
-    console.log("done building");
-});
-*/
+    console.log("done building JS.");
 
-// Build CSS.
-require('coffee-script');
-requirejs.config(requireConfig);
-less = require('/home/adorsk/tools/less.js/lib/less/index.js');
-less.rewritePath = function(path){
-    path = path.replace(/^require:(.*)/, function(){
-        newPath = requirejs.toUrl(arguments[1]);
-        return newPath;
+    // Then build CSS.
+    require('coffee-script');
+    requirejs.config(requireConfig);
+    less = require(__dirname + '/assets/js/less.js/lib/less/index.js');
+    less.rewritePath = function(path){
+        path = path.replace(/^require:(.*)/, function(){
+            newPath = requirejs.toUrl(arguments[1]);
+            return newPath;
+        });
+        return path;
+    };
+    less.addBasePath = true;
+    less.compileCss = true;
+
+    srcDir = BASE_URL + '/src/styles';
+    srcFile = srcDir + '/GeoRefineClient.less';
+    src = fs.readFileSync(srcFile, 'utf-8');
+
+    parser = new less.Parser({
+        paths: [srcDir],
+        filename: srcFile
     });
-    return path;
-};
-less.addBasePath = true;
-less.compileCss = true;
+    parser.parse(src, function(err, tree){
+        if (err){
+            console.error('err: ', err);
+        }
+        css = tree.toCSS();
 
-srcDir = BASE_URL + '/src/styles';
-srcFile = srcDir + '/GeoRefineClient.less';
-src = fs.readFileSync(srcFile, 'utf-8');
+        bundler = require('./bundler.coffee');
+        bundler.bundle(css, {
+            outputDir: 'dist/css'
+        });
 
-parser = new less.Parser({
-    paths: [srcDir],
-    filename: srcFile
-});
-parser.parse(src, function(err, tree){
-    if (err){
-        console.error('err: ', err);
-    }
-    css = tree.toCSS();
+        console.log("done building CSS.");
+        console.log("done building.");
 
-    bundler = require('./bundler.coffee');
-    bundler.bundle(css, {
-        outputDir: 'dist/css'
     });
 
 });
-
