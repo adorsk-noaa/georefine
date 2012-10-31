@@ -61,7 +61,7 @@ parser.parse(src, function(err, tree){
 
     bundler = require('./bundler.coffee');
     bundler.bundle(css, {
-        outputDir: 'css'
+        outputDir: 'dist/css'
     });
 
 });
