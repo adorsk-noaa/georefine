@@ -16,11 +16,10 @@ var config= {
 		requireLib: ASSETS_PATH + "/js/require.js/require",
 		text: ASSETS_PATH + "/js/require.js/plugins/text",
 		rless: ASSETS_PATH + "/js/rless",
-		less: ASSETS_PATH + "/js/less",
+		less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
 		jquery: ASSETS_PATH + "/js/jquery",
 		underscore: ASSETS_PATH + "/js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
-		ui: ASSETS_PATH + "/js/jquery.ui/jquery-ui",
 		'underscore.string': ASSETS_PATH + "/js/underscore.string",
 		_s: ASSETS_PATH + "/js/_s",
 		openlayers: ASSETS_PATH + "/js/openlayers/openlayers",
@@ -157,7 +156,14 @@ var config= {
           "name": "qtip",
           "location": ASSETS_PATH + "/js/jquery.qtip",
           "main": "jquery.qtip",
+        },
+
+        {
+          "name": "ui",
+          "location": ASSETS_PATH + "/js/jquery.ui",
+          "main": "jquery-ui",
         }
+
 	]
 
 };
