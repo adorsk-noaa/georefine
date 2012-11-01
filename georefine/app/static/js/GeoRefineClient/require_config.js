@@ -161,7 +161,7 @@ var config= {
         {
           "name": "ui",
           "location": ASSETS_PATH + "/js/jquery.ui",
-          "main": "jquery-ui",
+          "main": "js/jquery-ui-1.9.1.custom.js"
         }
 
 	]
