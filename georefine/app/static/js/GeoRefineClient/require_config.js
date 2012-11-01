@@ -14,7 +14,7 @@ var config= {
 	deps: [],
 	paths: {
 		requireLib: ASSETS_PATH + "/js/require.js/require",
-		text: ASSETS_PATH + "/js/require.js/plugins/text",
+		text: ASSETS_PATH + "/js/requirejs-text",
 		rless: ASSETS_PATH + "/js/rless",
 		less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
 		jquery: ASSETS_PATH + "/js/jquery",

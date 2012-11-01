@@ -91,6 +91,11 @@ assets = {
         'source': 'https://github.com/adorsk/requirejs-less.git',
         'path': 'requirejs-less.js'
     },
+    'requirejs-text.js': {
+        'type': 'git',
+        'source': 'https://github.com/requirejs/text.git',
+        'path': 'text.js'
+    },
     'underscore.js': {
         'type': 'git',
         'source': 'https://github.com/documentcloud/underscore.git'
