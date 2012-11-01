@@ -106,7 +106,8 @@ assets = {
     },
     'underscore.string.js': {
         'type': 'git',
-        'source': 'https://github.com/epeli/underscore.string.git'
+        'source': 'https://github.com/adorsk/underscore.string.git',
+        'path': 'lib/underscore.string.js'
     },
     'util': {
         'type': 'git',
