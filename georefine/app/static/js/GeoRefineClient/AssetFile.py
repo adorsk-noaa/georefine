@@ -78,8 +78,10 @@ assets = {
         'source': 'https://github.com/adorsk-noaa/bb_menus.git'
     },
     'openlayers': {
-        'type': 'git',
-        'source': 'https://github.com/openlayers/openlayers.git'
+        'type': 'url',
+        'source': 'http://openlayers.org/download/OpenLayers-2.12.zip',
+        'unzip': True,
+        'path': 'OpenLayers-2.12' 
     },
     'require.js': {
         'type': 'git',
