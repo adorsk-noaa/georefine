@@ -28,7 +28,6 @@ var config= {
 		jqp_cat_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.categoryAxisRenderer.min",
 		jqp_log_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.logAxisRenderer.min",
 		flot: ASSETS_PATH + "/js/flot/jquery.flot",
-		jqwindow: ASSETS_PATH + "/js/jquery.window/jquery.window",
 		DataTables: ASSETS_PATH + "/js/DataTables/media/js/jquery.dataTables.min",
 		jqForm: ASSETS_PATH + "/js/jquery.form",
 	},
@@ -162,8 +161,13 @@ var config= {
           "name": "ui",
           "location": ASSETS_PATH + "/js/jquery.ui",
           "main": "js/jquery-ui-1.9.1.custom.js"
-        }
+        },
 
+        {
+          "name": "jqwindow",
+          "location": ASSETS_PATH + "/js/jquery.window",
+          "main": "jquery.window"
+        }
 	]
 
 };
