@@ -1,6 +1,6 @@
 config = {
     'CACHE_DIR': 'cache',
-    'TARGET_DIR': 'assets'
+    'TARGET_DIR': 'assets/js'
 }
 
 assets = {
@@ -35,7 +35,7 @@ assets = {
     },
     'jqplot': {
         'type': 'url',
-        'source': 'https://bitbucket.org/cleonello/jqplot/downloads/jquery.jqplot.1.0.4r1121.zip',
+        'source': 'https://cdn.bitbucket.org/cleonello/jqplot/downloads/jquery.jqplot.1.0.4r1121.zip',
         'unzip': True,
         'path': 'dist'
     },

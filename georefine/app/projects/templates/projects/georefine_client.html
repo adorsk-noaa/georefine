@@ -4,7 +4,7 @@
 
 	<script type="text/javascript">
         GRC_BASE_PATH= "{{url_for('static', filename='js/GeoRefineClient/')}}";
-        ASSETS_PATH= "{{url_for('static', filename='assets/')}}";
+        ASSETS_PATH= "{{url_for('static', filename='js/GeoRefineClient/assets/')}}";
 		var GeoRefine = {};
         GeoRefine.app = {};
 		GeoRefine.config = {{georefine_config}};
@@ -19,7 +19,7 @@
 
     {% else %}
     <script src="{{url_for('static', filename='js/GeoRefineClient/require_config.js')}}"></script>
-    <script src="{{url_for('static', filename='assets/js/require.js/require.js')}}"></script>
+    <script src="{{url_for('static', filename='js/GeoRefineClient/assets/js/require.js')}}"></script>
     <script src="{{url_for('static', filename='js/GeoRefineClient/src/app-dev.js')}}"></script>
     {% endif %}
 

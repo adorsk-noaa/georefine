@@ -21,7 +21,6 @@ var config= {
 		underscore: ASSETS_PATH + "/js/underscore.js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
 		_s: ASSETS_PATH + "/js/underscore.string",
-		openlayers: ASSETS_PATH + "/js/openlayers/OpenLayers",
 		jqplot: ASSETS_PATH + "/js/jqplot/jquery.jqplot.min",
 		jqp_bar: ASSETS_PATH + "/js/jqplot/plugins/jqplot.barRenderer.min",
 		jqp_cat_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.categoryAxisRenderer.min",
@@ -166,6 +165,12 @@ var config= {
           "name": "jqwindow",
           "location": ASSETS_PATH + "/js/jquery.window",
           "main": "jquery.window"
+        },
+
+        {
+          "name": "openlayers",
+          "location": ASSETS_PATH + "/js/openlayers",
+          "main": "OpenLayers"
         }
 	]
 
