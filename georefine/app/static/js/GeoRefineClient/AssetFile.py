@@ -34,8 +34,10 @@ assets = {
         'source': 'https://github.com/adorsk-noaa/bb_facets.git'
     },
     'jqplot': {
-        'type': 'hg',
-        'source': 'ssh://hg@bitbucket.org/cleonello/jqplot'
+        'type': 'url',
+        'source': 'https://bitbucket.org/cleonello/jqplot/downloads/jquery.jqplot.1.0.4r1121.zip',
+        'unzip': True,
+        'path': 'dist'
     },
     'jquery.form.js': {
         'type': 'git',
