@@ -53,7 +53,9 @@ assets = {
     },
     'jquery.ui': {
         'type': 'url',
-        'source': 'https://github.com/downloads/jquery/jquery-ui/jquery-ui-1.9.1.zip'
+        'source': 'http://jqueryui.com/resources/download/jquery-ui-1.9.1.custom.zip',
+        'unzip': True,
+        'path': 'jquery-ui-1.9.1.custom'
     },
     'jquery.ui.extras': {
         'type': 'git',
