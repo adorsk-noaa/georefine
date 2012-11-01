@@ -13,7 +13,7 @@ var config= {
     baseUrl: GRC_BASE_PATH,
 	deps: [],
 	paths: {
-		requireLib: ASSETS_PATH + "/js/require.js/require",
+		requireLib: ASSETS_PATH + "/js/require.js",
 		text: ASSETS_PATH + "/js/requirejs-text",
 		rless: ASSETS_PATH + "/js/rless",
 		less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
