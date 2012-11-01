@@ -27,7 +27,7 @@ assets = {
     },
     'export_dialog': {
         'type': 'git',
-        'source': 'https://github.com/adorsk-noaa/export_dialog.git'
+        'source': 'https://github.com/adorsk-noaa/bb_export_dialog.git'
     },
     'facets': {
         'type': 'git',
@@ -94,7 +94,7 @@ assets = {
     'underscore.js': {
         'type': 'git',
         'source': 'https://github.com/documentcloud/underscore.git'
-    }
+    },
     'underscore.string.js': {
         'type': 'git',
         'source': 'https://github.com/epeli/underscore.string.git'
