@@ -92,7 +92,7 @@ assets = {
     'underscore.js': {
         'type': 'git',
         'source': 'https://github.com/documentcloud/underscore.git'
-    }
+    },
     'underscore.string.js': {
         'type': 'git',
         'source': 'https://github.com/epeli/underscore.string.git'
