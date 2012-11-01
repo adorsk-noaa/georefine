@@ -49,7 +49,7 @@ assets = {
     'jquery.qtip': {
         'type': 'git',
         'source': 'https://github.com/Craga89/qTip2.git',
-        'path': 'dist/jquery.qtip.js'
+        'path': 'dist'
     },
     'jquery.ui': {
         'type': 'url',
