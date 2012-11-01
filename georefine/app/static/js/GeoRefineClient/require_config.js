@@ -18,7 +18,7 @@ var config= {
 		rless: ASSETS_PATH + "/js/rless",
 		less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
 		jquery: ASSETS_PATH + "/js/jquery",
-		underscore: ASSETS_PATH + "/js/underscore",
+		underscore: ASSETS_PATH + "/js/underscore.js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
 		'underscore.string': ASSETS_PATH + "/js/underscore.string",
 		_s: ASSETS_PATH + "/js/_s",
