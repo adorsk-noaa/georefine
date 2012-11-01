@@ -21,7 +21,7 @@ var config= {
 		underscore: ASSETS_PATH + "/js/underscore.js/underscore",
 		backbone: ASSETS_PATH + "/js/backbone",
 		'underscore.string': ASSETS_PATH + "/js/underscore.string",
-		_s: ASSETS_PATH + "/js/_s",
+		_s: ASSETS_PATH + "/js/underscore.string.js/dist/underscore.string.min",
 		openlayers: ASSETS_PATH + "/js/openlayers/openlayers",
 		jqplot: ASSETS_PATH + "/js/jqplot/jquery.jqplot.min",
 		jqp_bar: ASSETS_PATH + "/js/jqplot/plugins/jqplot.barRenderer.min",
