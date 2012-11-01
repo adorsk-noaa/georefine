@@ -5,6 +5,7 @@ vm = require('vm');
 
 requireConfig = {};
 BASE_URL = __dirname + '/';
+DIST_DIR = __dirname + '/dist';
 requireConfigPath = BASE_URL + 'require_config.js';
 script = vm.createScript(fs.readFileSync(requireConfigPath));
 requireConfig = {};
@@ -17,7 +18,7 @@ script.runInNewContext(sandbox);
 
 buildConfig = {
     include: ['GeoRefineClient'],
-    out: BASE_URL + 'dist/GeoRefineClient.min.js',
+    out: DIST_DIR + '/GeoRefineClient.min.js',
     optimize: 'uglify'
 };
 
@@ -59,7 +60,7 @@ requirejs.optimize(buildConfig, function(buildResponse){
 
         bundler = require('./bundler.coffee');
         bundler.bundle(css, {
-            outputDir: 'dist/css'
+            outputDir: DIST_DIR + '/css'
         });
 
         console.log("done building CSS.");
