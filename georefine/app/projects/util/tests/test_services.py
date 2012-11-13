@@ -6,6 +6,8 @@ from georefine.app.projects.util import services
 from georefine.app import db
 import os
 
+
+
 _basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Services_Test(BaseTest):
@@ -18,7 +20,7 @@ class Services_Test(BaseTest):
         #manage_projects.setUpData(self.project)
 
     def testGetKeyedResults(self):
-        #return #INACTIVE
+        return #INACTIVE
         project = Project(id=1, name='test')
         project.schema = self.schema
 
@@ -159,7 +161,7 @@ class Services_Test(BaseTest):
         return
 
     def testProjects30(self):
-        #return #INACTIVE
+        return #INACTIVE
         project = db.session.query(Project).filter(Project.id == 30).one()
         project.schema = manage_projects.getProjectSchema(project)
 

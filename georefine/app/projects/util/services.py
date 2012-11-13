@@ -1,8 +1,12 @@
 from georefine.app import db
 from georefine.app.projects.models import Project
+from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.util.dao.gr_sa_dao import GeoRefine_SA_DAO
 import platform
 import copy
+import tempfile
+import tarfile
+
 
 def get_dao(project):
     return GeoRefine_SA_DAO(
@@ -136,3 +140,63 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     keyed_results = dao.get_keyed_results(key_def=KEY, query_defs=QUERIES)
     return keyed_results
 
+
+def create_project(project_file=None):
+    """ Create a project from a project bundle file. """
+    # Get transactional session.
+    con, trans, session = db.get_session_w_external_trans(db.session)
+    try:
+        tmp_dir2 = tempfile.mkdtemp(prefix="gr2.")
+        tar = tarfile.open(project_file)
+        tar.extractall(tmp_dir2)
+        tar.close()
+
+        project = Project()
+        session.add(project)
+        session.commit()
+
+        projects_manage.setUpSchema(project, tmp_dir2, session)
+        projects_manage.setUpAppConfig(project, tmp_dir2)
+        projects_manage.setUpMapLayers(project, tmp_dir2, session)
+        projects_manage.setUpData(project, tmp_dir2, session)
+        projects_manage.setUpStaticFiles(project, tmp_dir2)
+
+    except Exception as e:
+        trans.rollback()
+        con.close()
+        raise e
+
+    trans.commit()
+    con.close()
+    return project
+
+def delete_project(project):
+    """ Delete a project. """
+    # Get transactional session.
+    con, trans, session = db.get_session_w_external_trans(self.session)
+
+    try:
+        # Remove project maplayers.
+        project.layers_schema['metadata'].drop_all(bind=session.connection())
+
+        # Remove project tables.
+        project.schema['metadata'].drop_all(bind=session.connection())
+        project.layers_schema['metadata'].drop_all(bind=session.connection())
+
+        # Delete the project's db record.
+        self.on_project_delete(project)
+        self.session.flush()
+        self.session.delete(project)
+        self.session.commit()
+
+        # Remove project static files.
+        shutil.rmtree(project.static_files_dir)
+
+    except Exception, ex:
+        trans.rollback()
+        con.close()
+        return False
+
+    trans.commit()
+    con.close()
+    return True
