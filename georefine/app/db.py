@@ -6,11 +6,11 @@ engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], convert_unicode=Tr
 metadata = MetaData()
 session = scoped_session(sessionmaker(bind=engine))
 
-def init_db():
-    metadata.create_all(bind=engine, checkfirst=True)
+def init_db(bind=engine, checkfirst=True, **kwargs):
+    metadata.create_all(bind=bind, checkfirst=checkfirst, **kwargs)
 
-def clear_db():
-	metadata.drop_all(bind=engine)
+def clear_db(bind=engine):
+	metadata.drop_all(bind=bind)
 
 def get_session_w_external_trans(orig_session):
     con = orig_session.bind.connect()

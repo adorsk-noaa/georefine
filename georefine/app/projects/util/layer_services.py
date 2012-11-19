@@ -69,3 +69,37 @@ def get_map(layer, wms_parameters={}, **kwargs):
     return img
 
     #return open('/data/burger.png').read()
+
+def create_layers_for_project(project, data_dir, session=db.session):
+    # Create layer record in db.
+
+    map_layers_dir = os.path.join(
+        data_dir, 'data', "map_layers", "data", "shapefiles"
+    )
+
+    # Read layer metadata from layers dir.
+    # Layers dir is expected to contain a set of directories, where
+    # each directory contains data and metadata for a layer.
+    for layer_id in os.listdir(map_layers_dir):
+        layer_dir = os.path.join(map_layers_dir, layer_id)
+
+
+def create_layer_for_project(project, layer_dir, session=db.session):
+    # record whether layer has sld here too.
+    # Read big blob o' metadata from layers spreadsheet. or an individual
+    # metadata.json in each layer dir. that might be better. yah.
+
+    # Copy layer files to subdir of project's data dir.
+    layer_storage_dir = os.path.join(project.data_dir, 'layers', layer_id)
+
+    # Create and saver layer model.
+    layer_model = MapLayer(
+        layer_id=layer,
+        project=project,
+        sld=sld,
+        # other metadata here? Generic pickle blob to reconstitute later.
+    )
+
+    session.add(layer_model)
+    session.commit()
+

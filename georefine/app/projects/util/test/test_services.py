@@ -7,7 +7,6 @@ from georefine.app import db
 import os
 
 
-
 _basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Services_Test(BaseTest):

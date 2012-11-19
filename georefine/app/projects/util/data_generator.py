@@ -4,6 +4,7 @@ import os
 import csv
 import fiona
 import tarfile
+import json
 
 
 template_env = Environment(
@@ -151,6 +152,10 @@ def generate_layer(target_dir=None, layer_def=None):
     for record in layer_def['records']:
         shp_writer.write(record)
     shp_writer.close()
+
+    metadata_file = os.path.join(target_dir, "metadata.json")
+    open(metadata_file, "wb").write(json.dumps(layer_def['metadata']))
+
     return target_dir
 
 
@@ -167,7 +172,11 @@ def generate_layer_def(layer_id='layer', properties=None, n=10):
             'geometry': 'MultiPolygon',
             'properties': properties,
         },
-        'records': []
+        'records': [],
+        'metadata': {
+            'srid': '4326',
+            'shapetype': 'MultiPolygon',
+        }
     }
     data = []
     for i in range(n):

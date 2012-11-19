@@ -5,7 +5,8 @@ from sqlalchemy.orm import mapper, relationship, backref
 
 
 class Project(object):
-    def __init__(self, id=None, name=None, schema=None, app_config=None):
+    def __init__(self, id=None, name=None, schema=None, app_config=None,
+                 data_dir=None, static_dir=None, static_url=None):
         self.id = id
         self.name = name
         self.schema = schema
@@ -16,36 +17,36 @@ project_table = Table('project_projects', db.metadata,
         Column('name', String),
         Column('schema', PickleType),
         Column('app_config', PickleType),
-        Column('layers_schema', PickleType),
-        Column('static_files_dir', String),
-        Column('static_files_url', String),
+        Column('data_dir', String),
+        Column('static_dir', String),
+        Column('static_url', String),
         )
-mapper(Project, project_table)
 
 class MapLayer(object):
-    def __init__(self, id=None, layer_id=None, project=None, tbl=None, 
-                 sld=None):
+    def __init__(self, id=None, layer_id=None, project=None, dir_=None,
+                 metadata=None):
         self.id = id
         self.layer_id = layer_id
         self.project = project
-        self.tbl = tbl
-        self.sld = sld
+        self.dir_
+        self.metadata = metadata
 
 maplayer_table = Table('project_maplayers', db.metadata,
         Column('id', Integer, primary_key=True),
         Column('layer_id', String),
         Column('project_id', Integer, ForeignKey(project_table.c.id)),
-        Column('tbl', String),
-        Column('sld', Text),
+        Column('dir_', String),
+        Column('metadata', PickleType),
         )
-mapper(MapLayer, maplayer_table, properties={
-    'project': relationship(
-        Project, 
+
+mapper(Project, project_table, properties={
+    'maplayers': relationship(
+        MapLayer,
+        cascade="all, delete-orphan",
         single_parent=True,
-        backref=backref(
-            "maplayers",
-            cascade="all, delete-orphan"
-        )
     )
+})
+mapper(MapLayer, maplayer_table, properties={
+    'project': relationship(Project)
 })
 

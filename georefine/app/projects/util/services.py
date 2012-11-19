@@ -1,11 +1,14 @@
+from georefine.app import app
 from georefine.app import db
 from georefine.app.projects.models import Project
-from georefine.app.projects.util import manage_projects as projects_manage
+from georefine.app.projects.util import manage_projects as manage
 from georefine.util.dao.gr_sa_dao import GeoRefine_SA_DAO
 import platform
 import copy
 import tempfile
 import tarfile
+import os
+import logging
 
 
 def get_dao(project):
@@ -141,27 +144,49 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     return keyed_results
 
 
-def create_project(project_file=None):
+def create_project(project_file=None, logger=logging.getLogger()):
     """ Create a project from a project bundle file. """
     # Get transactional session.
     con, trans, session = db.get_session_w_external_trans(db.session)
     try:
-        tmp_dir2 = tempfile.mkdtemp(prefix="gr2.")
-        tar = tarfile.open(project_file)
-        tar.extractall(tmp_dir2)
-        tar.close()
 
+        # Create project model.
         project = Project()
         session.add(project)
         session.commit()
 
-        projects_manage.setUpSchema(project, tmp_dir2, session)
-        projects_manage.setUpAppConfig(project, tmp_dir2)
-        projects_manage.setUpMapLayers(project, tmp_dir2, session)
-        projects_manage.setUpData(project, tmp_dir2, session)
-        projects_manage.setUpStaticFiles(project, tmp_dir2)
+        # Create project directories.
+        project.data_dir = os.path.join(app.config['DATA_DIR'], 'projects',
+                                   str(project.id))
+        os.makedirs(project.data_dir)
+        project.static_dir = os.path.join(app.static_folder, 'projects',
+                                          str(project.id))
+        os.makedirs(project.static_dir)
+
+        # Unpack project bundle to temp dir.
+        tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
+        tar = tarfile.open(project_file)
+        tar.extractall(tmp_dir)
+        tar.close()
+
+        # Ingest app config.
+        manage.ingest_app_config(project, tmp_dir)
+
+        # Ingest project static files.
+        manage.ingest_static_files(project, tmp_dir)
+
+        # Ingest map layers.
+        manage.ingest_map_layers(project, tmp_dir, session)
+
+        # Setup project schema and db.
+        manage.ingest_schema(project, tmp_dir)
+        project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
+        dao = manage.get_dao(project)
+        dao.create_all()
+        manage.ingest_data(project, tmp_dir, dao)
 
     except Exception as e:
+        logger.exception("Error creating project.")
         trans.rollback()
         con.close()
         raise e
