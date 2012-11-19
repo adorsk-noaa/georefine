@@ -6,10 +6,12 @@ from sqlalchemy import Column, Float, Integer, String, MetaData
 from geoalchemy import *
 from geoalchemy.geometry import Geometry
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sa_dao.orm_dao import ORM_DAO
+from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import json
 import os, shutil, csv
+import pyspatialite
+import sys
+sys.modules['pysqlite2'] = pyspatialite
 
 
 def ingest_schema(project, data_dir, session=db.session): 
@@ -28,12 +30,20 @@ def ingest_app_config(project, data_dir):
 
 def get_dao(project):
     """ Get DAO for a project. """
-    engine = create_engine(project.db_uri)
-    session = scoped_session(sessionmaker(bind=engine))
-    dao = ORM_DAO(schema=project.schema, session=session())
+    engine = get_engine(project)
+    dao = SqlAlchemyDAO(schema=project.schema, connection=engine.connect())
     return dao
 
-def ingest_data(project, data_dir, session=db.session):
+def get_engine(project, **kwargs):
+    return create_engine(project.db_uri, **kwargs)
+
+def initialize_db(project):
+    if project.db_uri.startswith('sqlite'):
+        engine = get_engine(project)
+        con = engine.connect()
+        con.execute("SELECT InitSpatialMetaData()")
+
+def ingest_data(project, data_dir, dao):
     schema = project.schema
 
     # Load data (in order defined by schema).
@@ -88,10 +98,9 @@ def ingest_data(project, data_dir, session=db.session):
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
             # Insert values.
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
-            session.execute(t['source'].insert().values(**processed_row))
+            dao.connection.execute(t['source'].insert().values(**processed_row))
 
         table_file.close()
-        session.commit()
 
 def ingest_map_layers(project, source_data_dir, session):
     source_layers_dir = os.path.join(source_data_dir, 'layers')

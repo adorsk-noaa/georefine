@@ -42,9 +42,11 @@ def generate_sources(source_defs=None):
                         'kwargs': {
                             'type_': 'MultiPolygon(2)',
                         },
-                        'data': generate_multipolygon_wkt
+                        'csv_name': 'geom_wkt',
+                        'data': generate_multipolygon_wkt,
                     },
-                ]
+                ],
+                'GeometryDDL': True,
             }
         ]
 
@@ -56,6 +58,7 @@ def generate_sources(source_defs=None):
             'cols': source_def['cols'],
             'col_strs': get_col_strs_for_source_def(source_def),
             'data': get_data_for_source_def(source_def),
+            'GeometryDDL': source_def.get('GeometryDDL'),
         }
         sources.append(source)
 
@@ -97,7 +100,7 @@ def generate_polygon_coords(x=0, dx=1, y=0, dy=1):
 
 def generate_multipolygon_wkt(n, data=None, **kwargs):
     """ Generate a multipolygon for a data record. """
-    coords = generate_polygon_coords(**kwargs)
+    coords = generate_polygon_coords(x=n, y=n)
     wkt = "MULTIPOLYGON(((%s)))" % (','.join(["%s %s" % (c[0], c[1]) for c in coords]))
     return wkt
 
@@ -228,10 +231,12 @@ def generate_project_dir(target_dir=None, source_defs=None,):
     for source in sources:
         csv_file = os.path.join(data_dir, source['id'] + '.csv')
         writer = csv.writer(open(csv_file, 'wb'))
-        col_names = [col['name'] for col in source['cols']]
+        col_names = []
+        for col in source['cols']:
+            col_names.append(col.get('csv_name', col['name']))
         writer.writerow(col_names)
         for record in source['data']:
-            writer.writerow([record[col] for col in col_names])
+            writer.writerow([record[col['name']] for col in source['cols']])
 
     # Create mock layers.
     layers_dir = os.path.join(target_dir, 'layers')

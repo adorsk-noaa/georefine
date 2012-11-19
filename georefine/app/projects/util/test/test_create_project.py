@@ -22,7 +22,7 @@ class CreateProjectTest(DBTestCase):
 
     def tearDown(self):
         if self.tmp_dir and self.tmp_dir.startswith('/tmp') and \
-        os.path.exists(self.tmp_dir):
+        os.path.exists(self.tmp_dir) and False:
             shutil.rmtree(self.tmp_dir)
         DBTestCase.tearDown(self)
 
@@ -30,7 +30,6 @@ class CreateProjectTest(DBTestCase):
         # Create project file.
         pfile = dg.generate_project_file()
         proj = services.create_project(project_file=pfile)
-        print proj
     
 if __name__ == '__main__':
     unittest.main()

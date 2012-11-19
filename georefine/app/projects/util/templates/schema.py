@@ -16,9 +16,11 @@ sources['{{source.id}}'] = Table(
     {{col}},
     {%- endfor %}
 )
+
 {% if source.GeometryDDL %}
 GeometryDDL(sources['{{source.id}}'])
 {% endif %}
+
 ordered_sources.append({'id': '{{source.id}}', 'source': sources['{{source.id}}']})
 {% endfor %}
 

@@ -9,9 +9,10 @@ import tempfile
 import tarfile
 import os
 import logging
+from sqlalchemy import create_engine
 
 
-def get_dao(project):
+def get_gr_dao(project):
     return GeoRefine_SA_DAO(
         connection=db.session.bind, 
         schema=project.schema
@@ -181,6 +182,7 @@ def create_project(project_file=None, logger=logging.getLogger()):
         # Setup project schema and db.
         manage.ingest_schema(project, tmp_dir)
         project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
+        manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
         manage.ingest_data(project, tmp_dir, dao)
