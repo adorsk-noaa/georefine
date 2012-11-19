@@ -3,6 +3,7 @@ from jinja2 import Environment, PackageLoader
 import os
 import csv
 import fiona
+import tarfile
 
 
 template_env = Environment(
@@ -186,23 +187,34 @@ def generate_layer_def(layer_id='layer', properties=None, n=10):
 
     return layer_def
 
-def generate_project_file(target_file=None, source_defs=None):
-    """ Generate a project file. """
-
-    tmp_dir = tempfile.mkdtemp(prefix="gr.project.")
-
+def generate_project_file(target_file=None, **kwargs):
+    """ Generate a project dir. """
+    project_dir = generate_project_dir(**kwargs)
     if not target_file:
-        target_file = tmp_dir + '.tar.gz'
+        target_file = project_dir + '.tar.gz'
+    tar = tarfile.open(target_file, "w:gz")
+    for item in os.listdir(project_dir):
+        path = os.path.join(project_dir, item)
+        tar.add(path, arcname=item)
+    tar.close()
+    return target_file
+
+def generate_project_dir(target_dir=None, source_defs=None,):
+    """ Generate a project file. """
+    if not target_dir:
+        target_dir = tempfile.mkdtemp(prefix="gr.project.")
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
 
     # Create mock sources.
     sources = generate_sources(source_defs=source_defs)
 
     # Create mock schema.
-    schema_file = os.path.join(tmp_dir, 'schema.py')
+    schema_file = os.path.join(target_dir, 'schema.py')
     generate_schema(target_file=schema_file, sources=sources)
 
     # Create mock data per the schema.
-    data_dir = os.path.join(tmp_dir, 'data')
+    data_dir = os.path.join(target_dir, 'data')
     os.makedirs(data_dir)
     for source in sources:
         csv_file = os.path.join(data_dir, source['id'] + '.csv')
@@ -213,11 +225,11 @@ def generate_project_file(target_file=None, source_defs=None):
             writer.writerow([record[col] for col in col_names])
 
     # Create mock layers.
-    layers_dir = os.path.join(tmp_dir, 'layers')
+    layers_dir = os.path.join(target_dir, 'layers')
     generate_layers(target_dir=layers_dir)
 
     # Cretae mock app config.
-    app_config_file = os.path.join(tmp_dir, 'app_config.py')
+    app_config_file = os.path.join(target_dir, 'app_config.py')
     generate_app_config(target_file=app_config_file)
 
-    return target_file
+    return target_dir
