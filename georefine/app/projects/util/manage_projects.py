@@ -28,7 +28,6 @@ def ingest_app_config(project, data_dir):
 
 def get_dao(project):
     """ Get DAO for a project. """
-    project.db_uri = os.path.join(project.dir, 'db.sqlite')
     engine = create_engine(project.db_uri)
     session = scoped_session(sessionmaker(bind=engine))
     dao = ORM_DAO(schema=project.schema, session=session())
