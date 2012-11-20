@@ -6,11 +6,13 @@ from sqlalchemy.orm import mapper, relationship, backref
 
 class Project(object):
     def __init__(self, id=None, name=None, schema=None, app_config=None,
-                 data_dir=None, static_dir=None, static_url=None):
+                 data_dir=None, static_dir=None, static_url=None,
+                 layers=[]):
         self.id = id
         self.name = name
         self.schema = schema
         self.app_config = app_config
+        self.layers = layers
 
 project_table = Table('project_projects', db.metadata,
         Column('id', Integer, primary_key=True),
@@ -40,7 +42,7 @@ maplayer_table = Table('project_maplayers', db.metadata,
         )
 
 mapper(Project, project_table, properties={
-    'maplayers': relationship(
+    'layers': relationship(
         MapLayer,
         cascade="all, delete-orphan",
         single_parent=True,

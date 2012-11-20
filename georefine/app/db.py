@@ -2,6 +2,7 @@ from georefine.app import app
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], convert_unicode=True)
 metadata = MetaData()
 session = scoped_session(sessionmaker(bind=engine))
@@ -12,8 +13,12 @@ def init_db(bind=engine, checkfirst=True, **kwargs):
 def clear_db(bind=engine):
 	metadata.drop_all(bind=bind)
 
-def get_session_w_external_trans(orig_session):
-    con = orig_session.bind.connect()
+def get_session_w_external_trans(new_connection=False):
+    global session
+    if new_connection:
+        con = session.bind.engine.connect()
+    else:
+        con = session.bind
     trans = con.begin()
-    new_session = sessionmaker()(bind=con)
-    return con, trans, new_session
+    session = sessionmaker(bind=con)()
+    return con, trans, session

@@ -35,7 +35,7 @@ class DBTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.trans.rollback()
-        db.session.close
+        self.connection.close()
 
 if __name__ == '__main__':
     unittest.main()

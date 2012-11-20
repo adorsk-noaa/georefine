@@ -9,7 +9,7 @@ import tempfile
 import tarfile
 import os
 import logging
-from sqlalchemy import create_engine
+import shutil
 
 
 def get_gr_dao(project):
@@ -19,8 +19,6 @@ def get_gr_dao(project):
     )
 
 
-# @TODO: Move the logic for fetching connection parms, sql to this function. Take it out of the renderer,
-# renderer shouldn't have to do that stuff.
 def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
             GEOM_ENTITY=None, wms_parameters={}, **kwargs):
     dao = get_dao(project)
@@ -48,7 +46,6 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
             **kwargs
         )
 
-    # @TODO: Add normal python renderer.
     else:
         from georefine.util.mapping.ms_renderer import MapScriptRenderer
         import georefine.util.mapping.sld_util as sld_util
@@ -148,9 +145,9 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
 def create_project(project_file=None, logger=logging.getLogger()):
     """ Create a project from a project bundle file. """
     # Get transactional session.
-    con, trans, session = db.get_session_w_external_trans(db.session)
-    try:
+    con, trans, session = db.get_session_w_external_trans()
 
+    try:
         # Create project model.
         project = Project()
         session.add(project)
@@ -158,10 +155,10 @@ def create_project(project_file=None, logger=logging.getLogger()):
 
         # Create project directories.
         project.data_dir = os.path.join(app.config['DATA_DIR'], 'projects',
-                                   str(project.id))
+                                   'project_' + str(project.id))
         os.makedirs(project.data_dir)
         project.static_dir = os.path.join(app.static_folder, 'projects',
-                                          str(project.id))
+                                          'project_' + str(project.id))
         os.makedirs(project.static_dir)
 
         # Unpack project bundle to temp dir.
@@ -189,41 +186,40 @@ def create_project(project_file=None, logger=logging.getLogger()):
 
     except Exception as e:
         logger.exception("Error creating project.")
+        try:
+            if project:
+                delete_project_dirs(project)
+            shutil.rmtree(tmp_dir)
+        except NameError:
+            pass
         trans.rollback()
-        con.close()
         raise e
 
     trans.commit()
-    con.close()
-    return project
+
+    return db.session.merge(project)
 
 def delete_project(project):
     """ Delete a project. """
     # Get transactional session.
-    con, trans, session = db.get_session_w_external_trans(self.session)
+    con, trans, session = db.get_session_w_external_trans()
+
+    project = session.merge(project)
 
     try:
-        # Remove project maplayers.
-        project.layers_schema['metadata'].drop_all(bind=session.connection())
+        delete_project_dirs(project)
+        session.delete(project)
+        session.commit()
 
-        # Remove project tables.
-        project.schema['metadata'].drop_all(bind=session.connection())
-        project.layers_schema['metadata'].drop_all(bind=session.connection())
-
-        # Delete the project's db record.
-        self.on_project_delete(project)
-        self.session.flush()
-        self.session.delete(project)
-        self.session.commit()
-
-        # Remove project static files.
-        shutil.rmtree(project.static_files_dir)
-
-    except Exception, ex:
+    except Exception as e:
         trans.rollback()
-        con.close()
-        return False
+        raise e
 
     trans.commit()
-    con.close()
     return True
+
+def delete_project_dirs(project):
+    for dir_attr in ['data_dir', 'static_dir']:
+        dir_ = getattr(project, dir_attr, None)
+        if dir_:
+            shutil.rmtree(dir_)
