@@ -13,8 +13,7 @@ def init_db(bind=engine, checkfirst=True, **kwargs):
 def clear_db(bind=engine):
 	metadata.drop_all(bind=bind)
 
-def get_session_w_external_trans(new_connection=False):
-    global session
+def get_session_w_external_trans(session=session, new_connection=False):
     if new_connection:
         con = session.bind.engine.connect()
     else:

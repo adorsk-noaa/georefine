@@ -9,33 +9,43 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 class DBTestCase(unittest.TestCase):
 
-    def get_engine_uri(self):
-        return 'sqlite://'
+    db_uri = 'sqlite://'
+    rollback_each_time = True
+    refresh_db_each_time = False
 
-    def spatializeDB(self):
-        self.connection.execute("SELECT InitSpatialMetaData()") 
+    @classmethod
+    def setUpClass(cls):
+        cls.spatializeDB(cls.getConnection())
 
-    def setUp(self, refresh_db=True):
-        self.engine = create_engine(self.get_engine_uri())
-        self.connection = self.engine.connect()
-        self.trans = self.connection.begin()
-        self.spatializeDB()
+    @classmethod
+    def spatializeDB(clz, con):
+        con.execute("SELECT InitSpatialMetaData()") 
 
-        db.session = scoped_session(sessionmaker(bind=self.connection))
+    @classmethod
+    def getConnection(cls):
+        engine = create_engine(cls.db_uri)
+        return engine.connect()
 
-        app.config['TESTING'] = True
-        self.client = app.test_client()
+    @classmethod
+    def getSession(cls, con=None):
+        if not con:
+            con = cls.getConnection()
+        return scoped_session(sessionmaker(bind=con))
 
-        if refresh_db:
-            self.refresh_db(bind=self.connection)
-
-    def refresh_db(self, bind=None):
-        db.clear_db(bind=bind)
-        db.init_db(bind=bind)
+    def setUp(self):
+        if self.rollback_each_time:
+            self.con = self.getConnection()
+            self.trans = self.con.begin()
+            
+        db.session = self.getSession(self.con)
+        if self.refresh_db_each_time:
+            self.refresh_db(bind=db.session.bind)
 
     def tearDown(self):
-        self.trans.rollback()
-        self.connection.close()
+        if self.rollback_each_time:
+            self.trans.rollback()
 
-if __name__ == '__main__':
-    unittest.main()
+    @classmethod
+    def refresh_db(clz, bind=None):
+        db.clear_db(bind=bind)
+        db.init_db(bind=bind)

@@ -126,6 +126,7 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
 
 def execute_queries(project, QUERIES=[]):
     dao = manage.get_dao(project)
+    dao.valid_funcs.append('func.count')
     results = dao.execute_queries(QUERIES)
     return results
 
@@ -135,10 +136,13 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     return keyed_results
 
 
-def create_project(project_file=None, logger=logging.getLogger()):
+def create_project(project_file=None, logger=logging.getLogger(), 
+                   session=None):
     """ Create a project from a project bundle file. """
     # Get transactional session.
-    con, trans, session = db.get_session_w_external_trans()
+    if not session:
+        session = db.session
+    con, trans, session = db.get_session_w_external_trans(session)
 
     try:
         # Create project model.
@@ -177,6 +181,8 @@ def create_project(project_file=None, logger=logging.getLogger()):
         dao.create_all()
         manage.ingest_data(project, tmp_dir, dao)
 
+        session.commit()
+
     except Exception as e:
         logger.exception("Error creating project.")
         try:
@@ -190,12 +196,14 @@ def create_project(project_file=None, logger=logging.getLogger()):
 
     trans.commit()
 
-    return db.session.merge(project)
+    return project
 
-def delete_project(project):
+def delete_project(project, session=None):
     """ Delete a project. """
     # Get transactional session.
-    con, trans, session = db.get_session_w_external_trans()
+    if not session:
+        session = db.session
+    con, trans, session = db.get_session_w_external_trans(session)
 
     project = session.merge(project)
 
