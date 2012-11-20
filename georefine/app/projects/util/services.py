@@ -2,7 +2,7 @@ from georefine.app import app
 from georefine.app import db
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as manage
-from georefine.util.dao.gr_sa_dao import GeoRefine_SA_DAO
+from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import platform
 import copy
 import tempfile
@@ -12,16 +12,9 @@ import logging
 import shutil
 
 
-def get_gr_dao(project):
-    return GeoRefine_SA_DAO(
-        connection=db.session.bind, 
-        schema=project.schema
-    )
-
-
 def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
             GEOM_ENTITY=None, wms_parameters={}, **kwargs):
-    dao = get_dao(project)
+    dao = manage.get_dao(project)
 
     wms_parameters['layers'] = 'data'
 
@@ -132,12 +125,12 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
     #return open('/data/burger.png').read()
 
 def execute_queries(project, QUERIES=[]):
-    dao = get_dao(project)
+    dao = manage.get_dao(project)
     results = dao.execute_queries(QUERIES)
     return results
 
 def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
-    dao = get_dao(project)
+    dao = manage.get_dao(project)
     keyed_results = dao.get_keyed_results(key_def=KEY, query_defs=QUERIES)
     return keyed_results
 

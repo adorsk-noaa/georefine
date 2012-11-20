@@ -13,7 +13,15 @@ import os
 
 logging.basicConfig()
 
-class ManageProjectTest(DBTestCase):
+class ManageProjectsTestCase(DBTestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.test_project_file = dg.generate_project_file()
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.test_project_file)
+
     def setUp(self):
         DBTestCase.setUp(self)
         self.tmp_dir = tempfile.mkdtemp(prefix="gr.app.")
@@ -28,14 +36,12 @@ class ManageProjectTest(DBTestCase):
             shutil.rmtree(self.tmp_dir)
         DBTestCase.tearDown(self)
 
-    def xtest_create_project(self):
-        pfile = dg.generate_project_file()
-        project = services.create_project(project_file=pfile)
+    def test_create_project(self):
+        project = services.create_project(project_file=self.test_project_file)
         self.assertTrue(getattr(project, 'id', None) is not None)
 
     def test_delete_project(self):
-        pfile = dg.generate_project_file()
-        project = services.create_project(project_file=pfile)
+        project = services.create_project(project_file=self.test_project_file)
         dir_attrs = ['data_dir', 'static_dir']
         project_dirs = [getattr(project, dir_attr) for dir_attr in dir_attrs]
 
@@ -46,6 +52,51 @@ class ManageProjectTest(DBTestCase):
 
         num_layers = db.session.query(project_models.MapLayer).count()
         self.assertEquals(num_layers, 0)
-    
+
+    def test_execute_query(self):
+        project = services.create_project(project_file=self.test_project_file)
+        q = {
+            "ID": "primary_q",
+            "SELECT" : [
+                {'EXPRESSION': '__Src1__id', 'ID': 'id'},
+                {'EXPRESSION': '__Src1__float_', 'ID': 'float_'},
+            ],
+        }
+
+        results = services.execute_queries(project, [q])
+        print results
+
+    def test_get_keyed_results(self):
+        project = services.create_project(project_file=self.test_project_file)
+        bucket_entity1 = {
+            'ID': 'bucket', 
+            'EXPRESSION': '__Src1__float_',
+            'AS_HISTOGRAM': True, 
+            'ALL_VALUES': True, 
+            'MIN': 0, 
+            'MAX': 10, 
+            'NUM_CLASSES': 5
+        }
+        key = {
+            "KEY_ENTITY" : bucket_entity1
+        }
+
+        primary_q = {
+            "AS_DICTS": True, 
+            "ID": "primary_q",
+            "SELECT" : [
+                {'ID': "src1_id", 'EXPRESSION': '__Src1__id'},
+            ],
+            "GROUP_BY": [
+                {"ID": "src1_id"},
+                bucket_entity1,
+            ],
+            "SELECT_GROUP_BY": True,
+        }
+
+        results = services.execute_keyed_queries(project, key, [primary_q])
+        print results
+
+
 if __name__ == '__main__':
     unittest.main()

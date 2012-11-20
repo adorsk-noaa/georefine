@@ -19,7 +19,7 @@ def generate_sources(source_defs=None):
     if not source_defs:
         source_defs = [
             {
-                'id':  'src1',
+                'id':  'Src1',
                 'cols': [
                     {
                         'name': 'id',
@@ -30,7 +30,7 @@ def generate_sources(source_defs=None):
                         'data': lambda n, r: None,
                     },
                     {
-                        'name': 'float_col',
+                        'name': 'float_',
                         'kwargs': {
                             'type_': 'Float',
                         },
@@ -87,7 +87,7 @@ def get_data_for_source_def(source_def, n=10):
         record = {}
         for col in source_def['cols']:
             if col.get('data'):
-                value = col['data'](n, record)
+                value = col['data'](i, record)
             else:
                 value = None
             record[col['name']] = value
