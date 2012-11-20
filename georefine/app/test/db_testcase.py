@@ -9,9 +9,12 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 class DBTestCase(unittest.TestCase):
 
-    db_uri = 'sqlite://'
     rollback_each_time = True
     refresh_db_each_time = False
+
+    @classmethod
+    def get_db_uri(cls):
+        return 'sqlite://'
 
     @classmethod
     def setUpClass(cls):
@@ -23,7 +26,7 @@ class DBTestCase(unittest.TestCase):
 
     @classmethod
     def getConnection(cls):
-        engine = create_engine(cls.db_uri)
+        engine = create_engine(cls.get_db_uri())
         return engine.connect()
 
     @classmethod

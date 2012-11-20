@@ -12,8 +12,8 @@ import logging
 import shutil
 
 
-def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
-            GEOM_ENTITY=None, wms_parameters={}, **kwargs):
+def get_map(project, query, data_entity=None, geom_id_entity=None,
+            geom_entity=None, wms_parameters={}, **kwargs):
     dao = manage.get_dao(project)
 
     wms_parameters['layers'] = 'data'
@@ -26,15 +26,15 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
         sa_connection_parameters = dao.get_connection_parameters()
         gt_connection_parameters = mapSqlAlchemyConnectionParameters(sa_connection_parameters)
 
-        sql = dao.get_sql(QUERY)
+        sql = dao.get_sql(query)
 
         # Render map image.
         img = gt_renderer.renderMap(
             connection_parameters=gt_connection_parameters,
             sql=sql,
-            data_entity=DATA_ENTITY, 
-            geom_id_entity=GEOM_ID_ENTITY, 
-            geom_entity=GEOM_ENTITY, 
+            data_entity=data_entity, 
+            geom_id_entity=geom_id_entity, 
+            geom_entity=geom_entity, 
             map_parameters=wms_parameters,
             **kwargs
         )
@@ -48,14 +48,15 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
         # Generate data string from parameters.
         # Generate styles from parameters.
 
-        if 'postgres' in db.engine.url.drivername:
+        driver = dao.connection.engine.url.drivername
+        if 'postgres' in driver:
             connectiontype = 'POSTGIS'
 
             ms_connection_str = "host=%s password=%s dbname=%s user=%s" % (
                 db.engine.url.host, db.engine.url.password, 
                 db.engine.url.database, db.engine.url.username)
 
-            sql = dao.get_sql(QUERY)
+            sql = dao.get_sql(query)
 
             ms_data_str = ("geom FROM"
                            " (SELECT ST_SetSRID(subq.%s, 4326) as geom"
@@ -63,31 +64,29 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
                            " FROM (%s) as subq) as wrapped_subq" 
                            " USING UNIQUE geom_id USING srid=4326"
                            % (
-                               GEOM_ENTITY['ID'], 
-                               GEOM_ID_ENTITY['ID'],
+                               geom_entity['ID'], 
+                               geom_id_entity['ID'],
                                sql
                            )
                           )
 
-        elif 'sqlite' in db.engine.url.drivername:
+        elif 'sqlite' in driver:
             connectiontype = 'OGR'
-            ms_connection_str = db.engine.url.database
+            ms_connection_str = dao.connection.engine.url.database
 
-            sql = dao.get_sql(QUERY)
+            sql = dao.get_sql(query)
 
-            ms_data_str = ("SELECT AsBinary(%s) from %s" 
-                           % (
-                               GEOM_ENTITY['ID'],
-                               sql
-                           )
-                          )
+            ms_data_str = "SELECT %s AS 'geometry'" % geom_entity['ID']
+            if data_entity:
+                ms_data_str += ", %s" % data_entity['ID']
+            ms_data_str += " FROM (%s) AS 'subq'" % sql
 
         # Create SLD for styling if there was a value entity.
-        if DATA_ENTITY:
+        if data_entity:
             # Generate class bounds.
-            num_classes = DATA_ENTITY.get('num_classes', 25)
-            vmin = float(DATA_ENTITY.get('min', 0))
-            vmax = float(DATA_ENTITY.get('max', 1))
+            num_classes = data_entity.get('num_classes', 25)
+            vmin = float(data_entity.get('min', 0))
+            vmax = float(data_entity.get('max', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
             classes = [[None, vmin]]
@@ -99,7 +98,7 @@ def get_map(project, QUERY, DATA_ENTITY=None, GEOM_ID_ENTITY=None,
             # Render sld.
             sld_doc = sld_util.get_polygon_gradient_sld(
                 layer_name='data',
-                value_attr=DATA_ENTITY['ID'],
+                value_attr=data_entity['ID'],
                 classes=classes
             )
             
