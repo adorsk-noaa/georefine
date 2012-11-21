@@ -78,15 +78,15 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
 
             ms_data_str = "SELECT %s AS 'geometry'" % geom_entity['ID']
             if data_entity:
-                ms_data_str += ", %s" % data_entity['ID']
+                ms_data_str += ", %s as 'data'" % data_entity['ID']
             ms_data_str += " FROM (%s) AS 'subq'" % sql
 
         # Create SLD for styling if there was a value entity.
         if data_entity:
             # Generate class bounds.
-            num_classes = data_entity.get('num_classes', 25)
-            vmin = float(data_entity.get('min', 0))
-            vmax = float(data_entity.get('max', 1))
+            num_classes = data_entity.get('NUM_CLASSES', 25)
+            vmin = float(data_entity.get('MIN', 0))
+            vmax = float(data_entity.get('MAX', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
             classes = [[None, vmin]]
@@ -98,10 +98,10 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
             # Render sld.
             sld_doc = sld_util.get_polygon_gradient_sld(
                 layer_name='data',
-                value_attr=data_entity['ID'],
+                value_attr='data',
                 classes=classes
             )
-            
+
         layers = [{
             'name': 'data',
             'connection': ms_connection_str,
@@ -109,7 +109,7 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
             'data': ms_data_str,
             'projection': 'init=epsg:4326',
             'type': 'POLYGON',
-            'apply_sld': [sld_doc],
+            'apply_sld': [sld_doc, 'data'],
         }]
 
         imgObj = renderer.render_map(

@@ -208,7 +208,12 @@ class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
         return "sqlite:///%s" % cls.db_file
 
     def test_get_data_map(self):
-        data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}
+        data_entity = {
+            'EXPRESSION': 'func.sum(__Src1__float_)', 
+            'ID': 'data',
+            'MIN': 0,
+            'MAX': 10,
+        }
         geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
         geom_id_entity = {'EXPRESSION': '__Src1__id', 'ID': 'id'}
         query = {
@@ -238,6 +243,7 @@ class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
                 geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
                 wms_parameters=wms_parameters)
         self.assertFalse(self.img_is_blank(img))
+        self.show_img(img)
 
 class ProjectsServicesLayerMapTestCase(ProjectsServicesMapCommonTestCase):
 

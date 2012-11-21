@@ -9,13 +9,13 @@
         <UserStyle>
             <Title>Polygon Gradient</Title>
             <FeatureTypeStyle>
+                {% set color_class = color_classes[0] %}
                 <Rule>
-                    {% set color_class = color_classes[0] %}
                     <ogc:Filter>
-                            <ogc:PropertyIsGreaterThanOrEqualTo>
+                            <ogc:PropertyIsLessThan>
                                 <ogc:PropertyName>{{value_attr}}</ogc:PropertyName>
                                 <ogc:Literal>{{color_class[0]}}</ogc:Literal>
-                            </ogc:PropertyIsGreaterThanOrEqualTo>
+                            </ogc:PropertyIsLessThan>
                     </ogc:Filter>
                     <PolygonSymbolizer>
                         <Fill>
