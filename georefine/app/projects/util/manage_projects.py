@@ -2,11 +2,11 @@ from georefine.app.projects.models import Project, MapLayer
 from georefine.app import app, db
 import georefine.util.shapefile as shp_util
 import georefine.util.gis as gis_util
+from georefine.app.projects.util.project_dao import ProjectDAO
 from sqlalchemy import Column, Float, Integer, String, MetaData
 from geoalchemy import *
 from geoalchemy.geometry import Geometry
 from sqlalchemy import create_engine, MetaData
-from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import json
 import os, shutil, csv
 import pyspatialite
@@ -31,7 +31,7 @@ def ingest_app_config(project, data_dir):
 def get_dao(project):
     """ Get DAO for a project. """
     engine = get_engine(project)
-    dao = SqlAlchemyDAO(schema=project.schema, connection=engine.connect())
+    dao = ProjectDAO(schema=project.schema, connection=engine.connect())
     return dao
 
 def get_engine(project, **kwargs):

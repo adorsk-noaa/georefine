@@ -103,38 +103,7 @@ class ProjectsServicesCommonTestCase(ProjectsCommonTestCase):
 
     @classmethod
     def get_source_defs(cls):
-        return [
-            {
-                'id':  'Src1',
-                'cols': [
-                    {
-                        'name': 'id',
-                        'kwargs': {
-                            'type_': 'Integer',
-                            'primary_key': True,
-                        },
-                        'data': lambda n, r: None,
-                    },
-                    {
-                        'name': 'float_',
-                        'kwargs': {
-                            'type_': 'Float',
-                        },
-                        'data': lambda n, r: float(n),
-                    },
-                    {
-                        'class': 'GeometryExtensionColumn',
-                        'name': 'geom',
-                        'kwargs': {
-                            'type_': 'MultiPolygon(2)',
-                        },
-                        'csv_name': 'geom_wkt',
-                        'data': dg.generate_multipolygon_wkt,
-                    },
-                ],
-                'GeometryDDL': True,
-            }
-        ]
+        return dg.generate_source_defs()
 
 class ProjectsServicesTestCase(ProjectsServicesCommonTestCase):
     def test_execute_query(self):

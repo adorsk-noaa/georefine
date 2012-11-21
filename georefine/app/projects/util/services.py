@@ -70,16 +70,26 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
                            )
                           )
 
+        # Spatialite needs some special handling in order to take advantage
+        # of spatial indices.
         elif 'sqlite' in driver:
             connectiontype = 'OGR'
             ms_connection_str = dao.connection.engine.url.database
 
-            sql = dao.get_sql(query)
+            frame_entity = {
+                'EXPRESSION': 'func.BuildMbr(%s)' % wms_parameters['BBOX']
+            }
+
+            spatialite_query = dao.get_spatialite_spatial_query(
+                query, geom_entity, frame_entity)
+            sql = dao.query_to_raw_sql(spatialite_query)
 
             ms_data_str = "SELECT %s AS 'geometry'" % geom_entity['ID']
             if data_entity:
                 ms_data_str += ", %s as 'data'" % data_entity['ID']
             ms_data_str += " FROM (%s) AS 'subq'" % sql
+
+            print ms_data_str
 
         # Create SLD for styling if there was a value entity.
         if data_entity:
