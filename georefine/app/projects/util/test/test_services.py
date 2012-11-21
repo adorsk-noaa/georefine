@@ -35,7 +35,7 @@ class ProjectsCommonTestCase(DBTestCase):
 
     def setUp(self):
         DBTestCase.setUp(self)
-        if not hasattr(self, 'tmpdir') or not os.path.exists(self.tmpdir):
+        if not hasattr(self, 'tmp_dir') or not os.path.exists(self.tmp_dir):
             self.setUpDirs()
 
     def tearDown(self):
@@ -52,10 +52,10 @@ class ProjectsCommonTestCase(DBTestCase):
         app.static_folder = self.static_dir
 
     @classmethod
-    def clearDirs(self):
-        if hasattr(self, 'tmp_dir') and self.tmp_dir.startswith('/tmp') and \
-           os.path.exists(self.tmp_dir):
-            shutil.rmtree(self.tmp_dir)
+    def clearDirs(cls):
+        if hasattr(cls, 'tmp_dir') and cls.tmp_dir.startswith('/tmp') and \
+           os.path.exists(cls.tmp_dir):
+            shutil.rmtree(cls.tmp_dir)
 
     @classmethod
     def get_source_defs(cls):
@@ -97,7 +97,6 @@ class ProjectsServicesCommonTestCase(ProjectsCommonTestCase):
                                               session=cls.session)
     @classmethod
     def tearDownClass(cls):
-        services.delete_project(cls.project, session=cls.session)
         cls.clearDirs()
         super(ProjectsServicesCommonTestCase, cls).tearDownClass()
 
@@ -191,9 +190,53 @@ class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
         """ Need to use disk-based db in order for mapping backend to access
         backend. """
         if not hasattr(cls, 'db_file'):
-            hndl, db_file = tempfile.mkstemp(suffix=".db.sqlite")
-            cls.db_file = db_file
+            cls.db_file = tempfile.mkstemp(suffix=".db.sqlite", dir=cls.tmp_dir)
         return "sqlite:///%s" % cls.db_file
+
+    def test_get_map(self):
+        data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}
+        geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
+        geom_id_entity = {'EXPRESSION': '__Src1__id', 'ID': 'id'}
+        query = {
+            "ID": "query",
+            "SELECT" : [
+                data_entity,
+                geom_entity,
+                geom_id_entity,
+            ],
+            "GROUP_BY": [
+                geom_entity,
+                geom_id_entity,
+            ]
+        }
+        wms_parameters = {
+            #'TRANSPARENT': True,
+            'SERVICE': 'WMS',
+            'VERSION': '1.1.1',
+            'REQUEST': 'GetMap',
+            'STYLES': '',
+            'FORMAT': 'image/png',
+            'SRS': 'EPSG:4326',
+            'BBOX': '0,0,15,15',
+            'WIDTH': 200,
+            'HEIGHT': 200,
+        }
+        img = services.get_map(self.project, query, data_entity=data_entity,
+                geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
+                wms_parameters=wms_parameters)
+        img_file = StringIO(img)
+        img = Image.open(img_file)
+        is_blank = True
+        for pix in img.getdata():
+            if pix != (255,255,255,):
+                is_blank = False
+                break
+        self.assertFalse(is_blank)
+
+class ProjectsLayersServicesTestCase(ProjectsServicesCommonTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(ProjectsLayersServicesTestCase, cls).setUpClass()
 
     def test_get_map(self):
         data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}

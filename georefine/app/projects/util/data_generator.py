@@ -5,6 +5,7 @@ import csv
 import fiona
 import tarfile
 import json
+import shutil
 
 
 template_env = Environment(
@@ -199,7 +200,7 @@ def generate_layer_def(layer_id='layer', properties=None, n=10):
 
     return layer_def
 
-def generate_project_file(target_file=None, **kwargs):
+def generate_project_file(target_file=None, rmdir=True, **kwargs):
     """ Generate a project dir. """
     project_dir = generate_project_dir(**kwargs)
     if not target_file:
@@ -209,6 +210,8 @@ def generate_project_file(target_file=None, **kwargs):
         path = os.path.join(project_dir, item)
         tar.add(path, arcname=item)
     tar.close()
+    if rmdir:
+        shutil.rmtree(project_dir)
     return target_file
 
 def generate_project_dir(target_dir=None, source_defs=None,):

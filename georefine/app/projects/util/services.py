@@ -180,6 +180,9 @@ def create_project(project_file=None, logger=logging.getLogger(),
         dao.create_all()
         manage.ingest_data(project, tmp_dir, dao)
 
+        # Clean up tmpdir.
+        shutil.rmtree(tmp_dir)
+
         session.commit()
 
     except Exception as e:
