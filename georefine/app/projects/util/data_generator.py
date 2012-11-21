@@ -17,40 +17,66 @@ template_env = Environment(
 )
 
 
+def generate_source_defs():
+    return [
+        {
+            'id':  'Src1',
+            'cols': [
+                {
+                    'name': 'id',
+                    'type_': 'Integer',
+                    'kwargs': {
+                        'primary_key': True,
+                    },
+                    'data': lambda n, r, d: None,
+                },
+                {
+                    'name': 'float_',
+                    'type_': 'Float',
+                    'data': lambda n, r, d: float(n),
+                },
+                {
+                    'class': 'GeometryExtensionColumn',
+                    'name': 'geom',
+                    'type_': 'MultiPolygon(2)',
+                    'csv_name': 'geom_wkt',
+                    'data': generate_multipolygon_wkt,
+                },
+            ],
+            'GeometryDDL': True,
+        },
+
+        {
+            'id':  'Src2',
+            'cols': [
+                {
+                    'name': 'id',
+                    'type_': 'Integer',
+                    'kwargs': {
+                        'primary_key': True,
+                    },
+                    'data': lambda n, r, d: None,
+                },
+                {
+                    'name': 'float_',
+                    'type_': 'Float',
+                    'data': lambda n, r, d: float(n),
+                },
+                {
+                    'name': 'src1_id',
+                    'type_': 'Integer',
+                    'args': [
+                        'ForeignKey("Src1.id")',
+                    ],
+                    'data': lambda n, r, d: d['Src1'][n]['id'],
+                },
+            ],
+            'GeometryDDL': True,
+        }]
+
 def generate_sources(source_defs=None):
     if not source_defs:
-        source_defs = [
-            {
-                'id':  'Src1',
-                'cols': [
-                    {
-                        'name': 'id',
-                        'kwargs': {
-                            'type_': 'Integer',
-                            'primary_key': True,
-                        },
-                        'data': lambda n, r: None,
-                    },
-                    {
-                        'name': 'float_',
-                        'kwargs': {
-                            'type_': 'Float',
-                        },
-                        'data': lambda n, r: float(n),
-                    },
-                    {
-                        'class': 'GeometryExtensionColumn',
-                        'name': 'geom',
-                        'kwargs': {
-                            'type_': 'MultiPolygon(2)',
-                        },
-                        'csv_name': 'geom_wkt',
-                        'data': generate_multipolygon_wkt,
-                    },
-                ],
-                'GeometryDDL': True,
-            }
-        ]
+        source_defs = generate_source_defs()
 
     sources = []
 
@@ -70,37 +96,38 @@ def get_col_strs_for_source_def(source_def):
     col_strs = []
     for col in source_def['cols']:
         args = col.get('args', [])
+        args.insert(0, col['type_'])
         args.insert(0, "'%s'" % col['name'])
         args_str = ','.join(args)
         kwargs_str = ','.join(["%s=%s" % (k,v) 
-                               for k, v in col['kwargs'].items()])
+                               for k, v in col.get('kwargs', {}).items()])
         combined_args_str = args_str + ',' + kwargs_str
         class_str = col.get('class', 'Column')
         col_str = "%s(%s)" % (class_str, combined_args_str)
         col_strs.append(col_str)
     return col_strs
 
-def get_data_for_source_def(source_def, n=10):
+def get_data_for_source_def(source_def, n=10, data={}):
     records = []
-    type_map = {
-        'Integer': int
-    }
     for i in range(n):
         record = {}
         for col in source_def['cols']:
             if col.get('data'):
-                value = col['data'](i, record)
+                value = col['data'](i, record, data)
             else:
                 value = None
             record[col['name']] = value
         records.append(record)
+
+    data[source_def['id']] = records
+
     return records
 
 def generate_polygon_coords(x=0, dx=1, y=0, dy=1):
     coords = [[x, y], [x, y+dy], [x+dx, y+dy], [x+dx, y], [x, y]]
     return coords
 
-def generate_multipolygon_wkt(n, data=None, **kwargs):
+def generate_multipolygon_wkt(n, record=None, data={}, **kwargs):
     """ Generate a multipolygon for a data record. """
     coords = generate_polygon_coords(x=n, y=n)
     wkt = "MULTIPOLYGON(((%s)))" % (','.join(["%s %s" % (c[0], c[1]) for c in coords]))
