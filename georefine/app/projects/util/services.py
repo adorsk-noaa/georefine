@@ -2,6 +2,7 @@ from georefine.app import app
 from georefine.app import db
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as manage
+import georefine.util.mapping.sld_util as sld_util
 from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import platform
 import copy
@@ -12,10 +13,10 @@ import logging
 import shutil
 
 
-def get_map(project, query, data_entity=None, geom_id_entity=None,
+def get_data_map(project, query, data_entity=None, geom_id_entity=None,
             geom_entity=None, wms_parameters={}, **kwargs):
+    """ Get a map image for a given project data map request. """
     dao = manage.get_dao(project)
-
     wms_parameters['layers'] = 'data'
 
     if platform.system() == 'Java':
@@ -41,7 +42,6 @@ def get_map(project, query, data_entity=None, geom_id_entity=None,
 
     else:
         from georefine.util.mapping.ms_renderer import MapScriptRenderer
-        import georefine.util.mapping.sld_util as sld_util
         renderer = MapScriptRenderer()
 
 
@@ -109,19 +109,49 @@ def get_map(project, query, data_entity=None, geom_id_entity=None,
             'data': ms_data_str,
             'projection': 'init=epsg:4326',
             'type': 'POLYGON',
-            'sld': {'doc': sld_doc}
+            'apply_sld': [sld_doc],
         }]
 
-        imgObj = renderer.renderLayers(
+        imgObj = renderer.render_map(
             wms_parameters=wms_parameters,
-            layers=layers
+            layers=layers,
         )
 
         img = renderer.imgObj_to_bytes(imgObj)
 
     return img
 
-    #return open('/data/burger.png').read()
+def get_layer_map(layer, wms_parameters={}, **kwargs):
+    """ Get a map image for a given project layer. """
+
+    # Render w/ GeoTools if using jython.
+    if platform.system() == 'Java':
+        #@ TODO: implement later...
+        pass
+
+    # Otherwise render w/ mapscript.
+    else:
+        from georefine.util.mapping.ms_renderer import MapScriptRenderer
+        renderer = MapScriptRenderer()
+
+        layer_def = {}
+        layer_def.update(layer.metadata)
+
+        # Rewrite relative paths as needed.
+        path_attrs = ['mapfile']
+        for path_attr in path_attrs:
+            path = layer_def.get(path_attr)
+            if path:
+                layer_def[path_attr] = os.path.join(layer.dir_, path)
+
+        imgObj = renderer.render_map(
+            wms_parameters=wms_parameters,
+            **layer_def
+        )
+
+        img = renderer.imgObj_to_bytes(imgObj)
+
+    return img
 
 def execute_queries(project, QUERIES=[]):
     dao = manage.get_dao(project)

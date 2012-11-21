@@ -30,7 +30,7 @@ class MapLayer(object):
         self.id = id
         self.layer_id = layer_id
         self.project = project
-        self.dir_
+        self.dir_ = dir_
         self.metadata = metadata
 
 maplayer_table = Table('project_maplayers', db.metadata,

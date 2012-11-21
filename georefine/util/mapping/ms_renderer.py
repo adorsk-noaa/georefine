@@ -3,23 +3,19 @@ import mapscript as ms
 
 class MapScriptRenderer(object):
 
-    def renderLayers(self, 
-                     map_parameters={},
-                     wms_parameters={},
-                     layers=[]
-                 ):
-        mapObj = self.get_mapObj(**map_parameters)
+    def render_map(self, **kwargs):
+        mapObj = self.get_mapObj(**kwargs)
 
-        for layer in layers:
+        for layer in kwargs.get('layers', []):
             layerObj = self.get_layerObj(mapObj=mapObj, **layer)
 
-        if wms_parameters:
+        if kwargs.get('wms_parameters'):
             wms_request = ms.OWSRequest()
-            for k, v in wms_parameters.items():
+            for k, v in kwargs['wms_parameters'].items():
                 wms_request.setParameter(str(k),str(v))
             mapObj.loadOWSParameters(wms_request)
 
-        #mapObj.save('/tmp/foo.map')
+        mapObj.save('/tmp/foo.map')
         img = mapObj.draw()
         return img
 
@@ -37,7 +33,8 @@ class MapScriptRenderer(object):
         if kwargs.has_key('extent'):
             mapObj.extent = self.get_rectObj(kwargs['extent'])
         else:
-            mapObj.extent = self.get_rectObj()
+            if not mapObj.extent:
+                mapObj.extent = self.get_rectObj()
 
         if kwargs.has_key('imagecolor'):
             mapObj.imagecolor = ms.colorObj(*kwargs['imagecolor'])
@@ -45,16 +42,27 @@ class MapScriptRenderer(object):
         if kwargs.has_key('projection'):
             mapObj.setProjection(kwargs['projection'])
         else:
-            mapObj.setProjection("init=epsg:4326")
+            if not mapObj.getProjection():
+                mapObj.setProjection("init=epsg:4326")
 
         for attr in ['width', 'height']:
             if kwargs.has_key(attr):
                 setattr(mapObj, attr, kwargs[attr])
 
-        mapObj.name = "MAP"
-        mapObj.status = ms.MS_ON
+        if kwargs.get('apply_sld'):
+            mapObj.applySLD(kwargs['apply_sld'])
 
-        mapObj.web.metadata.set('ows_enable_request', '*')
+        if kwargs.get('apply_sld_url'):
+            mapObj.applySLDUrl(kwargs['apply_sld_url'])
+
+        if not mapObj.name:
+            mapObj.name = "MAP"
+
+        if not mapObj.status:
+            mapObj.status = ms.MS_ON
+
+        if not mapObj.web.metadata.get('ows_enable_request'):
+            mapObj.web.metadata.set('ows_enable_request', '*')
 
         return mapObj
 
@@ -77,6 +85,9 @@ class MapScriptRenderer(object):
         ]:
             if kwargs.has_key(attr):
                 setattr(layerObj, attr, kwargs[attr])
+
+        if kwargs.get('type'):
+            layerObj.type = getattr(ms, 'MS_LAYER_%s' % kwargs['type'].upper())
         
         if kwargs.get('connectiontype'):
             layerObj.setConnectionType(
@@ -88,9 +99,11 @@ class MapScriptRenderer(object):
         if kwargs.get('units'):
             layerObj.units = getattr(ms, 'MS_%s', kwargs['units'])
 
-        if kwargs.get('sld'):
-            sld = kwargs['sld']
-            layerObj.applySLD(sld['doc'], sld.get('stylelayer'))
+        if kwargs.get('apply_sld'):
+            layerObj.applySLD(*kwargs['apply_sld'])
+
+        if kwargs.get('apply_sld_url'):
+            layerObj.applySLDUrl(*kwargs['apply_sld_url'])
 
         if kwargs.get('projection'):
             layerObj.setProjection(kwargs['projection'])

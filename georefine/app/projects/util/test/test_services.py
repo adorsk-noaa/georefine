@@ -179,11 +179,24 @@ class ProjectsServicesTestCase(ProjectsServicesCommonTestCase):
         expected_results = [{'data': {'primary_q': {u'count': 4, u'bucket': u'[0.0, 5.0)'}}, 'key': '[0.0, 5.0)', 'label': '[0.0, 5.0)'}, {'data': {'primary_q': {u'count': 5, u'bucket': u'[5.0, 10.0)'}}, 'key': '[5.0, 10.0)', 'label': '[5.0, 10.0)'}]
         self.assertEquals(results, expected_results)
 
-class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
-    @classmethod
-    def setUpClass(cls):
-        #logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
-        super(ProjectsServicesMapTestCase, cls).setUpClass()
+class ProjectsServicesMapCommonTestCase(ProjectsServicesCommonTestCase):
+
+    def bytes_to_img(self, img_data):
+        img_file = StringIO(img_data)
+        img = Image.open(img_file)
+        return img
+
+    def img_is_blank(self, img_data):
+        img = self.bytes_to_img(img_data)
+        for pix in img.getdata():
+            if pix != (255,255,255,):
+                return False
+        return True
+
+    def show_img(self, img_data):
+        self.bytes_to_img(img_data).show()
+
+class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
 
     @classmethod
     def get_db_uri(cls):
@@ -193,7 +206,7 @@ class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
             cls.db_file = tempfile.mkstemp(suffix=".db.sqlite", dir=cls.tmp_dir)
         return "sqlite:///%s" % cls.db_file
 
-    def test_get_map(self):
+    def test_get_data_map(self):
         data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}
         geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
         geom_id_entity = {'EXPRESSION': '__Src1__id', 'ID': 'id'}
@@ -210,7 +223,6 @@ class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
             ]
         }
         wms_parameters = {
-            #'TRANSPARENT': True,
             'SERVICE': 'WMS',
             'VERSION': '1.1.1',
             'REQUEST': 'GetMap',
@@ -221,44 +233,25 @@ class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
             'WIDTH': 200,
             'HEIGHT': 200,
         }
-        img = services.get_map(self.project, query, data_entity=data_entity,
+        img = services.get_data_map(self.project, query, data_entity=data_entity,
                 geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
                 wms_parameters=wms_parameters)
-        img_file = StringIO(img)
-        img = Image.open(img_file)
-        is_blank = True
-        for pix in img.getdata():
-            if pix != (255,255,255,):
-                is_blank = False
-                break
-        self.assertFalse(is_blank)
+        self.assertFalse(self.img_is_blank(img))
 
-class ProjectsLayersServicesTestCase(ProjectsServicesCommonTestCase):
+class ProjectsServicesLayerMapTestCase(ProjectsServicesMapCommonTestCase):
+
     @classmethod
-    def setUpClass(cls):
-        super(ProjectsLayersServicesTestCase, cls).setUpClass()
+    def tearDownClass(cls):
+        print cls.test_project_file
+        super(ProjectsServicesCommonTestCase, cls).tearDownClass()
 
-    def test_get_map(self):
-        data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}
-        geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
-        geom_id_entity = {'EXPRESSION': '__Src1__id', 'ID': 'id'}
-        query = {
-            "ID": "query",
-            "SELECT" : [
-                data_entity,
-                geom_entity,
-                geom_id_entity,
-            ],
-            "GROUP_BY": [
-                geom_entity,
-                geom_id_entity,
-            ]
-        }
+    def test_get_layer_map(self):
+        layer = self.project.layers[0]
         wms_parameters = {
-            #'TRANSPARENT': True,
             'SERVICE': 'WMS',
             'VERSION': '1.1.1',
             'REQUEST': 'GetMap',
+            'LAYERS': layer.layer_id,
             'STYLES': '',
             'FORMAT': 'image/png',
             'SRS': 'EPSG:4326',
@@ -266,18 +259,9 @@ class ProjectsLayersServicesTestCase(ProjectsServicesCommonTestCase):
             'WIDTH': 200,
             'HEIGHT': 200,
         }
-        img = services.get_map(self.project, query, data_entity=data_entity,
-                geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
-                wms_parameters=wms_parameters)
-        img_file = StringIO(img)
-        img = Image.open(img_file)
-        is_blank = True
-        for pix in img.getdata():
-            if pix != (255,255,255,):
-                is_blank = False
-                break
-        self.assertFalse(is_blank)
-
+        img = services.get_layer_map(layer, wms_parameters=wms_parameters)
+        self.show_img(img)
+        #self.assertFalse(self.img_is_blank(img))
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,7 +7,6 @@ from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project, MapLayer
 from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
-from georefine.app.projects.util import layer_services as layer_services
 from georefine.app.keyed_strings import util as ks_util
 import os
 import tarfile

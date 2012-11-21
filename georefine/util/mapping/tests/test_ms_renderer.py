@@ -13,6 +13,17 @@ class MapScriptRendererTest(unittest.TestCase):
         mapObj = renderer.get_mapObj()
         assert mapObj.__class__.__name__ == 'mapObj'
 
+    def test_render_from_mapfile(self):
+        """ Tmp. quick test, in the future should generate shapefile to use. """
+        renderer = MapScriptRenderer()
+        mapfile = """
+        """
+
+        imgObj = renderer.render_map(
+            mapfile="/tmp/mtest/mapfile.map"
+        )
+        im = Image.open(StringIO(renderer.imgObj_to_bytes(imgObj))).show()
+
     def testRendering(self):
         renderer = MapScriptRenderer()
 

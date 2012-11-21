@@ -6,6 +6,7 @@ import fiona
 import tarfile
 import json
 import shutil
+import georefine.util.mapping.sld_util as sld_util
 
 
 template_env = Environment(
@@ -148,7 +149,7 @@ def generate_layer(target_dir=None, layer_def=None):
     if not target_dir:
         target_dir = tempfile.mkdtemp(prefix="%s." % layer_def['id'])
 
-    shp_file = os.path.join(target_dir, "%s.shp" % layer_def['id'])
+    shp_file = os.path.join(target_dir, layer_def['shpfile_filename'])
     shp_writer = fiona.collection(
         shp_file, "w", driver="ESRI Shapefile", schema=layer_def['schema'], 
         crs=layer_def['crs'],
@@ -156,6 +157,11 @@ def generate_layer(target_dir=None, layer_def=None):
     for record in layer_def['records']:
         shp_writer.write(record)
     shp_writer.close()
+
+    mfile_def = layer_def.get('mapfile_def')
+    if mfile_def:
+        mfile_file = os.path.join(target_dir, mfile_def['filename'])
+        open(mfile_file, "wb").write(mfile_def['content'])
 
     metadata_file = os.path.join(target_dir, "metadata.json")
     open(metadata_file, "wb").write(json.dumps(layer_def['metadata']))
@@ -177,11 +183,20 @@ def generate_layer_def(layer_id='layer', properties=None, n=10):
             'properties': properties,
         },
         'records': [],
-        'metadata': {
-            'srid': '4326',
-            'shapetype': 'MultiPolygon',
-        }
+        'mapfile_filename': '%s.map' % layer_id,
+        'shpfile_filename': '%s.shp' % layer_id,
     }
+
+    layer_def['metadata'] = {
+        'mapfile': layer_def['mapfile_filename'],
+    }
+
+    layer_def['mapfile_def'] = {
+        'filename': layer_def['mapfile_filename'],
+        'content': template_env.get_template('mapfile.map').render(
+            layer_def=layer_def),
+    }
+
     data = []
     for i in range(n):
         coords = generate_polygon_coords(x=i, y=i)

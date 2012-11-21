@@ -1,0 +1,30 @@
+MAP
+    NAME "MAP"
+    STATUS ON
+    SIZE 600 600
+    EXTENT -180.0 -90.0 180.0 90.0
+    IMAGECOLOR 128 128 128
+
+    PROJECTION
+    "init=epsg:4326"
+    END
+
+    LAYER
+      NAME "{{layer_def.id}}"
+      DATA "{{layer_def.shpfile_filename}}"
+      PROJECTION
+        "init=epsg:4326"
+      END
+      STATUS DEFAULT
+      TYPE POLYGON
+      CLASS
+        NAME "Generic Class"
+        STYLE
+          COLOR 255 0 0
+          SYMBOL 0
+          WIDTH 1
+        END
+      END
+    END	 # LAYER
+
+END # MAP
