@@ -1,217 +1,239 @@
 import unittest
-from georefine.util.sa.tests.basetest import BaseTest
-from georefine.app.projects.models import Project
-from georefine.app.projects.util import manage_projects
-from georefine.app.projects.util import services
+from georefine.app import app
 from georefine.app import db
+from georefine.app.test.db_testcase import DBTestCase
+from georefine.app.projects.util import services as services
+from georefine.app.projects import models as project_models
+import tempfile
+from georefine.app.projects.util import data_generator as dg
+import logging
+import shutil
+from StringIO import StringIO
 import os
+from PIL import Image
 
 
-_basedir = os.path.abspath(os.path.dirname(__file__))
+logging.basicConfig()
 
-class Services_Test(BaseTest):
+
+class ProjectsCommonTestCase(DBTestCase):
+
+    rollback_each_time = True
+    refresh_db_each_time = True
+    clear_dirs_each_time = True
+
+    @classmethod
+    def setUpClass(cls):
+        super(ProjectsCommonTestCase, cls).setUpClass()
+        cls.test_project_file = dg.generate_project_file(
+            source_defs=cls.get_source_defs())
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.test_project_file)
+        super(ProjectsCommonTestCase, cls).tearDownClass()
 
     def setUp(self):
-        super(Services_Test, self).setUp()
-        db.session.bind = self.connection
-        self.schema = self.setUpSchemaAndData1()
-        #manage_projects.setUpSchema(self.project)      
-        #manage_projects.setUpData(self.project)
+        DBTestCase.setUp(self)
+        if not hasattr(self, 'tmpdir') or not os.path.exists(self.tmpdir):
+            self.setUpDirs()
 
-    def testGetKeyedResults(self):
-        return #INACTIVE
-        project = Project(id=1, name='test')
-        project.schema = self.schema
+    def tearDown(self):
+        if self.clear_dirs_each_time:
+            self.clearDirs()
+        DBTestCase.tearDown(self)
 
-        bucket_entity1 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'ALL_VALUES': True, 'MIN': 0, 'MAX': 5, 'NUM_CLASSES': 5}
-        #bucket_entity2 = {'ID': 'bucket', 'EXPRESSION': '{{test1.id}}', 'AS_HISTOGRAM': True, 'NUM_CLASSES': 10, 'CONTEXT': {
-            #"WHERE": [["{{test1.id}}", "in", [2,3]]]
-            #}}
+    @classmethod
+    def setUpDirs(self):
+        self.tmp_dir = tempfile.mkdtemp(prefix="gr.app.")
+        self.data_dir = os.path.join(self.tmp_dir, "data")
+        self.static_dir = os.path.join(self.tmp_dir, "static")
+        app.config['DATA_DIR'] = self.data_dir
+        app.static_folder = self.static_dir
 
+    @classmethod
+    def clearDirs(self):
+        if hasattr(self, 'tmp_dir') and self.tmp_dir.startswith('/tmp') and \
+           os.path.exists(self.tmp_dir):
+            shutil.rmtree(self.tmp_dir)
+
+    @classmethod
+    def get_source_defs(cls):
+        return None
+
+class ManageProjectsTestCase(ProjectsCommonTestCase):
+
+    def test_create_project(self):
+        project = services.create_project(project_file=self.test_project_file)
+        self.assertTrue(getattr(project, 'id', None) is not None)
+
+    def test_delete_project(self):
+        project = services.create_project(project_file=self.test_project_file)
+        dir_attrs = ['data_dir', 'static_dir']
+        project_dirs = [getattr(project, dir_attr) for dir_attr in dir_attrs]
+
+        delete_result = services.delete_project(project)
+        self.assertTrue(delete_result)
+        for dir_ in project_dirs:
+            self.assertFalse(os.path.exists(dir_))
+
+        num_layers = db.session.query(project_models.MapLayer).count()
+        self.assertEquals(num_layers, 0)
+
+
+class ProjectsServicesCommonTestCase(ProjectsCommonTestCase):
+    rollback_each_time = True
+    refresh_db_each_time = False
+    clear_dirs_each_time = False
+
+    @classmethod
+    def setUpClass(cls):
+        super(ProjectsServicesCommonTestCase, cls).setUpClass()
+        cls.setUpDirs()
+        cls.con = cls.getConnection()
+        cls.session = cls.getSession(cls.con)
+        cls.refresh_db(bind=cls.session.bind)
+        cls.project = services.create_project(cls.test_project_file,
+                                              session=cls.session)
+    @classmethod
+    def tearDownClass(cls):
+        services.delete_project(cls.project, session=cls.session)
+        cls.clearDirs()
+        super(ProjectsServicesCommonTestCase, cls).tearDownClass()
+
+    @classmethod
+    def get_source_defs(cls):
+        return [
+            {
+                'id':  'Src1',
+                'cols': [
+                    {
+                        'name': 'id',
+                        'kwargs': {
+                            'type_': 'Integer',
+                            'primary_key': True,
+                        },
+                        'data': lambda n, r: None,
+                    },
+                    {
+                        'name': 'float_',
+                        'kwargs': {
+                            'type_': 'Float',
+                        },
+                        'data': lambda n, r: float(n),
+                    },
+                    {
+                        'class': 'GeometryExtensionColumn',
+                        'name': 'geom',
+                        'kwargs': {
+                            'type_': 'MultiPolygon(2)',
+                        },
+                        'csv_name': 'geom_wkt',
+                        'data': dg.generate_multipolygon_wkt,
+                    },
+                ],
+                'GeometryDDL': True,
+            }
+        ]
+
+class ProjectsServicesTestCase(ProjectsServicesCommonTestCase):
+    def test_execute_query(self):
+        q = {
+            "ID": "primary_q",
+            "SELECT" : [
+                {'EXPRESSION': '__Src1__id', 'ID': 'id'},
+                {'EXPRESSION': '__Src1__float_', 'ID': 'float_'},
+            ],
+        }
+
+        results = services.execute_queries(self.project, [q])
+        expected_results = {'primary_q': [{u'float_': 0.0, u'id': 1}, {u'float_': 1.0, u'id': 2}, {u'float_': 2.0, u'id': 3}, {u'float_': 3.0, u'id': 4}, {u'float_': 4.0, u'id': 5}, {u'float_': 5.0, u'id': 6}, {u'float_': 6.0, u'id': 7}, {u'float_': 7.0, u'id': 8}, {u'float_': 8.0, u'id': 9}, {u'float_': 9.0, u'id': 10}]}
+        self.assertEquals(results, expected_results)
+
+    def test_get_keyed_results(self):
+        bucket_entity = {
+            'ID': 'bucket', 
+            'EXPRESSION': '__Src1__id',
+            'AS_HISTOGRAM': True, 
+            'ALL_VALUES': True, 
+            'MIN': 0, 
+            'MAX': 10, 
+            'NUM_CLASSES': 2,
+        }
         key = {
-                #"KEY_ENTITY" : {'EXPRESSION': '{{test1.id}}', 'ALL_VALUES': True},
-                #"LABEL_ENTITY" : {'EXPRESSION': '{{test1.name}}'}
-                "KEY_ENTITY" : bucket_entity1
-                }
+            "KEY_ENTITY" : bucket_entity
+        }
 
         primary_q = {
-                "AS_DICTS": True, 
-                "ID": "primary_q",
-                "SELECT" : [
-                    {'ID': "t1id", 'EXPRESSION': '{{test1.id}}'},
-                    ],
-                "GROUP_BY": [
-                    {"ID": "t1id"},
-                    bucket_entity1
-                    ],
-                "SELECT_GROUP_BY": True,
-                }
-
-        results = services.execute_keyed_queries(project, key, [primary_q])
-        print results
-
-    def testProject30KeyedResults(self):
-        return #INACTIVE
-        project = db.session.query(Project).filter(Project.id == 30).one()
-        project.schema = manage_projects.getProjectSchema(project)
-
-        import simplejson as json
-        json_params = '''
-        {
-   "KEY":{
-      "KEY_ENTITY":{
-         "ID":"substrate_id",
-         "EXPRESSION":"{{result.substrate.id}}"
-      },
-      "LABEL_ENTITY":{
-         "ID":"substrate_name",
-         "EXPRESSION":"{{result.substrate.name}}"
-      }
-   },
-   "QUERIES":[
-      {
-         "SELECT":[
-            {
-               "ID":"count_cell_id",
-               "EXPRESSION":"func.count({{inner.cell_id}})"
-            }
-         ],
-         "FROM":[
-            {
-               "ID": "inner",
-               "TABLE":{
-                  "SELECT":[
-                     {
-                        "ID":"cell_id",
-                        "EXPRESSION":"{{result.cell.id}}"
-                     }
-                  ],
-                  "FROM":[],
-                  "GROUP_BY":[
-                     {"ID":"cell_id"},
-                     {"ID":"substrate_id","EXPRESSION":"{{result.substrate.id}}" }, 
-                     {"ID":"substrate_name","EXPRESSION":"{{result.substrate.name}}"}
-                  ],
-                  "WHERE":[
-                    ["{{result.t}}", "==", "2009"]
-                  ],
-                  "ORDER_BY":[
-
-                  ],
-                  "ID":"inner",
-                  "SELECT_GROUP_BY":true
-               }
-            }
-         ],
-         "GROUP_BY":[
-                     {"ID":"substrate_id","EXPRESSION":"{{inner.substrate_id}}" }, 
-                     {"ID":"substrate_name","EXPRESSION":"{{inner.substrate_name}}"}
-         ],
-         "WHERE":[],
-         "ORDER_BY":[],
-         "ID":"outer",
-         "SELECT_GROUP_BY":true
-      }
-   ]
-}
-        '''
+            "ID": "primary_q",
+            "SELECT" : [
+                {'ID': "count", 'EXPRESSION': 'func.count(__Src1__id)'},
+            ],
+            "GROUP_BY": [
+                bucket_entity,
+            ],
+            "SELECT_GROUP_BY": True,
+        }
 
 
-        params = json.loads(json_params)
-        results = services.get_keyed_results(project, params['KEY'], params['QUERIES'])
-        print results
+        results = services.execute_keyed_queries(self.project, key, [primary_q])
+        expected_results = [{'data': {'primary_q': {u'count': 4, u'bucket': u'[0.0, 5.0)'}}, 'key': '[0.0, 5.0)', 'label': '[0.0, 5.0)'}, {'data': {'primary_q': {u'count': 5, u'bucket': u'[5.0, 10.0)'}}, 'key': '[5.0, 10.0)', 'label': '[5.0, 10.0)'}]
+        self.assertEquals(results, expected_results)
 
+class ProjectsServicesMapTestCase(ProjectsServicesCommonTestCase):
+    @classmethod
+    def setUpClass(cls):
+        #logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+        super(ProjectsServicesMapTestCase, cls).setUpClass()
 
+    @classmethod
+    def get_db_uri(cls):
+        """ Need to use disk-based db in order for mapping backend to access
+        backend. """
+        if not hasattr(cls, 'db_file'):
+            hndl, db_file = tempfile.mkstemp(suffix=".db.sqlite")
+            cls.db_file = db_file
+        return "sqlite:///%s" % cls.db_file
 
-    def testProjects30Map(self):
-        return
-        project = db.session.query(Project).filter(Project.id == 30).one()
-        project.schema = manage_projects.getProjectSchema(project)
-
-        request = {'args': {}}
-        import simplejson as json
-
-        json_parms = '''
-        {"QUERY":{"ID":"outer","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"SELECT":[{"ID":"x_data","EXPRESSION":"func.sum({{result.x}}/{{result.cell.area}})"}],"GROUP_BY":[{"ID":"x_cell_id","EXPRESSION":"{{result.cell.id}}"},{"ID":"x_cell_geom","EXPRESSION":"RawColumn({{result.cell.geom}})"}],"WHERE":[{},["{{result.x}}",">=",0],["{{result.x}}","<=",6254998.2334],["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"x_geom_id","EXPRESSION":"{{inner.x_cell_id}}"},{"ID":"x_geom","EXPRESSION":"RawColumn({{inner.x_cell_geom}})"},{"ID":"x_data","EXPRESSION":"{{inner.x_data}}"}]},"GEOM_ID_ENTITY":{"ID":"x_geom_id"},"GEOM_ENTITY":{"ID":"x_geom"},"DATA_ENTITY":{"ID":"x_data","max":0.25,"min":0}}
-        '''
-        params = json.loads(json_parms)
-
-        wms_parms = {}
-        raw_wms_parms = 'TRANSPARENT=TRUE&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&STYLES=&FORMAT=image/png&SRS=EPSG:4326&BBOX=-79,31,-72.6,37.4&WIDTH=256&HEIGHT=256'
-        kvs = raw_wms_parms.split('&')
-        for kv in kvs:
-            k, v = kv.split('=')
-            wms_parms[k] = v
-            
-        # Parse WMS parameters.
-        MAP_PARAMETERS = {}
-        for wms_parameter in ['BBOX', 'FORMAT', 'WIDTH', 'HEIGHT', 'TRANSPARENT', 'SRS']:
-            value = wms_parms.get(wms_parameter)
-            if wms_parameter == 'WIDTH' or wms_parameter == 'HEIGHT':
-                value = int(value)
-            MAP_PARAMETERS[wms_parameter] = value
-
-        map_image = services.get_map(
-                project, 
-                MAP_PARAMETERS = MAP_PARAMETERS,
-                **params
-                )
-
-        return
-
-    def testProjects30(self):
-        return #INACTIVE
-        project = db.session.query(Project).filter(Project.id == 30).one()
-        project.schema = manage_projects.getProjectSchema(project)
-
-        requests_json = '''
-        [{"ID":"keyed_results","REQUEST":"execute_keyed_queries","PARAMETERS":{"KEY":{"KEY_ENTITY":{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}},"QUERIES":[{"ID":"base","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]},{"ID":"primary","FROM":[{"ID":"inner","TABLE":{"ID":"inner","SELECT_GROUP_BY":true,"GROUP_BY":["{{result.cell.id}}",{"ID":"cell_area"},{"ID":"x","EXPRESSION":"{{result.x}}","ALL_VALUES":true,"AS_HISTOGRAM":true,"MIN":0,"MAX":5831057.2977,"MINAUTO":false,"MAXAUTO":false,"NUM_BUCKETS":5,"CONTEXT":{"WHERE":[["{{result.t}}","==",2009]]}}],"SELECT":[{"ID":"cell_area","EXPRESSION":"{{result.cell.area}}/1000000.0"}],"WHERE":[["{{result.t}}","==",2009],{},["{{result.x}}",">=",0],["{{result.x}}","<=",6254998.2334]]}}],"SELECT_GROUP_BY":true,"GROUP_BY":[{"ID":"x","EXPRESSION":"{{inner.x}}"}],"SELECT":[{"ID":"sum_cell_area","EXPRESSION":"func.sum({{inner.cell_area}})"}]}]}}]
-        '''
-        import simplejson as json
-        request_defs = json.loads(requests_json)
-
-        results = {}
-        for request_def in request_defs:
-
-            formatted_parms = {}
-            for k, v in request_def['PARAMETERS'].items():
-                formatted_parms[str(k)] = v
-
-            if request_def['REQUEST'] == 'execute_keyed_queries':
-                    
-                r = services.execute_keyed_queries(
-                        project = project,
-                        **formatted_parms
-                        )
-
-            elif request_def['REQUEST'] == 'execute_queries':
-                r = services.execute_queries(
-                    project = project,
-                    **formatted_parms
-                    )
-
-            results[request_def['ID']] = r
-
-        #print "r is: ", json.dumps(results, indent=2)
-        dstats = []
-        for d in r:
-            l = d['label'][1:]
-            l = l[:-1]
-            mn, mx = l.split(',')
-            stats = {'min': mn, 'max': mx, 'label': d['label']}
-            for k, v in stats.items():
-                v = v.strip()
-                if k == 'label': pass
-                elif v == '...':
-                    v = 1e20
-                    if k == 'min': v = v * -1
-                else:
-                    v = float(v)
-                stats[k] = v
-            dstats.append(stats)
-        sorted_stats = sorted(dstats, key=lambda s: s['min'])
-        for ss in sorted_stats: print ss['label']
-        #print len(r)
+    def test_get_map(self):
+        data_entity = {'EXPRESSION': 'func.sum(__Src1__float_)', 'ID': 'data'}
+        geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
+        geom_id_entity = {'EXPRESSION': '__Src1__id', 'ID': 'id'}
+        query = {
+            "ID": "query",
+            "SELECT" : [
+                data_entity,
+                geom_entity,
+                geom_id_entity,
+            ],
+            "GROUP_BY": [
+                geom_entity,
+                geom_id_entity,
+            ]
+        }
+        wms_parameters = {
+            #'TRANSPARENT': True,
+            'SERVICE': 'WMS',
+            'VERSION': '1.1.1',
+            'REQUEST': 'GetMap',
+            'STYLES': '',
+            'FORMAT': 'image/png',
+            'SRS': 'EPSG:4326',
+            'BBOX': '0,0,15,15',
+            'WIDTH': 200,
+            'HEIGHT': 200,
+        }
+        img = services.get_map(self.project, query, data_entity=data_entity,
+                geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
+                wms_parameters=wms_parameters)
+        img_file = StringIO(img)
+        img = Image.open(img_file)
+        is_blank = True
+        for pix in img.getdata():
+            if pix != (255,255,255,):
+                is_blank = False
+                break
+        self.assertFalse(is_blank)
 
 
 if __name__ == '__main__':
