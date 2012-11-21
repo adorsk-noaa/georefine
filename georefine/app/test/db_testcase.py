@@ -17,10 +17,6 @@ class DBTestCase(unittest.TestCase):
         return 'sqlite://'
 
     @classmethod
-    def setUpClass(cls):
-        cls.spatializeDB(cls.getConnection())
-
-    @classmethod
     def spatializeDB(clz, con):
         con.execute("SELECT InitSpatialMetaData()") 
 

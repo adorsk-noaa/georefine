@@ -90,6 +90,7 @@ class ProjectsServicesCommonTestCase(ProjectsCommonTestCase):
     def setUpClass(cls):
         super(ProjectsServicesCommonTestCase, cls).setUpClass()
         cls.setUpDirs()
+        cls.spatializeDB(cls.getConnection())
         cls.con = cls.getConnection()
         cls.session = cls.getSession(cls.con)
         cls.refresh_db(bind=cls.session.bind)
@@ -203,7 +204,7 @@ class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
         """ Need to use disk-based db in order for mapping backend to access
         backend. """
         if not hasattr(cls, 'db_file'):
-            cls.db_file = tempfile.mkstemp(suffix=".db.sqlite", dir=cls.tmp_dir)
+            hdnl, cls.db_file = tempfile.mkstemp(suffix=".db.sqlite", dir=cls.tmp_dir)
         return "sqlite:///%s" % cls.db_file
 
     def test_get_data_map(self):
@@ -240,11 +241,6 @@ class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
 
 class ProjectsServicesLayerMapTestCase(ProjectsServicesMapCommonTestCase):
 
-    @classmethod
-    def tearDownClass(cls):
-        print cls.test_project_file
-        super(ProjectsServicesCommonTestCase, cls).tearDownClass()
-
     def test_get_layer_map(self):
         layer = self.project.layers[0]
         wms_parameters = {
@@ -260,8 +256,7 @@ class ProjectsServicesLayerMapTestCase(ProjectsServicesMapCommonTestCase):
             'HEIGHT': 200,
         }
         img = services.get_layer_map(layer, wms_parameters=wms_parameters)
-        self.show_img(img)
-        #self.assertFalse(self.img_is_blank(img))
+        self.assertFalse(self.img_is_blank(img))
 
 if __name__ == '__main__':
     unittest.main()
