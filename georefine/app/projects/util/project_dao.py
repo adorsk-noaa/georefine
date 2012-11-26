@@ -13,6 +13,7 @@ class ProjectDAO(SqlAlchemyDAO):
         'func.BuildMbr',
         'func.ST_AsBinary',
         'func.ST_AsText',
+        'func.ST_Intersects',
     ]
 
     def get_spatialite_spatial_query(

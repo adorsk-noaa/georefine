@@ -12,6 +12,7 @@ from geoalchemy import *
 import re
 import os
 import logging
+import time
 
 
 class ProjectsProjectDAOTestCase(DBTestCase):
@@ -114,7 +115,81 @@ class ProjectsProjectDAOTestCase(DBTestCase):
         }
         q = self.dao.get_spatialite_spatial_query(outer_query, geom_entity, frame_entity)
         rows = self.dao.connection.execute(q).fetchall()
-        print rows
+        self.assertEquals(len(rows), 3)
+
+    def test_idx_performance(self):
+        con = self.getConnection()
+        self.spatializeDB(con)
+        dao = ProjectDAO(con, self.schema)
+        self.schema['metadata'].create_all(bind=con)
+
+        n = 1e4
+        geom_step = 180.0/n
+        trans = con.begin()
+        for i in range(int(n)):
+            src1_record = {
+                'id': None,
+                'geom': WKTSpatialElement(
+                    dg.generate_multipolygon_wkt(x=i*geom_step, dx=geom_step,
+                                                 y=i*geom_step, dy=geom_step)
+                ),
+            }
+            dao.connection.execute(self.schema['sources']['Src1'].insert(values=src1_record))
+            for j in range(2):
+                src2_record = {
+                    'id': None,
+                    'src1_id': i,
+                    'value': i,
+                }
+                dao.connection.execute(self.schema['sources']['Src2'].insert(values=src2_record))
+        trans.commit()
+
+        geom_entity = {'EXPRESSION': '__Src2__Src1__geom', 'ID': 'geom'}
+        value_entity = {'EXPRESSION': 'func.sum(__Src2__value)', 'ID': 'value'}
+        frame_entity = {
+            'EXPRESSION': 'func.BuildMbr(0,0,90,90)',
+            'ID': 'frame_',
+        }
+        inner_query = {
+            "ID": 'inner',
+            'SELECT': [
+                geom_entity,
+                value_entity
+            ],
+            "GROUP_BY": [
+                geom_entity,
+            ]
+        }
+        query = {
+            "ID": "outer",
+            "SELECT" : [
+                {'EXPRESSION': '__inner__%s' % value_entity['ID']},
+            ],
+            "WHERE": [
+                [{'TYPE': 'ENTITY', 'EXPRESSION':
+                  'func.ST_Intersects(__inner__geom, func.BuildMbr(0,0,90,90))'}, 
+                  '==', 1]
+            ],
+            "FROM": [{'ID': 'inner', 'SOURCE': inner_query}]
+        }
+
+        print "w/ index"
+        for i in range(10):
+            start_time = time.time()
+            q = dao.get_spatialite_spatial_query(query, geom_entity, frame_entity)
+            rows = dao.connection.execute(q).fetchall()
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print len(rows), elapsed
+
+        print "w/o index"
+        for i in range(10):
+            start_time = time.time()
+            q = dao.get_query(query)
+            rows = dao.connection.execute(q).fetchall()
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print len(rows), elapsed
 
 if __name__ == '__main__':
     unittest.main()
