@@ -237,7 +237,7 @@ def generate_layer_def(layer_id='layer', properties=None, n=10):
             'id': i,
             'properties': {},
         }
-        geom = generate_multipolygon_wkt(i, x=i, y=i)
+        geom = generate_multipolygon_wkt(x=i, y=i)
         for prop, type_ in layer_def['schema']['properties'].items():
             record['properties'][prop] = eval(type_)(i)
         layer_def['records'].append(record)

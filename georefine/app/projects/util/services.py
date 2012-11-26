@@ -89,8 +89,6 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
                 ms_data_str += ", %s as 'data'" % data_entity['ID']
             ms_data_str += " FROM (%s) AS 'subq'" % sql
 
-            print ms_data_str
-
         # Create SLD for styling if there was a value entity.
         if data_entity:
             # Generate class bounds.

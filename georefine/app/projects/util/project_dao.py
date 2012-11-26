@@ -1,6 +1,7 @@
 from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 from sqlalchemy.schema import Column
 from sqlalchemy.sql import *
+from geoalchemy import *
 
 
 class ProjectDAO(SqlAlchemyDAO):
@@ -10,12 +11,17 @@ class ProjectDAO(SqlAlchemyDAO):
     # Add GIS funcs.
     valid_funcs = SqlAlchemyDAO.valid_funcs + [
         'func.BuildMbr',
+        'func.ST_AsBinary',
+        'func.ST_AsText',
     ]
 
-    def get_spatialite_spatial_query(self, query_def, geom_entity_def,
-                                     frame_entity_def):
+    def get_spatialite_spatial_query(
+        self, query_def=None, geom_entity_def=None, frame_entity_def=None):
+
         # Get normal query.
         q, q_registries = self.get_query(query_def, return_registries=True)
+
+
 
         # Get entities from registry.
         geom_entity = self.get_registered_entity(q_registries['sources'],
@@ -29,11 +35,11 @@ class ProjectDAO(SqlAlchemyDAO):
         geom_el = geom_entity.proxies[0]
 
         # If element is a column...
-        if isinstance(geom_el, Column):
+        if isinstance(geom_el, (Column, RawColumn,)):
             # Get its table.
             geom_table = geom_el.table
 
-            # Create subquery on spatial index for the table, using
+            # Create bquery on spatial index for the table, using
             # the frame entity.
             idx_sql = """
             """
@@ -46,7 +52,56 @@ class ProjectDAO(SqlAlchemyDAO):
                 )
             )
 
-            geom_rowid = literal_column(geom_table.name + ".ROWID")
-            q = q.where(geom_rowid.in_(idx_select))
+            geom_parent_clause = self.get_table_parent_clause(q, geom_table)
+
+            # Assumes single-column primary key.
+            geom_id = [c for c in geom_table.primary_key.columns][0]
+            geom_parent_clause.append_whereclause(geom_id.in_(idx_select))
 
         return q
+
+    def get_table_parent_clause(self, clause, table):
+        """ Get clause which contains a given table in a query
+        via depth-first search. """
+        child_froms = clause.locate_all_froms()
+        if table in child_froms:
+            return clause
+        else:
+            for from_ in child_froms:
+                if isinstance(from_, Alias):
+                    from_ = from_.original
+                if isinstance(from_, Select):
+                    parent = self.get_table_parent_clause(from_, table)
+                    if parent is not None: return parent
+            return None
+
+    def get_entity_parent(self, froms, entity):
+        """ Get first occurence of entity in query tree, starting
+        from the bottom of the tree via depth-first search. """
+        parent = None
+        for from_ in froms:
+            if isinstance(from_, Alias):
+                parent = self.get_entity_parent(from_.original.froms, entity)
+            elif isinstance(from_, Join) :
+                parent = self.get_entity_parent([from_.right, from_.left], entity)
+
+            # If no deeper parent was found, check the current set of columns.
+            if parent is None:
+                if hasattr(from_, 'columns') and entity.key in from_.columns:
+                    col = from_.columns[entity.key]
+                    if col is entity:
+                        parent = from_
+
+        return parent
+
+    def get_registered_entity(self, source_registry, entity_registry,
+                              entity_def):
+        entity = super(ProjectDAO, self).get_registered_entity(
+            source_registry, entity_registry, entity_def)
+        return entity
+
+    def alter_col(self, col):
+        if isinstance(col, GeometryExtensionColumn):
+            col = RawColumn(col)
+        return col
+

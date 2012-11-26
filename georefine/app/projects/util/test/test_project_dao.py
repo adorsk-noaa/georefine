@@ -17,22 +17,32 @@ import logging
 class ProjectsProjectDAOTestCase(DBTestCase):
 
     rollback_each_time = False
-    
+
     @classmethod
     def setUpClass(cls):
         super(ProjectsProjectDAOTestCase, cls).setUpClass()
         metadata = MetaData()
         sources = {}
+
         sources['Src1'] = Table(
             'Src1', metadata,
             Column('id', Integer, primary_key=True),
             GeometryExtensionColumn('geom', MultiPolygon(2)),
         )
         GeometryDDL(sources['Src1'])
+
+        sources['Src2'] = Table(
+            'Src2', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('src1_id', Integer, ForeignKey('Src1.id')),
+            Column('value', Float),
+        )
+
         cls.schema = {
             'metadata': metadata,
             'sources': sources,
         }
+
         cls.connection = cls.getConnection()
         cls.spatializeDB(cls.connection)
         cls.dao = ProjectDAO(cls.connection, cls.schema)
@@ -40,13 +50,21 @@ class ProjectsProjectDAOTestCase(DBTestCase):
 
         n = 10
         for i in range(n):
-            record = {
+            src1_record = {
                 'id': None,
                 'geom': WKTSpatialElement(
                     dg.generate_multipolygon_wkt(x=i, y=i)
                 ),
             }
-            cls.dao.connection.execute(sources['Src1'].insert(values=record))
+            cls.dao.connection.execute(sources['Src1'].insert(values=src1_record))
+
+            for j in range(2):
+                src2_record = {
+                    'id': None,
+                    'src1_id': i,
+                    'value': i,
+                }
+                cls.dao.connection.execute(sources['Src2'].insert(values=src2_record))
 
     def test_spatial_query(self):
         geom_entity = {'EXPRESSION': '__Src1__geom', 'ID': 'geom'}
@@ -66,6 +84,37 @@ class ProjectsProjectDAOTestCase(DBTestCase):
         q = self.dao.get_spatialite_spatial_query(query, geom_entity, frame_entity)
         rows = self.dao.connection.execute(q).fetchall()
         self.assertEquals(len(rows), 3)
+
+    def test_nested_query(self):
+        geom_entity = {'EXPRESSION': '__Src2__Src1__geom', 'ID': 'geom'}
+        geom_id_entity = {'EXPRESSION': '__Src2__Src1__id', 'ID': 'geom_id'}
+        value_entity = {'EXPRESSION': 'func.sum(__Src2__value)', 'ID': 'value'}
+        frame_entity = {
+            'EXPRESSION': 'func.BuildMbr(0,0,2,2)',
+            'ID': 'frame_',
+        }
+        inner_query = {
+            "ID": 'inner',
+            'SELECT': [
+                geom_entity,
+                value_entity
+            ],
+            "GROUP_BY": [
+                geom_entity,
+                geom_id_entity,
+            ]
+        }
+        outer_query = {
+            "ID": "outer",
+            "SELECT" : [
+                {'EXPRESSION': '__inner__%s' %geom_entity['ID']},
+                {'EXPRESSION': '__inner__%s' % value_entity['ID']},
+            ],
+            "FROM": [{'ID': 'inner', 'SOURCE': inner_query}]
+        }
+        q = self.dao.get_spatialite_spatial_query(outer_query, geom_entity, frame_entity)
+        rows = self.dao.connection.execute(q).fetchall()
+        print rows
 
 if __name__ == '__main__':
     unittest.main()
