@@ -7,8 +7,10 @@ class ProjectDAO(SqlAlchemyDAO):
     """ Extension of SqlAlchemyDAO, w/ addition
     of a method to handle spatial queries for spatialite. """
 
-    # Add BuildMbr func for spatialite index queries.
-    valid_funcs = SqlAlchemyDAO.valid_funcs + ['func.BuildMbr']
+    # Add GIS funcs.
+    valid_funcs = SqlAlchemyDAO.valid_funcs + [
+        'func.BuildMbr',
+    ]
 
     def get_spatialite_spatial_query(self, query_def, geom_entity_def,
                                      frame_entity_def):
@@ -31,27 +33,20 @@ class ProjectDAO(SqlAlchemyDAO):
             # Get its table.
             geom_table = geom_el.table
 
-            
-            TODO!!!
-            #  @TODO: make this version dependent...only newer sqlites 
-            # seem to have spatialindex popualted?
-
             # Create subquery on spatial index for the table, using
             # the frame entity.
             idx_sql = """
-            ROWID FROM SpatialIndex
             """
-            idx_subq = subquery(
-                'idx_subq', [idx_sql], 
+            idx_select = select(
+                ["ROWID FROM SpatialIndex"],
                 and_(
+                    # CAREFUL! Order matters here for spatialite.
+                    (literal_column('f_table_name') == geom_table.name),
                     (literal_column('search_frame') == frame_entity),
-                    (literal_column('f_table_name') == geom_table.name)
                 )
             )
 
             geom_rowid = literal_column(geom_table.name + ".ROWID")
-            idx_rowid = literal_column('idx_subq.ROWID')
-            q = q.select_from(
-                geom_table.join( idx_subq, geom_rowid == idx_rowid))
+            q = q.where(geom_rowid.in_(idx_select))
 
         return q

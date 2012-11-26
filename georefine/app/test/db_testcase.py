@@ -36,7 +36,8 @@ class DBTestCase(unittest.TestCase):
             self.con = self.getConnection()
             self.trans = self.con.begin()
             
-        db.session = self.getSession(self.con)
+        db.session = self.getSession(getattr(self, 'con', None))
+
         if self.refresh_db_each_time:
             self.refresh_db(bind=db.session.bind)
 

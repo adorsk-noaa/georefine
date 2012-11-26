@@ -40,7 +40,7 @@ def generate_source_defs():
                     'name': 'geom',
                     'type_': 'MultiPolygon(2)',
                     'csv_name': 'geom_wkt',
-                    'data': generate_multipolygon_wkt,
+                    'data': generate_multipolygon_wkt_for_record,
                 },
             ],
             'GeometryDDL': True,
@@ -127,12 +127,14 @@ def generate_polygon_coords(x=0, dx=1, y=0, dy=1):
     coords = [[x, y], [x, y+dy], [x+dx, y+dy], [x+dx, y], [x, y]]
     return coords
 
-def generate_multipolygon_wkt(n, record=None, data={}, **kwargs):
+def generate_multipolygon_wkt_for_record(n, record=None, data={}, **kwargs):
     """ Generate a multipolygon for a data record. """
-    coords = generate_polygon_coords(x=n, y=n)
+    return generate_multipolygon_wkt(x=n, y=n)
+
+def generate_multipolygon_wkt(**kwargs):
+    coords = generate_polygon_coords(**kwargs)
     wkt = "MULTIPOLYGON(((%s)))" % (','.join(["%s %s" % (c[0], c[1]) for c in coords]))
     return wkt
-
 
 def generate_schema(target_file=None, sources=[]):
     """ Generate schema file. """
