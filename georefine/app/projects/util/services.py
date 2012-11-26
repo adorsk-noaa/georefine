@@ -13,7 +13,7 @@ import logging
 import shutil
 
 
-def get_data_map(project, query, data_entity=None, geom_id_entity=None,
+def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             geom_entity=None, wms_parameters={}, **kwargs):
     """ Get a map image for a given project data map request. """
     dao = manage.get_dao(project)
@@ -76,18 +76,20 @@ def get_data_map(project, query, data_entity=None, geom_id_entity=None,
             connectiontype = 'OGR'
             ms_connection_str = dao.connection.engine.url.database
 
-            frame_entity = {
-                'EXPRESSION': 'func.BuildMbr(%s)' % wms_parameters['BBOX']
-            }
-
-            spatialite_query = dao.get_spatialite_spatial_query(
-                query, geom_entity, frame_entity)
-            sql = dao.query_to_raw_sql(spatialite_query)
+            #frame_entity = {
+                #'EXPRESSION': 'func.BuildMbr(%s)' % wms_parameters['BBOX']
+            #}
+            #query_obj = dao.get_spatialite_spatial_query(
+                #query, geom_entity, frame_entity)
+            query_obj = dao.get_query(query)
+            sql = dao.query_to_raw_sql(query_obj)
 
             ms_data_str = "SELECT %s AS 'geometry'" % geom_entity['ID']
             if data_entity:
                 ms_data_str += ", %s as 'data'" % data_entity['ID']
             ms_data_str += " FROM (%s) AS 'subq'" % sql
+            ms_data_str += " WHERE ST_Intersects(geometry, BuildMbr(%s))" % (
+                wms_parameters['BBOX'])
 
         # Create SLD for styling if there was a value entity.
         if data_entity:
@@ -178,8 +180,9 @@ def create_project(project_file=None, logger=logging.getLogger(),
     """ Create a project from a project bundle file. """
     # Get transactional session.
     if not session:
-        session = db.session
-    con, trans, session = db.get_session_w_external_trans(session)
+        session = db.session()
+    con, trans, session = db.get_session_w_external_trans(
+        session, new_connection=True)
 
     try:
         # Create project model.
@@ -222,6 +225,7 @@ def create_project(project_file=None, logger=logging.getLogger(),
         shutil.rmtree(tmp_dir)
 
         session.commit()
+        trans.commit()
 
     except Exception as e:
         logger.exception("Error creating project.")
@@ -233,8 +237,6 @@ def create_project(project_file=None, logger=logging.getLogger(),
             pass
         trans.rollback()
         raise e
-
-    trans.commit()
 
     return project
 

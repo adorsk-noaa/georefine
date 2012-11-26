@@ -32,8 +32,9 @@ class ProjectDAO(SqlAlchemyDAO):
         frame_entity = self.get_registered_entity(q_registries['sources'],
                                                  q_registries['entities'],
                                                  frame_entity_def)
-        # Get entity's element.
-        geom_el = geom_entity.proxies[0]
+        # Get entity's source element.
+        geom_el = self.get_source_entity(geom_entity)
+        print geom_el
 
         # If element is a column...
         if isinstance(geom_el, (Column, RawColumn,)):
@@ -106,3 +107,15 @@ class ProjectDAO(SqlAlchemyDAO):
             col = RawColumn(col)
         return col
 
+    def get_source_entity(self, entity):
+        print "gse"
+        """ Get the original source element for a given entity. 
+        If entity is an alias to a column, returns the original column.
+        """
+        while True:
+            if getattr(entity, 'proxies', None) is not None:
+                entity = entity.proxies[0]
+            elif getattr(entity, 'column', None) is not None:
+                entity = entity.column
+            else:
+                return entity

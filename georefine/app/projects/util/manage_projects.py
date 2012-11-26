@@ -12,6 +12,7 @@ import os, shutil, csv
 import pyspatialite
 import sys
 sys.modules['pysqlite2'] = pyspatialite
+import logging
 
 
 def ingest_schema(project, data_dir, session=db.session): 
@@ -43,11 +44,15 @@ def initialize_db(project):
         con = engine.connect()
         con.execute("SELECT InitSpatialMetaData()")
 
-def ingest_data(project, data_dir, dao):
+def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
+                logging_interval=1000, commit_interval=10000):
     schema = project.schema
+
+    logger.info("Starting ingest...")
 
     # Load data (in order defined by schema).
     for t in schema['ordered_sources']:
+        logger.info("Ingesting data for source '%s'" % t['id'])
         table = t['source']
 
         # Get the filename for the table.
@@ -57,7 +62,14 @@ def ingest_data(project, data_dir, dao):
         table_file = open(table_filename, 'rb') 
         reader = csv.DictReader(table_file)
 
+        tran = dao.connection.begin()
+
+        row_counter = 0
         for row in reader:
+            row_counter += 1
+            if (row_counter % logging_interval) == 0:
+                logger.info("row %d" % row_counter)
+
             processed_row = {}
             # Parse values for columns.
             for c in table.columns:
@@ -100,10 +112,20 @@ def ingest_data(project, data_dir, dao):
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
             dao.connection.execute(t['source'].insert().values(**processed_row))
 
+            if (row_counter % commit_interval) == 0:
+                tran.commit()
+                tran = dao.connection.begin()
+        
+        # Commit any remaining rows.
+        tran.commit()
+
         table_file.close()
 
 def ingest_map_layers(project, source_data_dir, session):
     source_layers_dir = os.path.join(source_data_dir, 'layers')
+
+    if not os.path.exists(source_layers_dir):
+        return
 
     target_layers_dir = os.path.join(project.data_dir, "layers")
     os.makedirs(target_layers_dir)

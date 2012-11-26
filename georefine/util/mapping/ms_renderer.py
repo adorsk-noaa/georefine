@@ -99,8 +99,12 @@ class MapScriptRenderer(object):
         if kwargs.get('units'):
             layerObj.units = getattr(ms, 'MS_%s', kwargs['units'])
 
+        # TODO! Speed this up! SLD is waaay slow.
+        #FOOF
+        """
         if kwargs.get('apply_sld'):
             layerObj.applySLD(*kwargs['apply_sld'])
+        """
 
         if kwargs.get('apply_sld_url'):
             layerObj.applySLDUrl(*kwargs['apply_sld_url'])

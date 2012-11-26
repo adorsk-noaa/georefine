@@ -20,6 +20,7 @@ project_table = Table('project_projects', db.metadata,
         Column('schema', PickleType),
         Column('app_config', PickleType),
         Column('data_dir', String),
+        Column('db_uri', String),
         Column('static_dir', String),
         Column('static_url', String),
         )

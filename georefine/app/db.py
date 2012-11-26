@@ -13,11 +13,13 @@ def init_db(bind=engine, checkfirst=True, **kwargs):
 def clear_db(bind=engine):
 	metadata.drop_all(bind=bind)
 
-def get_session_w_external_trans(session=session, new_connection=False):
+def get_session_w_external_trans(session_=None, new_connection=False):
+    if not session_:
+        session_ = session()
     if new_connection:
-        con = session.bind.engine.connect()
+        con = session_.bind.engine.connect()
     else:
-        con = session.bind
+        con = session_.bind
     trans = con.begin()
     session = sessionmaker(bind=con)()
     return con, trans, session

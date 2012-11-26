@@ -26,8 +26,7 @@ def setup_projects_static_dir():
 def url_for_project_static_dir(project):
     """ Get the url for a project's static dir. """
     if not app.config.get('GR_PROJECTS_STATIC_URL_PATH'):
-        project_full_path = \
-                projects_manage.get_project_static_folder_path(project)
+        project_full_path = project.static_dir
         project_rel_path = project_full_path.replace(
             app.config['GR_STATIC_FOLDER'] + '/', '')
         return url_for('static', filename=project_rel_path)
@@ -133,12 +132,12 @@ def get_map(project_id):
     # Fix for unicode keys (py2.5 doesn't like them).
     str_params = {}
     for k,v in params.items():
-        str_params[str(k)] = v
+        str_params[str(k).lower()] = v
     params = str_params
 
     wms_parameters = get_wms_parameters(request.args)
 
-    map_image = projects_services.get_map(
+    map_image = projects_services.get_data_map(
             project, 
             wms_parameters=wms_parameters,
             **params
