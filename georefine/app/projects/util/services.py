@@ -91,19 +91,39 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             ms_data_str += " WHERE ST_Intersects(geometry, BuildMbr(%s))" % (
                 wms_parameters['BBOX'])
 
-        # Create SLD for styling if there was a value entity.
+        # Create classes for styling if there was a value entity.
         if data_entity:
-            # Generate class bounds.
+
+            # Create class bounds.
             num_classes = data_entity.get('NUM_CLASSES', 25)
             vmin = float(data_entity.get('MIN', 0))
             vmax = float(data_entity.get('MAX', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
-            classes = [[None, vmin]]
+            class_bounds = [[None, vmin]]
             for i in range(num_classes):
-                classes.append([vmin + i * class_width, 
+                class_bounds.append([vmin + i * class_width, 
                                 vmin + (i + 1) * class_width])
-            classes.append([vmax, None])
+            class_bounds.append([vmax, None])
+
+            # Create color map.
+            hsl_color_map = {
+                'h': [
+                    (vmin, 0,)
+                    (vmax, 0,)
+                ],
+                's': [
+                    (vmin, 0,)
+                    (vmax, 0,)
+                ],
+                'l': [
+                    (vmin, 0,)
+                    (vmax, 0,)
+                ],
+            }
+            HERE!!!
+
+            # Apply color map to classes.
 
             # Render sld.
             sld_doc = sld_util.get_polygon_gradient_sld(
