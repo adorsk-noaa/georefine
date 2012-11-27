@@ -2,7 +2,8 @@ from georefine.app import app
 from georefine.app import db
 from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as manage
-import georefine.util.mapping.sld_util as sld_util
+import georefine.util.mapping.colormap as cmap
+
 from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import platform
 import copy
@@ -106,31 +107,38 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
                                 vmin + (i + 1) * class_width])
             class_bounds.append([vmax, None])
 
-            # Create color map.
-            hsl_color_map = {
-                'h': [
-                    (vmin, 0,)
-                    (vmax, 0,)
-                ],
-                's': [
-                    (vmin, 0,)
-                    (vmax, 0,)
-                ],
-                'l': [
-                    (vmin, 0,)
-                    (vmax, 0,)
-                ],
-            }
-            HERE!!!
+            # Create black and white color map that covers the range.
+            rgb_cmap = cmap.generate_rgb_bw_colormap(
+                vmin=vmin, vmax=vmax)
 
-            # Apply color map to classes.
-
-            # Render sld.
-            sld_doc = sld_util.get_polygon_gradient_sld(
-                layer_name='data',
-                value_attr='data',
-                classes=classes
-            )
+            # Apply color map to class bounds to create classes.
+            classes = []
+            for class_bound in class_bounds:
+                cmin = class_bound[0]
+                cmax = class_bound[1]
+                if cmin is not None and cmax is not None:
+                    cls = {
+                        'expression': "(([data] >= %s) AND ([data] < %s))" % (
+                            cmin, cmax),
+                        'style': {
+                            'color': cmap.get_mapped_color(cmin, rgb_cmap)
+                        }
+                    }
+                elif cmin is None and cmax is not None:
+                    cls = {
+                        'expression': "([data] < %s)" % (cmax),
+                        'style': {
+                            'color': cmap.get_mapped_color(cmax, rgb_cmap)
+                        }
+                    }
+                elif cmin is not None and cmax is None:
+                    cls = {
+                        'expression': "([data] >= %s)" % (cmin),
+                        'style': {
+                            'color': cmap.get_mapped_color(cmin, rgb_cmap)
+                        }
+                    }
+                classes.append(cls)
 
         layers = [{
             'name': 'data',
@@ -139,14 +147,13 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             'data': ms_data_str,
             'projection': 'init=epsg:4326',
             'type': 'POLYGON',
-            'apply_sld': [sld_doc, 'data'],
+            'classes': classes,
         }]
 
         imgObj = renderer.render_map(
             wms_parameters=wms_parameters,
             layers=layers,
         )
-
         img = renderer.imgObj_to_bytes(imgObj)
 
     return img

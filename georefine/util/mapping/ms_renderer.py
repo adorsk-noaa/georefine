@@ -99,20 +99,47 @@ class MapScriptRenderer(object):
         if kwargs.get('units'):
             layerObj.units = getattr(ms, 'MS_%s', kwargs['units'])
 
-        # TODO! Speed this up! SLD is waaay slow.
-        #FOOF
-        """
         if kwargs.get('apply_sld'):
             layerObj.applySLD(*kwargs['apply_sld'])
-        """
 
         if kwargs.get('apply_sld_url'):
             layerObj.applySLDUrl(*kwargs['apply_sld_url'])
+
+        for cls in kwargs.get('classes', []):
+            classObj = self.get_classObj(layerObj=layerObj, **cls)
 
         if kwargs.get('projection'):
             layerObj.setProjection(kwargs['projection'])
             
         return layerObj
+
+    def get_classObj(self, layerObj=None, **kwargs):
+        if layerObj:
+            classObj = ms.classObj(layerObj)
+        else:
+            classObj = ms.classObj()
+        if kwargs.get('expression'):
+            classObj.setExpression(kwargs['expression'])
+        if kwargs.get('style'):
+            styleObj = self.get_styleObj(classObj=classObj, **kwargs['style'])
+        return classObj
+
+    def get_styleObj(self, classObj=None, **kwargs):
+        if classObj:
+            styleObj = ms.styleObj(classObj)
+        else:
+            styleObj = ms.styleObj(classObj)
+        for attr, value in kwargs.items():
+            if 'color' in attr:
+                if isinstance(value, dict):
+                    value = self.get_colorObj(**value)
+                else:
+                    value = self.get_colorObj(*value)
+            setattr(styleObj, attr, value)
+        return styleObj
+
+    def get_colorObj(self, r=None, b=None, g=None):
+        return ms.colorObj(int(r), int(b), int(g))
 
     def imgObj_to_bytes(self, img):
         return img.getBytes()

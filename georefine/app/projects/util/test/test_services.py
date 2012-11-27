@@ -212,7 +212,7 @@ class ProjectsServicesDataMapTestCase(ProjectsServicesMapCommonTestCase):
                 geom_id_entity=geom_id_entity, geom_entity=geom_entity, 
                 wms_parameters=wms_parameters)
         self.assertFalse(self.img_is_blank(img))
-        #self.show_img(img)
+        self.show_img(img)
 
 class ProjectsServicesLayerMapTestCase(ProjectsServicesMapCommonTestCase):
 
