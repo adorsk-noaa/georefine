@@ -174,7 +174,7 @@ def get_layer(project_id, layer_id):
 def layer_wms(project_id, layer_id):
     layer = get_layer(project_id, layer_id)
     wms_parameters = get_wms_parameters(request.args)
-    map_image = layer_services.get_map(
+    map_image = projects_services.get_layer_map(
         layer=layer,
         wms_parameters=wms_parameters
     )

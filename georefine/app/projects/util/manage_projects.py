@@ -122,25 +122,32 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
         table_file.close()
 
 def ingest_map_layers(project, source_data_dir, session):
-    source_layers_dir = os.path.join(source_data_dir, 'layers')
+    layers_data_dir = os.path.join(source_data_dir, 'data', 'map_layers', 'data')
 
-    if not os.path.exists(source_layers_dir):
+    if not os.path.exists(layers_data_dir):
         return
 
-    target_layers_dir = os.path.join(project.data_dir, "layers")
+    target_layers_dir = os.path.join(project.data_dir, "map_layers")
     os.makedirs(target_layers_dir)
 
-    for layer_id in os.listdir(source_layers_dir):
-        source_layer_dir = os.path.join(source_layers_dir, layer_id)
+    map_layers_file = os.path.join(layers_data_dir, "map_layers.csv")
+    reader = csv.DictReader(open(map_layers_file, "rb"))
+    layers = [row for row in reader]
+
+    for layer in layers:
+        source_layer_dir = os.path.join(layers_data_dir, layer['id'])
 
         metadata_file = os.path.join(source_layer_dir, "metadata.json")
-        metadata = json.load(open(metadata_file, "rb"))
+        if os.path.exists(metadata_file):
+            metadata = json.load(open(metadata_file, "rb"))
+        else:
+            metadata = {}
 
-        target_layer_dir = os.path.join(target_layers_dir, layer_id)
+        target_layer_dir = os.path.join(target_layers_dir, layer['id'])
         shutil.copytree(source_layer_dir, target_layer_dir)
 
         layer_model = MapLayer(
-            layer_id=layer_id,
+            layer_id=layer['id'],
             project=project,
             dir_=target_layer_dir,
             metadata=metadata,
