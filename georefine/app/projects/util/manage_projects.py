@@ -135,22 +135,22 @@ def ingest_map_layers(project, source_data_dir, session):
     layers = [row for row in reader]
 
     for layer in layers:
-        source_layer_dir = os.path.join(layers_data_dir, layer['id'])
+        layer_data_dir = os.path.join(layers_data_dir, layer['id'])
 
-        metadata_file = os.path.join(source_layer_dir, "metadata.json")
-        if os.path.exists(metadata_file):
-            metadata = json.load(open(metadata_file, "rb"))
+        layer_config_file = os.path.join(layer_data_dir, "config.json")
+        if os.path.exists(layer_config_file):
+            layer_config = json.load(open(layer_config_file, "rb"))
         else:
-            metadata = {}
+            layer_config = {}
 
         target_layer_dir = os.path.join(target_layers_dir, layer['id'])
-        shutil.copytree(source_layer_dir, target_layer_dir)
+        shutil.copytree(layer_data_dir, target_layer_dir)
 
         layer_model = MapLayer(
             layer_id=layer['id'],
             project=project,
             dir_=target_layer_dir,
-            metadata=metadata,
+            config=layer_config,
         )
         session.add(layer_model)
     session.commit()

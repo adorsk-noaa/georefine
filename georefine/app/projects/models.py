@@ -27,19 +27,19 @@ project_table = Table('project_projects', db.metadata,
 
 class MapLayer(object):
     def __init__(self, id=None, layer_id=None, project=None, dir_=None,
-                 metadata=None):
+                 config={}):
         self.id = id
         self.layer_id = layer_id
         self.project = project
         self.dir_ = dir_
-        self.metadata = metadata
+        self.config = config
 
 maplayer_table = Table('project_maplayers', db.metadata,
         Column('id', Integer, primary_key=True),
         Column('layer_id', String),
         Column('project_id', Integer, ForeignKey(project_table.c.id)),
         Column('dir_', String),
-        Column('metadata', PickleType),
+        Column('config', PickleType),
         )
 
 mapper(Project, project_table, properties={

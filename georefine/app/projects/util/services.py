@@ -172,7 +172,7 @@ def get_layer_map(layer, wms_parameters={}, **kwargs):
         renderer = MapScriptRenderer()
 
         layer_def = {}
-        layer_def.update(layer.metadata)
+        layer_def.update(layer.config)
 
         # Rewrite relative paths as needed.
         path_attrs = ['mapfile']
