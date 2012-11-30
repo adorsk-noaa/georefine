@@ -107,6 +107,7 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
                         processed_row[c.name] = cast(row[key])
 
                 except Exception, err:
+                    logger.exception("Error")
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
             # Insert values.
             # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.

@@ -94,11 +94,11 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
 
         # Create classes for styling if there was a value entity.
         if data_entity:
-
             # Create class bounds.
             num_classes = data_entity.get('NUM_CLASSES', 25)
-            vmin = float(data_entity.get('MIN', 0))
-            vmax = float(data_entity.get('MAX', 1))
+            # later: figure out where to standardize caps, here or mapview?
+            vmin = float(data_entity.get('min', 0))
+            vmax = float(data_entity.get('max', 1))
             vrange = vmax - vmin
             class_width = vrange/num_classes
             class_bounds = [[None, vmin]]
