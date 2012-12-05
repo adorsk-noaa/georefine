@@ -203,7 +203,7 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
 
 
 def create_project(project_file=None, logger=logging.getLogger(), 
-                   session=None):
+                   session=None, db_uri=None):
     """ Create a project from a project bundle file. """
     # Get transactional session.
     if not session:
@@ -242,7 +242,11 @@ def create_project(project_file=None, logger=logging.getLogger(),
 
         # Setup project schema and db.
         manage.ingest_schema(project, tmp_dir)
-        project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
+        if not db_uri:
+            project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
+        else:
+            project.db_uri = db_uri
+
         manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
