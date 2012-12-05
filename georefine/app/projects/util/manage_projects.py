@@ -45,7 +45,7 @@ def initialize_db(project):
         con.execute("SELECT InitSpatialMetaData()")
 
 def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
-                logging_interval=1000, commit_interval=10000):
+                logging_interval=1000, commit_interval=1e4, **kwargs):
     schema = project.schema
 
     logger.info("Starting ingest...")
@@ -58,13 +58,20 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
         # Get the filename for the table.
         table_filename = os.path.join(data_dir, 'data', "%s.csv" % (t['id']))
 
+        # Determine if source has a geometry column. (affects bulk inserts).
+        has_geom = False
+        for c in table.columns:
+            if isinstance(c.type, Geometry):
+                has_geom = True
+                break
+
         # Read rows from data file.
         table_file = open(table_filename, 'rb') 
         reader = csv.DictReader(table_file)
 
-        tran = dao.connection.begin()
-
         row_counter = 0
+        processed_rows = []
+        tran = dao.connection.begin()
         for row in reader:
             row_counter += 1
             if (row_counter % logging_interval) == 0:
@@ -109,15 +116,25 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
                 except Exception, err:
                     logger.exception("Error")
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
-            # Insert values.
-            # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do it one at a time.
-            dao.connection.execute(t['source'].insert().values(**processed_row))
+
+            processed_rows.append(processed_row)
+
+            # Note: geoalchemy doesn't seem to like bulk inserts yet, so we do
+            # geom insert statements one at a time.
+            if has_geom:
+                dao.connection.execute(t['source'].insert().values(**processed_row))
 
             if (row_counter % commit_interval) == 0:
+                # Do bulk insert for tables w/out geometry columns.
+                if not has_geom:
+                    dao.connection.execute(t['source'].insert(), processed_rows)
                 tran.commit()
                 tran = dao.connection.begin()
+                processed_rows = []
         
         # Commit any remaining rows.
+        if not has_geom:
+            dao.connection.execute(t['source'].insert(), processed_rows)
         tran.commit()
 
         table_file.close()

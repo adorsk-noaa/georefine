@@ -203,7 +203,7 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
 
 
 def create_project(project_file=None, logger=logging.getLogger(), 
-                   session=None, db_uri=None):
+                   session=None, db_uri=None, **kwargs):
     """ Create a project from a project bundle file. """
     # Get transactional session.
     if not session:
@@ -250,7 +250,8 @@ def create_project(project_file=None, logger=logging.getLogger(),
         manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
-        manage.ingest_data(project, tmp_dir, dao)
+        ingest_kwargs = kwargs.get('ingest_kwargs', {})
+        manage.ingest_data(project, tmp_dir, dao, **ingest_kwargs)
 
         # Clean up tmpdir.
         shutil.rmtree(tmp_dir)
