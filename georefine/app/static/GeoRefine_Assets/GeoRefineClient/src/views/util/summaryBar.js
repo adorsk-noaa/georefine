@@ -18,7 +18,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         }
 
         var model = GeoRefine.app.summaryBar.model;
-        
+
         // Define getData function.
         model.getData = function(){
 
@@ -55,7 +55,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
                 'SELECT_GROUP_BY': true,
             };
             requestsUtil.extendQuery(total_q, qfield.get('outer_query'));
-            
+
             // Assemble request.
             var totals_request = {
                 'ID': 'totals',
@@ -89,7 +89,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
 
         // Set formatter.
         GeoRefine.app.summaryBar.formatter = formatUtil.GeoRefineFormatter;
-        
+
         // Set decorated.
         GeoRefine.app.summaryBar.decorated = true;
 

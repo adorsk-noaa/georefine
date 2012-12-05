@@ -16,7 +16,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
 
     var setUpFacetsEditor = function(){
 
-        // Get facets editor model from state, or create a new model. 
+        // Get facets editor model from state, or create a new model.
         var facetsEditorModel = GeoRefine.app.state.facetsEditor || new Backbone.Model();
 
         // Use a customized FacetCollectionView which adds a token formatter to each
@@ -251,7 +251,6 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         numericFacet.formatter = function(format, value){
             return formatUtil.GeoRefineFormatter(format, value);
         };
-        
     };
 
     // Time slider facet decorator.
@@ -264,15 +263,20 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         model.getData = function(){
             // 'this' is a timeSliderFacet model.
             var _this = this;
-            
-            // Shorcut.
-            var qfield = _this.get('quantity_field');
 
             // Copy the key entity.
             var key = JSON.parse(JSON.stringify(_this.get('KEY')));
 
             // Assemble request.
-            var keyed_query_req = requestsUtil.makeKeyedQueryRequest(_this, key);
+            key['QUERY']['ID'] = 'key_query'
+            var keyed_query_req = {
+              'ID': 'keyed_results',
+              'REQUEST': 'execute_keyed_queries',
+              'PARAMETERS': {
+                'KEY': key,
+                'QUERIES': [key['QUERY']]
+              }
+            };
             var requests = [keyed_query_req];
 
             // Start request and save the deferred object.
@@ -284,12 +288,11 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                 },
                 success: function(data, status, xhr){
                     var results = data.results;
-                    var count_entity = qfield.get('outer_query')['SELECT'][0];
 
                     // Generate choices from data.
                     var choices = [];
                     _.each(results['keyed_results'], function(result){
-                        value = result['data']['outer'][count_entity['ID']];
+                        value = null,
                         choices.push({
                             'id': result['key'],
                             'label': result['label'],
@@ -464,29 +467,31 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
             }, facetView.model);
         });
 
-        // Listen for quantity field changes.
-        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
-        qFieldSelect.model.on('change:selection', function(){
-            var qfield_id = qFieldSelect.model.get('selection');
-            var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
-            this.set('quantity_field', selectedField);
-        }, facetView.model);
-        // Remove callback when model is removed.
-        facetView.model.on('remove', function(){
-            qFieldSelect.model.off(null, null, this);
-        }, facetView.model);
+        // Listen for quantity field changes, if not a timeSlider.
+        if (facetView.model.get('type') != 'timeSlider'){
+          var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
+          qFieldSelect.model.on('change:selection', function(){
+              var qfield_id = qFieldSelect.model.get('selection');
+              var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
+              this.set('quantity_field', selectedField);
+          }, facetView.model);
+          // Remove callback when model is removed.
+          facetView.model.on('remove', function(){
+              qFieldSelect.model.off(null, null, this);
+          }, facetView.model);
 
-        // Update totals when the summary bar totals change.
-        GeoRefine.app.summaryBar.model.on('change:data', function(){
-            var data = GeoRefine.app.summaryBar.model.get('data');
-            this.set('total', data.total);
-        }, facetView.model);
-        // Remove callback when model is removed.
-        facetView.model.on('remove', function(){
-            GeoRefine.app.summaryBar.model.off(null, null, this);
-        }, facetView.model);
+          // Update totals when the summary bar totals change.
+          GeoRefine.app.summaryBar.model.on('change:data', function(){
+              var data = GeoRefine.app.summaryBar.model.get('data');
+              this.set('total', data.total);
+          }, facetView.model);
+          // Remove callback when model is removed.
+          facetView.model.on('remove', function(){
+              GeoRefine.app.summaryBar.model.off(null, null, this);
+          }, facetView.model);
+        }
 
-        // Have the facet update when its query or base filters or count entities change.
+        // Have the facet update when its query or base filters or quantity_field change.
         if (facetView.model.getData){
 
             // helper function to get a timeout getData function.

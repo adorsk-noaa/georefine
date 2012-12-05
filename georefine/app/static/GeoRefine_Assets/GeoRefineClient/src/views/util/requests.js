@@ -15,6 +15,9 @@ function($, Backbone, _, _s, Util, filtersUtil){
         var boolean_params =['SELECT_GROUP_BY'];
 
         _.each(Array.prototype.slice.call(arguments, 1), function(source_q) {
+            if (! source_q){
+              return;
+            }
             _.each(array_params, function(param){
                 if (target_q.hasOwnProperty(param)){
                     _.each(source_q[param], function(source_q_value){
@@ -59,9 +62,6 @@ function($, Backbone, _, _s, Util, filtersUtil){
         // Set include filters to primary and base by default.
         filter_attrs = filter_attrs || ['primary_filters', 'base_filters'];
 
-        // Shortcuts.
-        var qfield  = model.get('quantity_field');
-
         // Initialize query definition.
         // Note: 'ID' must be 'inner' to conform to conventions.
         var inner_q = {
@@ -70,17 +70,17 @@ function($, Backbone, _, _s, Util, filtersUtil){
             'GROUP_BY': []
         };
 
-        // Merge the quantity field's inner query parameters.
-        extendQuery(inner_q, qfield.get('inner_query'));
+        // Add quantity field parameters if quantity field exists.
+        var qfield  = model.get('quantity_field');
+        if (qfield){
+          extendQuery(inner_q, qfield.get('inner_query'));
+        }
+
+        // Add model's inner query parameters.
+        extendQuery(inner_q, model.get('inner_query'));
 
         // Add the filters.
         addFiltersToQuery(model, filter_attrs, inner_q);
-
-        // Add key entities as group_by paramters.
-        inner_q['GROUP_BY'].push(key['KEY_ENTITY']);
-        if (key['LABEL_ENTITY']){
-            inner_q['GROUP_BY'].push(key['LABEL_ENTITY']);
-        }
 
         return inner_q;
     };
@@ -89,31 +89,22 @@ function($, Backbone, _, _s, Util, filtersUtil){
 
         key = JSON.parse(JSON.stringify(key));
 
-        // Shortcuts.
-        var qfield  = model.get('quantity_field');
 
         // Initialize the outer query.
         var outer_q = {
             'ID': query_id || 'outer',
             'FROM': [{'ID': 'inner', 'SOURCE': inner_query}],
-            'SELECT_GROUP_BY': true,
             'GROUP_BY': []
         };
 
-        // Add the quantity field's outer query parameters.
-        extendQuery(outer_q, qfield.get('outer_query'));
-
-        // Add key entities as group_by paramters.
-        var gb_attrs = ['KEY_ENTITY'];
-        if (key['LABEL_ENTITY']){
-            gb_attrs.push('LABEL_ENTITY');
+        // Add quantity field parameters if quantity field exists.
+        var qfield = model.get('quantity_field');
+        if (qfield){
+          extendQuery(outer_q, qfield.get('outer_query'));
         }
-        _.each(gb_attrs, function(gb_attr){
-            outer_q['GROUP_BY'].push({
-                'ID': key[gb_attr]['ID'],
-                'EXPRESSION': _s.sprintf("__inner__%s", key[gb_attr]['ID'])
-            });
-        });
+
+        // Add model query parameters.
+        extendQuery(outer_q, model.get('outer_query'));
 
         return outer_q;
     };
