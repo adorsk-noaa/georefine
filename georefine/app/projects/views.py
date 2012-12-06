@@ -39,15 +39,6 @@ def georefine_client(project_id):
     context_root = app.config['APPLICATION_ROOT']
     project = get_project(project_id)
 
-    ## TESTING!!!
-    f = ('/home/adorsk/projects/sasi_runner/lib/sasi_runner/packagers/templates/'
-         'georefine/app_config.py')
-    ns = {}
-    src = open(f, 'rb').read()
-    code = compile(src, '<string>', 'exec')
-    exec code in ns
-    project.app_config = ns['app_config']
-
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,

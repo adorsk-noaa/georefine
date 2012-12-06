@@ -31,6 +31,11 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
         // Copy the key entity.
         var key = JSON.parse(JSON.stringify(cfield.get('KEY')));
 
+        // Merge in capitalized attributes from cfield's entity model.
+        _.each(cfield.get('entity').toJSON(), function(v, attr){
+          key['KEY_ENTITY'][attr.toUpperCase()] = v;
+        });
+
         // Set base filters on key entity context.
         if (! key['KEY_ENTITY']['CONTEXT']){
             key['KEY_ENTITY']['CONTEXT'] = {};
