@@ -31,11 +31,6 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
         // Copy the key entity.
         var key = JSON.parse(JSON.stringify(cfield.get('KEY')));
 
-        // Merge in values from the category field's entity model.
-        _.each(cfield.get('entity').toJSON(), function(v, k){
-            key['KEY_ENTITY'][k.toUpperCase()] = v;
-        });
-
         // Set base filters on key entity context.
         if (! key['KEY_ENTITY']['CONTEXT']){
             key['KEY_ENTITY']['CONTEXT'] = {};
@@ -45,11 +40,15 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
 
         // Get the base query.
         var base_inner_q = requestsUtil.makeKeyedInnerQuery(q, key, ['base_filters']);
+        requestsUtil.extendQuery(base_inner_q, cfield.get('inner_query'));
         var base_outer_q = requestsUtil.makeKeyedOuterQuery(q, key, base_inner_q, 'base');
+        requestsUtil.extendQuery(base_outer_q, cfield.get('outer_query'));
 
         // Get the primary query.
         var primary_inner_q = requestsUtil.makeKeyedInnerQuery(q, key, ['base_filters', 'primary_filters']);
+        requestsUtil.extendQuery(primary_inner_q, cfield.get('inner_query'));
         var primary_outer_q = requestsUtil.makeKeyedOuterQuery(q, key, primary_inner_q, 'primary');
+        requestsUtil.extendQuery(primary_outer_q, cfield.get('outer_query'));
 
         // Assemble the keyed result parameters.
         var keyed_results_parameters = {
