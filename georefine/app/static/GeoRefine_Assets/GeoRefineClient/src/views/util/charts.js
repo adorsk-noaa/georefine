@@ -142,7 +142,7 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
         var datasource = chartEditor.model.get('datasource');
         var q = datasource.get('query');
         _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = datasource.get(filterCategory + "_filter_groups");
+            var groupIds = q.get(filterCategory + "_filter_groups");
             _.each(groupIds, function(groupId){
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filterGroup.on('change:filters', function(){
@@ -163,7 +163,7 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
         // Disconnect datasource's query from filter changes.
         var q = chartEditor.model.get('datasource').get('query');
         _.each(['primary', 'base'], function(filterCategory){
-            var groupIds = chartEditor.model.get(filterCategory + "_filter_groups");
+            var groupIds = q.get(filterCategory + "_filter_groups");
             _.each(groupIds, function(groupId){
                 var filterGroup = GeoRefine.app.filterGroups[groupId];
                 filterGroup.off(null, null, q);
@@ -207,14 +207,15 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
     };
 
     var initializeChartEditor = function(chartEditor){
-        // Decorate the chart editor.
-        decorateChartEditor(chartEditor);
 
         // Set filters on datasource query.
         var q = chartEditor.model.get('datasource').get('query');
         _.each(['base', 'primary'], function(filterCategory){
             filtersUtil.updateModelFilters(q, filterCategory, {silent: true});
         });
+
+        // Decorate the chart editor.
+        decorateChartEditor(chartEditor);
     };
 
     // Create chart editor from config defaults.
@@ -287,10 +288,17 @@ function($, Backbone, _, _s, Util, Charts, requestsUtil, functionsUtil, filtersU
 
         // Create datasource.
         var datasource = new Charts.models.DataSourceModel({
-            'schema':  schema ,
-            'primary_filter_groups': chartsConfig.primary_filter_groups,
-            'base_filter_groups': chartsConfig.base_filter_groups,
+            'schema':  schema
         });
+
+        // Setup filter groups on datasource query.
+        var q = datasource.get('query');
+        q.set({
+          'primary_filter_groups': chartsConfig.primary_filter_groups,
+          'base_filter_groups': chartsConfig.base_filter_groups,
+          },
+          {silent: true}
+        )
 
         // Create chart model.
         var chartModel = new Charts.models.XYChartModel({});
