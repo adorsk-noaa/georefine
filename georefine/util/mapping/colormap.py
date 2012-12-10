@@ -1,5 +1,6 @@
 import georefine.util.mapping.interpolate as interpolate
 from PIL import Image, ImageDraw
+import colorsys
 
 
 def get_mapped_color(value, colormap, clip=True, cast=None):
@@ -12,7 +13,7 @@ def get_mapped_color(value, colormap, clip=True, cast=None):
             mapped_color[attr] = cast(mapped_color[attr])
     return mapped_color
 
-def generate_hsl_bw_colormap(vmin=0, vmax=1, w2b=True):
+def generate_hsv_bw_colormap(vmin=0, vmax=1, w2b=True):
     if w2b:
         l = [(vmin, 0.0), (vmax, 1.0)]
     else:
@@ -33,6 +34,41 @@ def generate_rgb_bw_colormap(vmin=0, vmax=1, w2b=True):
         'g': points,
         'b': points,
     }
+
+def convert_color(c, to_schema='rgb'):
+    """ Convert a color to another schema. """
+    color_attrs = c.keys()
+
+    # RGB to x
+    if ''.join(sorted(color_attrs)) == 'bgr':
+        if to_schema == 'rgb':
+            return c
+        elif to_schema == 'hsv':
+            hsv = colorsys.rgb_to_hsv(c['r'], c['g'], c['b'])
+            return dict(zip(['h', 's', 'v'], hsv))
+        elif to_schema == 'hls':
+            hsv = colorsys.rgb_to_hls(c['r'], c['g'], c['b'])
+            return dict(zip(['h', 'l', 's'], hsv))
+
+
+    # HSV to x
+    elif ''.join(sorted(color_attrs)) == 'hsv':
+        from_schema = 'hsv'
+        if to_schema == 'hsv':
+            return c
+        elif to_schema == 'rgb':
+            rgb = colorsys.hsv_to_rgb(c['h'], c['s'], c['v'])
+            return dict(zip(['r', 'g', 'b'], rgb))
+
+    # HLS to x
+    elif ''.join(sorted(color_attrs)) == 'hls':
+        from_schema = 'hls'
+        if to_schema == 'hls':
+            return c
+        elif to_schema == 'rgb':
+            rgb = colorsys.hls_to_rgb(c['h'], c['l'], c['s'])
+            return dict(zip(['r', 'g', 'b'], rgb))
+
 
 def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
                   include_bins=[], value_bin_pct_width=.2):
@@ -107,25 +143,25 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
 
     return sorted(bins, key=lambda b: b[0])
 
-def generate_colored_bins(colormap=None, color_cast=None, **kwargs):
+def generate_colored_bins(colormap=None, to_schema=None, **kwargs):
     """ Generate list of (bin, rgb) tuples, via generate_bins. 
     Color value is taken at the midpoint of a bin.
-    'color_cast' is an optional function to cast mapped color values, e.g.
-    for converting RGB values to ints.
     """
     colored_bins = []
     bins = generate_bins(**kwargs)
     for bin_ in bins:
         bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
-        bin_color = get_mapped_color(bin_mid, colormap, clip=True, cast=color_cast)
+        bin_color = get_mapped_color(bin_mid, colormap, clip=True)
+        if to_schema:
+            bin_color = convert_color(bin_color, to_schema=to_schema)
         colored_bins.append((bin_, bin_color))
     return colored_bins
 
-def generate_colorbar_img(width=200, height=100, color_attrs=['r', 'g', 'b'], 
-                          **kwargs):
+def generate_colorbar_img(width=200, height=100, **kwargs):
     """ Generate a colorbar, via generate_colored_bins. """
 
-    colored_bins = generate_colored_bins(**kwargs)
+    colormap = kwargs.get('colormap')
+    colored_bins = generate_colored_bins(to_schema='rgb', **kwargs)
     img = Image.new('RGB', (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     left_bin = colored_bins[0][0]
@@ -136,6 +172,6 @@ def generate_colorbar_img(width=200, height=100, color_attrs=['r', 'g', 'b'],
     for bin_ in colored_bins:
         scaled_left = ((bin_[0][0] - x_min)/x_range) * width
         scaled_right = ((bin_[0][1] - x_min)/x_range) * width
-        fill = tuple([bin_[1][attr] for attr in color_attrs])
+        fill = tuple([int(bin_[1][attr]) for attr in ['r','g','b']])
         draw.rectangle([(scaled_left, 0), (scaled_right, height)], fill=fill)
     return img

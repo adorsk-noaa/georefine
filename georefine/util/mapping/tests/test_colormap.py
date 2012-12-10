@@ -4,19 +4,19 @@ from georefine.util.mapping import colormap as cmap
 
 class ColorMapTestCase(unittest.TestCase):
     def test_generate_bw_colormap(self):
-        bw_colormap = cmap.generate_hsl_bw_colormap()
+        bw_colormap = cmap.generate_hsv_bw_colormap()
 
     def test_get_mapped_color(self):
         vmin = 0
         vmax = 10
-        bw_colormap = cmap.generate_hsl_bw_colormap(vmin=vmin, vmax=vmax)
-        mapped_hsls = []
-        expected_hsls = []
+        bw_colormap = cmap.generate_hsv_bw_colormap(vmin=vmin, vmax=vmax)
+        mapped_hsvs = []
+        expected_hsvs = []
         n = 10
         for v in range(n):
-            mapped_hsls.append(cmap.get_mapped_color(v, bw_colormap))
-            expected_hsls.append({'h': 0, 's': 1, 'l': float(v)/n})
-        self.assertEquals(mapped_hsls, expected_hsls)
+            mapped_hsvs.append(cmap.get_mapped_color(v, bw_colormap))
+            expected_hsvs.append({'h': 0, 's': 1, 'l': float(v)/n})
+        self.assertEquals(mapped_hsvs, expected_hsvs)
 
     def test_generate_bins(self):
         vmin = 0
@@ -127,7 +127,7 @@ class ColorMapTestCase(unittest.TestCase):
         
         img = cmap.generate_colorbar_img(
             width=100, height=100, colormap=test_cmap, vmin=0, vmax=1, 
-            num_bins=4, color_attrs=['r','g','b'], color_cast=int)
+            num_bins=4)
 
         from PIL import Image, ImageDraw
         expected_img = Image.new('RGB', (width, height), (255, 255, 255))
@@ -141,6 +141,31 @@ class ColorMapTestCase(unittest.TestCase):
         for r in expected_rects:
             draw.rectangle([(r[0], 0), (r[1], height)], fill=r[2])
         self.assertEquals(img.tostring(), expected_img.tostring())
+
+    def test_convert_color(self):
+        rgb_c = {'r': 128, 'g': 128, 'b': 128}
+        hsv_c = {'h': 0, 's': 0, 'v': 128}
+        hls_c = {'h': 0, 's': 0, 'l': 128}
+
+        # rgb <-> hsv
+        self.assertEquals(
+            cmap.convert_color(rgb_c, to_schema='hsv'),
+            hsv_c,
+        )
+        self.assertEquals(
+            cmap.convert_color(hsv_c, to_schema='rgb'),
+            rgb_c
+        )
+
+        # rgb <-> hls
+        self.assertEquals(
+            cmap.convert_color(rgb_c, to_schema='hls'),
+            hls_c
+        )
+        self.assertEquals(
+            cmap.convert_color(hls_c, to_schema='rgb'),
+            rgb_c
+        )
 
 if __name__ == "__main__":
     unittest.main()
