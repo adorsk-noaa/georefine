@@ -15,7 +15,8 @@ class MapScriptRenderer(object):
                 wms_request.setParameter(str(k),str(v))
             mapObj.loadOWSParameters(wms_request)
 
-        #mapObj.save('/tmp/foo.map')
+        #import time
+        #mapObj.save('/tmp/foo.%s.map' % time.time())
         img = mapObj.draw()
         return img
 

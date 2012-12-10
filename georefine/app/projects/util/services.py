@@ -99,13 +99,27 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             # later: figure out where to standardize caps, here or mapview?
             vmin = float(data_entity.get('min', 0))
             vmax = float(data_entity.get('max', 1))
+
             colormap = data_entity.get(
                 'colormap', cmap.generate_hsv_bw_colormap(vmin=vmin, vmax=vmax))
 
             # Generate color bins.
-            color_bins = cmap.generate_colored_bins(colormap=colormap, schema='rgb',
-                                       vmin=vmin, vmax=vmax, 
-                                       num_bins=num_bins)
+            bin_kwargs = {
+                'schema': 'rgb',
+                'colormap': colormap,
+                'vmin': vmin,
+                'vmax': vmax,
+                'num_bins': num_bins
+            }
+            for kwarg in ['include_bins', 'include_values']:
+                if data_entity.has_key(kwarg):
+                    bin_kwargs[kwarg] = data_entity.get(kwarg)
+
+            color_bins = cmap.generate_colored_bins(**bin_kwargs)
+
+            # Add bottom/top bins.
+            color_bins.insert(0, ((None, color_bins[0][0][0]), color_bins[0][1]))
+            color_bins.append(((color_bins[-1][0][1], None), color_bins[-1][1]))
 
             # Create classes from color bins.
             classes = []
@@ -149,6 +163,9 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
         }]
 
         imgObj = renderer.render_map(
+            # use random bg color for transparency
+            # Otherwise it defaults to white.
+            imagecolor=(253, 27, 92),
             wms_parameters=wms_parameters,
             layers=layers,
         )
