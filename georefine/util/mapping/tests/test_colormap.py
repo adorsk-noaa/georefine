@@ -94,5 +94,25 @@ class ColorMapTestCase(unittest.TestCase):
              (3,4)]
         )
 
+    def test_generate_colored_bins(self):
+        test_cmap = dict(
+            zip(
+                ['c1'],
+                [ [(-2, -100), (2,100)] ]
+            )
+        )
+
+        self.assertEquals(
+            cmap.generate_colored_bins(colormap=test_cmap, vmin=-2, vmax=2, 
+                                       num_bins=4, include_bins=[(-.5, .5)]),
+            [
+                ((-2, -1), {'c1': -75}),
+                ((-1, -.5), {'c1': -37.5}),
+                ((-.5, .5), {'c1': 0}),
+                ((.5, 1), {'c1': 37.5}),
+                ((1, 2), {'c1': 75}),
+            ]
+        )
+
 if __name__ == "__main__":
     unittest.main()

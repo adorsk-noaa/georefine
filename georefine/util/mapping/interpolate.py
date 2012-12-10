@@ -26,7 +26,7 @@ def lin_interpolate(xs, curve, clip=False):
         y_range = y_max - y_min
         if x_range != 0:
             x_normalized = float((x - x_min))/x_range
-            y = x_normalized * y_range
+            y = y_min + x_normalized * y_range
         else:
             y = y_min
         interpolated_points.append((x,y,))

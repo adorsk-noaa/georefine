@@ -1,12 +1,12 @@
 import georefine.util.mapping.interpolate as interpolate
 
 
-def get_mapped_color(value, colormap):
+def get_mapped_color(value, colormap, clip=True):
     color_attrs = colormap.keys()
     mapped_color = {}
     for attr in color_attrs:
         mapped_color[attr] = interpolate.lin_interpolate(
-            [value], colormap[attr])[0][1]
+            [value], colormap[attr], clip=clip)[0][1]
     return mapped_color
 
 def generate_hsl_bw_colormap(vmin=0, vmax=1, w2b=True):
@@ -103,3 +103,14 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
         bins[slice_start:slice_end] = new_bins
 
     return sorted(bins, key=lambda b: b[0])
+
+def generate_colored_bins(colormap=None, **kwargs):
+    """ Generate list of (bin, rgb) tuples, via generate_bins. 
+    Color value is taken at the midpoint of a bin."""
+    colored_bins = []
+    bins = generate_bins(**kwargs)
+    for bin_ in bins:
+        bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
+        bin_color = get_mapped_color(bin_mid, colormap)
+        colored_bins.append((bin_, bin_color))
+    return colored_bins
