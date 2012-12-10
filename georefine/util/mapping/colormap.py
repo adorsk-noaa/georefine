@@ -1,5 +1,4 @@
 import georefine.util.mapping.interpolate as interpolate
-from bisect import bisect
 
 
 def get_mapped_color(value, colormap):
@@ -33,7 +32,7 @@ def generate_rgb_bw_colormap(vmin=0, vmax=1, w2b=True):
     }
 
 def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
-                  include_bins=[], value_bin_pct_width=.1):
+                  include_bins=[], value_bin_pct_width=.2):
     """ Generate a set of (v0, v1) bins from the given parameters.
     If 'include_bins' is specified, those bins are merged (see below) into the list 
     of generated bins.
@@ -41,7 +40,7 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
     with each generated bin being 'value_bin_pct_width' wide. These bins are
     then merged into the list of generated bins.
     Merging bins: bins are merged by 'cracking' existing bins in order to fit
-    in the new bins, so that there are no overlaps and no gaps.
+    in the new bins.
     For example, if the initial bin list is [(0,5), (5,10)],
     and we merge in (3,7), the merged bin list will be [(0,3),(3,7),(7,10)].
     If a new bin spans multiple existing bins, it will consume them.
@@ -58,37 +57,49 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
     if num_bins > 0:
         bin_width = 1.0 * vrange/num_bins
     for i in range(num_bins):
-        bins.append(tuple(vmin + i * bin_width, 
-                          vmin + (i+1) * bin_width))
+        bins.append((vmin + i * bin_width, vmin + (i+1) * bin_width,))
 
     # Generate bins for include_values.
     include_values_bins = []
     for v in include_values:
         v_bin_width = bin_width * value_bin_pct_width
-        v_bin = tuple(v - v_bin_width/2.0, v + v_bin_width/2.0)
+        v_bin = (v - v_bin_width/2.0, v + v_bin_width/2.0,)
         include_values_bins.append(v_bin)
 
     # Merge in bins from include_bins and include_values.
     for bin_ in include_bins + include_values_bins:
-        # Left intersect = bin whose x0 <= merge_bin x0.
-        left_bin_idx = bisect([b[0] for b in bins], bin_[0]) - 1
-        if left_bin_idx > -1:
-            left_bin = bins[left_bin_idx]
-        else:
-            left_bin = None
-        # Right intersect = bin whose xf >= merge_bin x1.
-        right_bin_idx = bisect([b[1] for b in bins], bin_[1]) - 1
-        if right_bin_idx < len(bins):
-            right_bin = bins[right_bin_idx]
-        else:
-            right_bin = None
-        # Remove all bins from left_intersect to right_intersect.
-        bins[left_bin_idx:right_bin_idx] = []
 
-        # Insert new bins, starting from left_intersect.
+        left_bin = None
+        slice_start = None
+        for i in range(len(bins)):
+            if bins[i][0] <= bin_[0]:
+                left_bin = bins[i]
+                slice_start = i
+            else:
+                break
+        if left_bin and left_bin[1] <= bin_[0]:
+            left_bin = None
+            slice_start = len(bins)
+
+        right_bin = None
+        slice_end = len(bins)
+        for i in range(len(bins) - 1, -1, -1):
+            if bins[i][1] >= bin_[1]:
+                right_bin = bins[i]
+                slice_end = i + 1
+            else:
+                break
+        if right_bin and right_bin[0] >= bin_[1]:
+            right_bin = None
+            slice_end = 0
+        
+        # Replace bins with new bins.
         new_bins = []
         if left_bin:
-            new_bins.append(tuple(left_bin[0], bin_[0]))
+            new_bins.append((left_bin[0], bin_[0],))
         new_bins.append(bin_)
         if right_bin:
-            new_bins.append(tuple(bin_[1], right_bin[1]))
+            new_bins.append((bin_[1], right_bin[1],))
+        bins[slice_start:slice_end] = new_bins
+
+    return sorted(bins, key=lambda b: b[0])

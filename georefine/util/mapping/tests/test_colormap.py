@@ -18,5 +18,81 @@ class ColorMapTestCase(unittest.TestCase):
             expected_hsls.append({'h': 0, 's': 1, 'l': float(v)/n})
         self.assertEquals(mapped_hsls, expected_hsls)
 
+    def test_generate_bins(self):
+        vmin = 0
+        vmax = 4
+        num_bins = 4
+
+        # Simple generation.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins),
+            [(0,1,), (1,2,), (2,3,),(3,4,)]
+        )
+
+        # include_bins.
+        # Middle
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(1.5,2.5,)]),
+            [(0,1,), (1,1.5,), (1.5, 2.5,), (2.5,3,),(3,4,)]
+        )
+        # Off left edge.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(-2,-1,)]),
+            [(-2,-1,), (0,1,), (1,2), (2,3), (3,4,)]
+        )
+        # Off right edge.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(5,6,)]),
+            [(0,1,), (1,2), (2,3), (3,4,), (5,6,)]
+        )
+        # Spanning left edge.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(-.5,.5,)]),
+            [(-.5, .5,),(.5,1,), (1,2), (2,3), (3,4,)]
+        )
+
+        # Spanning right edge.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(3.5,4.5,)]),
+            [(0, 1,), (1,2), (2,3), (3,3.5,), (3.5, 4.5,)]
+        )
+
+        # Spanning both edges.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(-.5,4.5,)]),
+            [(-.5, 4.5,)]
+        )
+
+        # Multiple.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(.5,1.5,), (2.5, 3.5)]),
+            [(0,.5,), (.5,1.5,), (1.5, 2,), (2, 2.5,),(2.5, 3.5,), (3.5,4,)]
+        )
+
+        # Include values.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_values=[2],
+                               value_bin_pct_width=.2),
+            [(0,1), (1,1.9), (1.9, 2.1), (2.1,3), (3,4)]
+        )
+
+        # Include bins and values.
+        self.assertEquals(
+            cmap.generate_bins(vmin=vmin, vmax=vmax, num_bins=num_bins,
+                               include_bins=[(1.5, 2.5)],
+                               include_values=[2],
+                               value_bin_pct_width=.2),
+            [(0,1), (1,1.5), (1.5, 1.9), (1.9, 2.1), (2.1, 2.5), (2.5, 3),
+             (3,4)]
+        )
+
 if __name__ == "__main__":
     unittest.main()
