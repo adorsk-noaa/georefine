@@ -114,5 +114,33 @@ class ColorMapTestCase(unittest.TestCase):
             ]
         )
 
+    def test_generate_colorbar_img(self):
+        test_cmap = dict(
+            zip(
+                ['r', 'g', 'b'],
+                [[(0,0), (1,200)]] * 3
+            )
+        )
+
+        width = 100
+        height = 100
+        
+        img = cmap.generate_colorbar_img(
+            width=100, height=100, colormap=test_cmap, vmin=0, vmax=1, 
+            num_bins=4, color_attrs=['r','g','b'], color_cast=int)
+
+        from PIL import Image, ImageDraw
+        expected_img = Image.new('RGB', (width, height), (255, 255, 255))
+        draw = ImageDraw.Draw(expected_img)
+        expected_rects = [
+            [0,25,(25,25,25)],
+            [25,50,(75,75,75)],
+            [50,75,(125,125,125)],
+            [75,100,(175,175,175)],
+        ]
+        for r in expected_rects:
+            draw.rectangle([(r[0], 0), (r[1], height)], fill=r[2])
+        self.assertEquals(img.tostring(), expected_img.tostring())
+
 if __name__ == "__main__":
     unittest.main()

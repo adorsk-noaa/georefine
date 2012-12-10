@@ -1,12 +1,15 @@
 import georefine.util.mapping.interpolate as interpolate
+from PIL import Image, ImageDraw
 
 
-def get_mapped_color(value, colormap, clip=True):
+def get_mapped_color(value, colormap, clip=True, cast=None):
     color_attrs = colormap.keys()
     mapped_color = {}
     for attr in color_attrs:
         mapped_color[attr] = interpolate.lin_interpolate(
             [value], colormap[attr], clip=clip)[0][1]
+        if cast:
+            mapped_color[attr] = cast(mapped_color[attr])
     return mapped_color
 
 def generate_hsl_bw_colormap(vmin=0, vmax=1, w2b=True):
@@ -104,13 +107,35 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
 
     return sorted(bins, key=lambda b: b[0])
 
-def generate_colored_bins(colormap=None, **kwargs):
+def generate_colored_bins(colormap=None, color_cast=None, **kwargs):
     """ Generate list of (bin, rgb) tuples, via generate_bins. 
-    Color value is taken at the midpoint of a bin."""
+    Color value is taken at the midpoint of a bin.
+    'color_cast' is an optional function to cast mapped color values, e.g.
+    for converting RGB values to ints.
+    """
     colored_bins = []
     bins = generate_bins(**kwargs)
     for bin_ in bins:
         bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
-        bin_color = get_mapped_color(bin_mid, colormap)
+        bin_color = get_mapped_color(bin_mid, colormap, clip=True, cast=color_cast)
         colored_bins.append((bin_, bin_color))
     return colored_bins
+
+def generate_colorbar_img(width=200, height=100, color_attrs=['r', 'g', 'b'], 
+                          **kwargs):
+    """ Generate a colorbar, via generate_colored_bins. """
+
+    colored_bins = generate_colored_bins(**kwargs)
+    img = Image.new('RGB', (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    left_bin = colored_bins[0][0]
+    right_bin = colored_bins[-1][0]
+    x_min = left_bin[0]
+    x_max = right_bin[1]
+    x_range = float(x_max - x_min)
+    for bin_ in colored_bins:
+        scaled_left = ((bin_[0][0] - x_min)/x_range) * width
+        scaled_right = ((bin_[0][1] - x_min)/x_range) * width
+        fill = tuple([bin_[1][attr] for attr in color_attrs])
+        draw.rectangle([(scaled_left, 0), (scaled_right, height)], fill=fill)
+    return img
