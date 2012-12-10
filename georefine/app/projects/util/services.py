@@ -92,50 +92,48 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             ms_data_str += " WHERE ST_Intersects(geometry, BuildMbr(%s))" % (
                 wms_parameters['BBOX'])
 
-        # Create classes for styling if there was a value entity.
+        # Create classes for styling if there was a data entity.
         if data_entity:
             # Create class bounds.
-            num_classes = data_entity.get('NUM_CLASSES', 25)
+            num_bins = data_entity.get('NUM_CLASSES', 25)
             # later: figure out where to standardize caps, here or mapview?
             vmin = float(data_entity.get('min', 0))
             vmax = float(data_entity.get('max', 1))
-            vrange = vmax - vmin
-            class_width = vrange/num_classes
-            class_bounds = [[None, vmin]]
-            for i in range(num_classes):
-                class_bounds.append([vmin + i * class_width, 
-                                vmin + (i + 1) * class_width])
-            class_bounds.append([vmax, None])
+            colormap = data_entity.get(
+                'colormap', cmap.generate_hsv_bw_colormap(vmin=vmin, vmax=vmax))
 
-            # Create black and white color map that covers the range.
-            rgb_cmap = cmap.generate_rgb_bw_colormap(
-                vmin=vmin, vmax=vmax)
+            # Generate color bins.
+            color_bins = cmap.generate_colored_bins(colormap=colormap, schema='rgb',
+                                       vmin=vmin, vmax=vmax, 
+                                       num_bins=num_bins)
 
-            # Apply color map to class bounds to create classes.
+            # Create classes from color bins.
             classes = []
-            for class_bound in class_bounds:
-                cmin = class_bound[0]
-                cmax = class_bound[1]
+            for color_bin in color_bins:
+                bin_ = color_bin[0]
+                cmin = bin_[0]
+                cmax = bin_[1]
+                color = color_bin[1]
                 if cmin is not None and cmax is not None:
                     cls = {
                         'expression': "(([data] >= %s) AND ([data] < %s))" % (
                             cmin, cmax),
                         'style': {
-                            'color': cmap.get_mapped_color(cmin, rgb_cmap)
+                            'color': color
                         }
                     }
                 elif cmin is None and cmax is not None:
                     cls = {
                         'expression': "([data] < %s)" % (cmax),
                         'style': {
-                            'color': cmap.get_mapped_color(cmax, rgb_cmap)
+                            'color': color
                         }
                     }
                 elif cmin is not None and cmax is None:
                     cls = {
                         'expression': "([data] >= %s)" % (cmin),
                         'style': {
-                            'color': cmap.get_mapped_color(cmin, rgb_cmap)
+                            'color': color
                         }
                     }
                 classes.append(cls)

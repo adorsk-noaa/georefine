@@ -15,13 +15,13 @@ def get_mapped_color(value, colormap, clip=True, cast=None):
 
 def generate_hsv_bw_colormap(vmin=0, vmax=1, w2b=True):
     if w2b:
-        l = [(vmin, 0.0), (vmax, 1.0)]
+        v = [(vmin, 0.0), (vmax, 1.0)]
     else:
-        l = [(vmin, 1.0), (vmax, 0.0)]
+        v = [(vmin, 1.0), (vmax, 0.0)]
     return {
         'h': [(vmin, 0,)],
-        's': [(vmin, 1,)],
-        'l': l,
+        's': [(vmin, 0,)],
+        'v': v,
     }
 
 def generate_rgb_bw_colormap(vmin=0, vmax=1, w2b=True):
@@ -44,10 +44,10 @@ def convert_color(c, to_schema='rgb'):
         if to_schema == 'rgb':
             return c
         elif to_schema == 'hsv':
-            hsv = colorsys.rgb_to_hsv(c['r'], c['g'], c['b'])
+            hsv = colorsys.rgb_to_hsv(c['r']/255.0, c['g']/255.0, c['b']/255.0)
             return dict(zip(['h', 's', 'v'], hsv))
         elif to_schema == 'hls':
-            hsv = colorsys.rgb_to_hls(c['r'], c['g'], c['b'])
+            hsv = colorsys.rgb_to_hls(c['r']/255.0, c['g']/255.0, c['b']/255.0)
             return dict(zip(['h', 'l', 's'], hsv))
 
 
@@ -58,7 +58,7 @@ def convert_color(c, to_schema='rgb'):
             return c
         elif to_schema == 'rgb':
             rgb = colorsys.hsv_to_rgb(c['h'], c['s'], c['v'])
-            return dict(zip(['r', 'g', 'b'], rgb))
+            return dict(zip(['r', 'g', 'b'], [int(255 * attr) for attr in rgb]))
 
     # HLS to x
     elif ''.join(sorted(color_attrs)) == 'hls':
@@ -67,7 +67,7 @@ def convert_color(c, to_schema='rgb'):
             return c
         elif to_schema == 'rgb':
             rgb = colorsys.hls_to_rgb(c['h'], c['l'], c['s'])
-            return dict(zip(['r', 'g', 'b'], rgb))
+            return dict(zip(['r', 'g', 'b'], [int(255 * attr) for attr in rgb]))
 
 
 def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
@@ -143,7 +143,7 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
 
     return sorted(bins, key=lambda b: b[0])
 
-def generate_colored_bins(colormap=None, to_schema=None, **kwargs):
+def generate_colored_bins(colormap=None, schema=None, **kwargs):
     """ Generate list of (bin, rgb) tuples, via generate_bins. 
     Color value is taken at the midpoint of a bin.
     """
@@ -152,8 +152,8 @@ def generate_colored_bins(colormap=None, to_schema=None, **kwargs):
     for bin_ in bins:
         bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
         bin_color = get_mapped_color(bin_mid, colormap, clip=True)
-        if to_schema:
-            bin_color = convert_color(bin_color, to_schema=to_schema)
+        if schema:
+            bin_color = convert_color(bin_color, to_schema=schema)
         colored_bins.append((bin_, bin_color))
     return colored_bins
 
@@ -161,7 +161,7 @@ def generate_colorbar_img(width=200, height=100, **kwargs):
     """ Generate a colorbar, via generate_colored_bins. """
 
     colormap = kwargs.get('colormap')
-    colored_bins = generate_colored_bins(to_schema='rgb', **kwargs)
+    colored_bins = generate_colored_bins(schema='rgb', **kwargs)
     img = Image.new('RGB', (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
     left_bin = colored_bins[0][0]

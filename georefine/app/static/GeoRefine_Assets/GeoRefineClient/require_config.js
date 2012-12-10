@@ -1,184 +1,194 @@
 if (typeof GRC_BASE_PATH == 'undefined'){
-    GRC_BASE_PATH = "";
+  GRC_BASE_PATH = "";
 }
 if (typeof ASSETS_PATH == 'undefined'){
-    ASSETS_PATH = GRC_BASE_PATH;
+  ASSETS_PATH = GRC_BASE_PATH;
 }
 
 if (typeof BASE_URL == 'undefined'){
-    BASE_URL = GRC_BASE_PATH;
+  BASE_URL = GRC_BASE_PATH;
 }
 
 var config= {
-    baseUrl: GRC_BASE_PATH,
-	deps: [],
-	paths: {
-		requireLib: ASSETS_PATH + "/js/require",
-		text: ASSETS_PATH + "/js/requirejs-text",
-		rless: ASSETS_PATH + "/js/rless",
-		less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
-		jquery: ASSETS_PATH + "/js/jquery",
-		underscore: ASSETS_PATH + "/js/underscore.js/underscore",
-		backbone: ASSETS_PATH + "/js/backbone",
-		_s: ASSETS_PATH + "/js/underscore.string",
-		jqplot: ASSETS_PATH + "/js/jqplot/jquery.jqplot.min",
-		jqp_bar: ASSETS_PATH + "/js/jqplot/plugins/jqplot.barRenderer.min",
-		jqp_cat_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.categoryAxisRenderer.min",
-		jqp_log_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.logAxisRenderer.min",
-		flot: ASSETS_PATH + "/js/flot/jquery.flot",
-		DataTables: ASSETS_PATH + "/js/DataTables/media/js/jquery.dataTables.min",
-		jqForm: ASSETS_PATH + "/js/jquery.form",
-	},
-	
-	shim: {
-		underscore: {
-		  exports: "_"
-		},
+  baseUrl: GRC_BASE_PATH,
+  deps: [],
+  paths: {
+    requireLib: ASSETS_PATH + "/js/require",
+    text: ASSETS_PATH + "/js/requirejs-text",
+    rless: ASSETS_PATH + "/js/rless",
+    less: ASSETS_PATH + "/js/less.js/dist/less-1.3.1",
+    jquery: ASSETS_PATH + "/js/jquery",
+    underscore: ASSETS_PATH + "/js/underscore.js/underscore",
+    backbone: ASSETS_PATH + "/js/backbone",
+    _s: ASSETS_PATH + "/js/underscore.string",
+    jqplot: ASSETS_PATH + "/js/jqplot/jquery.jqplot.min",
+    jqp_bar: ASSETS_PATH + "/js/jqplot/plugins/jqplot.barRenderer.min",
+    jqp_cat_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.categoryAxisRenderer.min",
+    jqp_log_axis_renderer: ASSETS_PATH + "/js/jqplot/plugins/jqplot.logAxisRenderer.min",
+    flot: ASSETS_PATH + "/js/flot/jquery.flot",
+    DataTables: ASSETS_PATH + "/js/DataTables/media/js/jquery.dataTables.min",
+    jqForm: ASSETS_PATH + "/js/jquery.form",
+  },
 
-		backbone: {
-		  deps: ["underscore", "jquery"],
-		  exports: "Backbone"
-		},
+  shim: {
+    underscore: {
+      exports: "_"
+    },
 
-		ui: {
-		  deps: ["jquery"],
-		},
+    backbone: {
+      deps: ["underscore", "jquery"],
+      exports: "Backbone"
+    },
 
-		openlayers: {},
+    ui: {
+      deps: ["jquery"],
+    },
 
-		jqplot: {
-		  deps: ["jquery"],
-		},
+    openlayers: {},
 
-		jqp_bar: {
-		  deps: ["jqplot"],
-		},
+    jqplot: {
+      deps: ["jquery"],
+    },
 
-		jqp_cat_axis_renderer: {
-		  deps: ["jqplot"],
-		},
+    jqp_bar: {
+      deps: ["jqplot"],
+    },
 
-		jqp_log_axis_renderer: {
-		  deps: ["jqplot"],
-		},
+    jqp_cat_axis_renderer: {
+      deps: ["jqplot"],
+    },
 
-		jqwindow: {
-		  deps: ["jquery", "ui"]
-		},
+    jqp_log_axis_renderer: {
+      deps: ["jqplot"],
+    },
 
-		qtip: {
-		  deps: ["jquery"]
-		},
+    jqwindow: {
+      deps: ["jquery", "ui"]
+    },
 
-        uiExtras: {
-            deps: ["jquery", "ui"]
-        },
+    qtip: {
+      deps: ["jquery"]
+    },
 
-		DataTables: {
-		  deps: ["jquery"]
-		},
+    uiExtras: {
+      deps: ["jquery", "ui"]
+    },
 
-		jqForm: {
-		  deps: ["jquery"]
-		}
-	},
+    DataTables: {
+      deps: ["jquery"]
+    },
 
-	packages: [
-		{
-		  "name": "Facets",
-		  "location": ASSETS_PATH + "/js/facets/src"
-		},
+    jqForm: {
+      deps: ["jquery"]
+    },
 
-		{
-		  "name": "MapView",
-		  "location": ASSETS_PATH + "/js/mapview/src"
-		},
-		
-		{
-		  "name": "Dialogs",
-		  "location": ASSETS_PATH + "/js/dialogs/src"
-		},
+    tabble: {
+      deps: ["ui"]
+    }
+  },
 
-		{
-		  "name": "ExportDialog",
-		  "location": ASSETS_PATH + "/js/export_dialog/src"
-		},
+  packages: [
+    {
+      "name": "Facets",
+      "location": ASSETS_PATH + "/js/facets/src"
+    },
 
-		{
-		  "name": "Charts",
-		  "location": ASSETS_PATH + "/js/charts/src"
-		},
+    {
+      "name": "MapView",
+      "location": ASSETS_PATH + "/js/mapview/src"
+    },
 
-		{
-		  "name": "Util",
-		  "location": ASSETS_PATH + "/js/util/src"
-		},
+    {
+      "name": "Dialogs",
+      "location": ASSETS_PATH + "/js/dialogs/src"
+    },
 
-		{
-		  "name": "Windows",
-		  "location": ASSETS_PATH + "/js/windows/src"
-		},
+    {
+      "name": "ExportDialog",
+      "location": ASSETS_PATH + "/js/export_dialog/src"
+    },
 
-		{
-		  "name": "uiExtras",
-		  "location": ASSETS_PATH + "/js/jquery.ui.extras"
-		},
+    {
+      "name": "Charts",
+      "location": ASSETS_PATH + "/js/charts/src"
+    },
 
-		{
-		  "name": "Menus",
-		  "location": ASSETS_PATH + "/js/menus/src"
-		},
+    {
+      "name": "Util",
+      "location": ASSETS_PATH + "/js/util/src"
+    },
 
-		{
-		  "name": "TableSelect",
-		  "location": ASSETS_PATH + "/js/table_select/src"
-		},
+    {
+      "name": "Windows",
+      "location": ASSETS_PATH + "/js/windows/src"
+    },
 
-		{
-		  "name": "TaskStatus",
-		  "location": ASSETS_PATH + "/js/task_status/src"
-		},
+    {
+      "name": "uiExtras",
+      "location": ASSETS_PATH + "/js/jquery.ui.extras"
+    },
 
-		{
-		  "name": "GeoRefineClient",
-		  "location": GRC_BASE_PATH + "/src"
-		},
+    {
+      "name": "Menus",
+      "location": ASSETS_PATH + "/js/menus/src"
+    },
 
-		{
-		  "name": "CommonStyles",
-		  "location": ASSETS_PATH + "/js/commonStyles/src"
-		},
+    {
+      "name": "TableSelect",
+      "location": ASSETS_PATH + "/js/table_select/src"
+    },
 
-        {
-          "name": "qtip",
-          "location": ASSETS_PATH + "/js/jquery.qtip",
-          "main": "jquery.qtip",
-        },
+    {
+      "name": "TaskStatus",
+      "location": ASSETS_PATH + "/js/task_status/src"
+    },
 
-        {
-          "name": "ui",
-          "location": ASSETS_PATH + "/js/jquery.ui",
-          "main": "js/jquery-ui-1.9.1.custom.js"
-        },
+    {
+      "name": "GeoRefineClient",
+      "location": GRC_BASE_PATH + "/src"
+    },
 
-        {
-          "name": "jqwindow",
-          "location": ASSETS_PATH + "/js/jquery.window",
-          "main": "jquery.window"
-        },
+    {
+      "name": "CommonStyles",
+      "location": ASSETS_PATH + "/js/commonStyles/src"
+    },
 
-        {
-          "name": "openlayers",
-          "location": ASSETS_PATH + "/js/openlayers",
-          "main": "OpenLayers"
-        }
-	]
+    {
+      "name": "qtip",
+      "location": ASSETS_PATH + "/js/jquery.qtip",
+      "main": "jquery.qtip",
+    },
+
+    {
+      "name": "ui",
+      "location": ASSETS_PATH + "/js/jquery.ui",
+      "main": "js/jquery-ui-1.9.1.custom.js"
+    },
+
+    {
+      "name": "jqwindow",
+      "location": ASSETS_PATH + "/js/jquery.window",
+      "main": "jquery.window"
+    },
+
+    {
+      "name": "openlayers",
+      "location": ASSETS_PATH + "/js/openlayers",
+      "main": "OpenLayers"
+    },
+
+    {
+      "name": "tabble",
+      "location": ASSETS_PATH + "/js/jquery.ui.tabble",
+      "main": "jquery.ui.tabble"
+    }
+  ]
 
 };
 
 if (typeof require == 'undefined'){
-    require = {};
+  require = {};
 }
 for (var k in config){
-    require[k] = config[k]
+  require[k] = config[k]
 }

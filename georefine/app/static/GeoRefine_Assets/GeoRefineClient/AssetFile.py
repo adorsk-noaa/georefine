@@ -116,5 +116,9 @@ assets = {
     'windows': {
         'type': 'git',
         'source': 'https://github.com/adorsk-noaa/bb_window.git'
+    },
+    'jquery.ui.tabble': {
+        'type': 'git',
+        'source': 'https://github.com/adorsk/jquery.ui.tabble.git'
     }
 }
