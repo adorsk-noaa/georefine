@@ -3,17 +3,17 @@ from PIL import Image, ImageDraw
 import colorsys
 
 
-def get_mapped_color(value, colormap, clip=True, cast=None):
+def get_mapped_color(normalized_value, colormap, clip=True, cast=None):
     color_attrs = colormap.keys()
     mapped_color = {}
     for attr in color_attrs:
         mapped_color[attr] = interpolate.lin_interpolate(
-            [value], colormap[attr], clip=clip)[0][1]
+            [normalized_value], colormap[attr], clip=clip)[0][1]
         if cast:
             mapped_color[attr] = cast(mapped_color[attr])
     return mapped_color
 
-def generate_hsv_bw_colormap(vmin=0, vmax=1, w2b=True):
+def generate_hsv_bw_colormap(vmin=0, vmax=1, w2b=True, **kwargs):
     if w2b:
         v = [(vmin, 0.0), (vmax, 1.0)]
     else:
@@ -24,7 +24,7 @@ def generate_hsv_bw_colormap(vmin=0, vmax=1, w2b=True):
         'v': v,
     }
 
-def generate_rgb_bw_colormap(vmin=0, vmax=1, w2b=True):
+def generate_rgb_bw_colormap(vmin=0, vmax=1, w2b=True, **kwargs):
     if w2b:
         points = [(vmin, 0.0), (vmax, 255)]
     else:
@@ -71,7 +71,7 @@ def convert_color(c, to_schema='rgb'):
 
 
 def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
-                  include_bins=[], value_bin_pct_width=.2):
+                  include_bins=[], value_bin_pct_width=.2, **kwargs):
     """ Generate a set of (v0, v1) bins from the given parameters.
     If 'include_bins' is specified, those bins are merged (see below) into the list 
     of generated bins.
@@ -143,14 +143,16 @@ def generate_bins(vmin=0, vmax=1, num_bins=10, include_values=[],
 
     return sorted(bins, key=lambda b: b[0])
 
-def generate_colored_bins(colormap=None, schema=None, **kwargs):
+def generate_colored_bins(vmin=0, vmax=1, colormap=None, schema=None, **kwargs):
     """ Generate list of (bin, rgb) tuples, via generate_bins. 
     Color value is taken at the midpoint of a bin.
     """
     colored_bins = []
     bins = generate_bins(**kwargs)
+    vrange = vmax - vmin
     for bin_ in bins:
         bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
+        normalized_mid = (bin_mid - vmin)/vrange
         bin_color = get_mapped_color(bin_mid, colormap, clip=True)
         if schema:
             bin_color = convert_color(bin_color, to_schema=schema)
@@ -159,8 +161,7 @@ def generate_colored_bins(colormap=None, schema=None, **kwargs):
 
 def generate_colorbar_img(width=200, height=100, **kwargs):
     """ Generate a colorbar, via generate_colored_bins. """
-
-    colormap = kwargs.get('colormap')
+    kwargs.setdefault('colormap', generate_hsv_bw_colormap(**kwargs))
     colored_bins = generate_colored_bins(schema='rgb', **kwargs)
     img = Image.new('RGB', (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)

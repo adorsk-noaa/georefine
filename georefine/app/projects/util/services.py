@@ -12,7 +12,18 @@ import tarfile
 import os
 import logging
 import shutil
+from StringIO import StringIO
 
+
+def get_colorbar(colorbar_def, width=100, height=1, format_='GIF'):
+    colorbar_img = cmap.generate_colorbar_img(
+        width=width, 
+        height=height,
+        **colorbar_def
+    )
+    buf = StringIO()
+    colorbar_img.save(buf, format=format_)
+    return buf.getvalue()
 
 def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             geom_entity=None, wms_parameters={}, **kwargs):

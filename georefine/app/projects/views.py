@@ -180,3 +180,12 @@ def layer_wms(project_id, layer_id):
         wms_parameters=wms_parameters
     )
     return Response(map_image, mimetype=wms_parameters['FORMAT'])
+
+@bp.route('/colorbar/', methods=['GET'])
+def get_colorbar():
+    colorbar_def = json.loads(request.args.get('CBAR'))
+    width = int(request.args.get('WIDTH', 100))
+    height = int(request.args.get('HEIGHT', 1))
+    colorbar_data = projects_services.get_colorbar(colorbar_def, width=width, height=height, format_='PNG')
+    return Response(colorbar_data, mimetype='image/png')
+
