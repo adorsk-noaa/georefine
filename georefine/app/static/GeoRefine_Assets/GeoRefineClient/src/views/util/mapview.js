@@ -302,10 +302,8 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
     var GRMapEditorView = BaseMapEditor.extend({
 
       getLayerCollectionEditorClass: function(){
-
         var BaseCollectionEditor = BaseMapEditor.prototype.getLayerCollectionEditorClass.apply(this, arguments);
         var GRCollectionEditor = BaseCollectionEditor.extend({
-
           getLayerEditorClass: function(){
             var BaseLayerEditor = BaseCollectionEditor.prototype.getLayerEditorClass.apply(this, arguments);
             var GRLayerEditor = BaseLayerEditor.extend({
@@ -317,7 +315,6 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
             return GRLayerEditor;
           }
         });
-
         return GRCollectionEditor;
       }
     });
@@ -429,37 +426,40 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
 
   createLayerModelFromDef = function(mapConfig, layerDef){
     // Create model for layer.
-    var layerModel = new Backbone.Model(_.extend({},
-                                                 mapConfig.default_layer_attributes,
-                                                 layerDef,
-                                                 {
-                                                   options: _.extend({},
-                                                                     mapConfig.default_layer_options,
-                                                                     layerDef.options
-                                                                    ),
-                                                                    // Have layers include map's filter groups.
-                                                                    primary_filter_groups: mapConfig.primary_filter_groups,
-                                                                    base_filter_groups: mapConfig.base_filter_groups,
-                                                                    // Set initial visible state per disabled state.
-                                                                    visible: (layerDef.visible != null) ? layerDef.visible : ! layerDef.disabled
-                                                 }
-                                                ));
+    var layerModel = new Backbone.Model(
+      _.extend(
+        {},
+        mapConfig.default_layer_attributes,
+        layerDef,
+        {
+          options: _.extend(
+            {},
+            mapConfig.default_layer_options,
+            layerDef.options
+          ),
+          // Have layers include map's filter groups.
+          primary_filter_groups: mapConfig.primary_filter_groups,
+          base_filter_groups: mapConfig.base_filter_groups,
+          // Set initial visible state per disabled state.
+          visible: (layerDef.visible != null) ? layerDef.visible : ! layerDef.disabled
+        }
+    ));
 
-                                                // Handle customizations for specific layer types.
-                                                if (layerDef.source == 'georefine_data_layer'){
-                                                  _.each(['data_entity', 'geom_entity', 'geom_id_entity'], function(entity_attr){
-                                                    if (layerDef[entity_attr]){
-                                                      var entityModel = new Backbone.Model(layerDef[entity_attr]);
-                                                      layerModel.set(entity_attr, entityModel);
-                                                    }
-                                                  });
-                                                }
-                                                else if (layerDef.source == 'georefine_wms_layer'){
-                                                  var service_url = _s.sprintf("%s/%s/wms", GeoRefine.app.WMSLayerEndpoint, layerModel.id);
-                                                  layerModel.set('service_url', service_url);
-                                                }
+    // Handle customizations for specific layer types.
+    if (layerDef.source == 'georefine_data_layer'){
+      _.each(['data_entity', 'geom_entity', 'geom_id_entity'], function(entity_attr){
+        if (layerDef[entity_attr]){
+          var entityModel = new Backbone.Model(layerDef[entity_attr]);
+          layerModel.set(entity_attr, entityModel);
+        }
+      });
+    }
+    else if (layerDef.source == 'georefine_wms_layer'){
+      var service_url = _s.sprintf("%s/%s/wms", GeoRefine.app.WMSLayerEndpoint, layerModel.id);
+      layerModel.set('service_url', service_url);
+    }
 
-                                                return layerModel;
+    return layerModel;
   };
 
   var getMapEditorLayers = function(mapEditor, opts){

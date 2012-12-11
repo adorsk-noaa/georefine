@@ -105,28 +105,19 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
 
         # Create classes for styling if there was a data entity.
         if data_entity:
-            # Create class bounds.
-            num_bins = data_entity.get('NUM_CLASSES', 25)
-            # later: figure out where to standardize caps, here or mapview?
-            vmin = float(data_entity.get('min', 0))
-            vmax = float(data_entity.get('max', 1))
-
-            colormap = data_entity.get(
-                'colormap', cmap.generate_hsv_bw_colormap(vmin=vmin, vmax=vmax))
 
             # Generate color bins.
-            bin_kwargs = {
-                'schema': 'rgb',
-                'colormap': colormap,
-                'vmin': vmin,
-                'vmax': vmax,
-                'num_bins': num_bins
-            }
-            for kwarg in ['include_bins', 'include_values']:
-                if data_entity.has_key(kwarg):
-                    bin_kwargs[kwarg] = data_entity.get(kwarg)
-
-            color_bins = cmap.generate_colored_bins(**bin_kwargs)
+            color_bins = cmap.generate_colored_bins(
+                schema= 'rgb',
+                vmin=data_entity.get('vmin', 0),
+                vmax=data_entity.get('vmax', 1),
+                num_bins=data_entity.get('num_bins', 20),
+                colormap=data_entity.get(
+                    'colormap', cmap.generate_hsv_bw_colormap()
+                ),
+                include_bins=data_entity.get('include_bins', []),
+                include_values=data_entity.get('include_values', []),
+            )
 
             # Add bottom/top bins.
             color_bins.insert(0, ((None, color_bins[0][0][0]), color_bins[0][1]))

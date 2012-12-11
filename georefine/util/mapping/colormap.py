@@ -148,7 +148,7 @@ def generate_colored_bins(vmin=0, vmax=1, colormap=None, schema=None, **kwargs):
     Color value is taken at the midpoint of a bin.
     """
     colored_bins = []
-    bins = generate_bins(**kwargs)
+    bins = generate_bins(vmin=vmin, vmax=vmax, **kwargs)
     vrange = vmax - vmin
     for bin_ in bins:
         bin_mid = bin_[0] + (bin_[1] - bin_[0])/2.0
