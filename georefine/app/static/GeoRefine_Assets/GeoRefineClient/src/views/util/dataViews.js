@@ -20,8 +20,8 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
 
         // Initialize defaults.
         GeoRefine.app.dataViews.defaults = dvState.defaults || {
-            width: 500,
-            height: 500
+            width: 485,
+            height: 300
         };
 
         // Initialize floating data views registry.
@@ -213,10 +213,6 @@ function($, Backbone, _, _s, Util, Windows, mapViewUtil, chartsUtil, serializati
             "showFooter": false,
             "scrollable": false
         }, opts);
-
-        // Add offset to x, y
-        opts.x += dvOffset.left;
-        opts.y += dvOffset.top;
 
         // Create model.
         var model = new Backbone.Model(opts);
