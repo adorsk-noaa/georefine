@@ -258,7 +258,8 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
 
     // Assign colormap if none was specified.
     if (! data_entity.get('colormap')){
-      var cmapId = data_entity.get('cmapId') || 'ColorBrewer:Rd';
+      var cmapId = data_entity.get('colormap_id') || 'ColorBrewer:Rd';
+      console.log(cmapId, colormapUtil.CMAPS);
       data_entity.set('colormap', colormapUtil.CMAPS[cmapId]);
     }
 
@@ -453,6 +454,14 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
           layerModel.set(entity_attr, entityModel);
         }
       });
+
+      // TESTING!
+      var de = layerModel.get('data_entity');
+      de.set('color_scale_type', 'diverging');
+      de.set('colormap_id', 'ColorBrewer:PiG');
+      de.set('vmin', -1);
+      de.set('vmax', 1);
+      de.set('include_values', [0]);
     }
     else if (layerDef.source == 'georefine_wms_layer'){
       var service_url = _s.sprintf("%s/%s/wms", GeoRefine.app.WMSLayerEndpoint, layerModel.id);

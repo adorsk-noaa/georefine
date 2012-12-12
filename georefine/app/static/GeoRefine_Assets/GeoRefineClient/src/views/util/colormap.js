@@ -47,15 +47,18 @@ define(
       ['Or', 'Pu']
     ];
 
-    $.each(diverging_hue_pairs, function(i, pair){
-      var cmapId = 'CB' + ':' + pair.join('');
-      var h1 = CB_HUES[pair[0]];
-      var h2 = CB_HUES[pair[1]];
-      CMAPS[cmapId] = {
-        'h': [[-1, h1],[0, h1],[0, h2],[1, h2]],
-        's': [[-1, MAX_S], [0, MIN_S], [0, MIN_S], [1, MAX_S]],
-        'v': [[-1, MAX_V], [0, MIN_V], [0, MIN_V], [1, MAX_V]]
-      };
+    $.each(diverging_hue_pairs, function(i, orig_pair){
+      var reversed_pair = [orig_pair[1], orig_pair[0]];
+      $.each([orig_pair, reversed_pair], function(j, pair){
+        var cmapId = CB_PREFIX + ':' + pair.join('');
+        var h1 = CB_HUES[pair[0]];
+        var h2 = CB_HUES[pair[1]];
+        CMAPS[cmapId] = {
+          'h': [[0, h1],[.5, h1],[.5, h2],[1, h2]],
+          's': [[0, MAX_S], [.5, MIN_S], [.5, MIN_S], [1, MAX_S]],
+          'v': [[0, MAX_V], [.5, MIN_V], [.5, MIN_V], [1, MAX_V]]
+        };
+      });
     });
 
     return {
