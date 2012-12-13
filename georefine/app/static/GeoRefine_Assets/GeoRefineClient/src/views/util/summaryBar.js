@@ -119,16 +119,14 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         });
 
         // Listen for quantity field changes.
-        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
-        qFieldSelect.model.on('change:selection', function(){
-            var qfield_id = qFieldSelect.model.get('selection');
-            var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
+        GeoRefine.app.facetsEditor.model.on('change:selected_qfield', function(){
+            var selectedField = GeoRefine.app.facetsEditor.model.get('selected_qfield');
             this.set('quantity_field', selectedField);
         }, GeoRefine.app.summaryBar.model);
 
         // Remove callback when model is removed.
         GeoRefine.app.summaryBar.model.on('remove', function(){
-            qFieldSelect.model.off(null, null, this);
+            GeoRefine.app.facetsEditor.model.off(null, null, this);
         }, GeoRefine.app.summaryBar.model);
 
         // Get data when parameters change.
@@ -147,8 +145,7 @@ function($, Backbone, _, _s, Util, requestsUtil, filtersUtil, formatUtil, serial
         decorateSummaryBar();
 
         // Set quantity field.
-        var qfield_id = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
-        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
+        var qfield = GeoRefine.app.facetsEditor.model.get('selected_qfield');
 
         GeoRefine.app.summaryBar.model.set({quantity_field: qfield }, {silent: true});
 

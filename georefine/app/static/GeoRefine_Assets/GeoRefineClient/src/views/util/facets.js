@@ -469,15 +469,14 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
 
         // Listen for quantity field changes, if not a timeSlider.
         if (facetView.model.get('type') != 'timeSlider'){
-          var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
-          qFieldSelect.model.on('change:selection', function(){
-              var qfield_id = qFieldSelect.model.get('selection');
-              var selectedField = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
+          GeoRefine.app.facetsEditor.model.on('change:selected_qfield', function(){
+              var selectedField = GeoRefine.app.facetsEditor.model.get('selected_qfield');
               this.set('quantity_field', selectedField);
           }, facetView.model);
+
           // Remove callback when model is removed.
           facetView.model.on('remove', function(){
-              qFieldSelect.model.off(null, null, this);
+              GeoRefine.app.facetsEditor.model.off(null, null, this);
           }, facetView.model);
 
           // Update totals when the summary bar totals change.
@@ -533,8 +532,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
     var disconnectFacet = function(facet){
 
         // Remove qfield callback.
-        var qFieldSelect = GeoRefine.app.facetsEditor.qFieldSelect;
-        qFieldSelect.model.off(null, null, facet.model);
+        GeoRefine.app.facetsEditor.model.off(null, null, facet.model);
 
         // Remove summaryBar callback.
         GeoRefine.app.summaryBar.model.off(null, null, facet.model);
@@ -562,8 +560,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         decorateFacet(facet);
 
         // Set quantity field.
-        var qfield_id = GeoRefine.app.facetsEditor.qFieldSelect.model.get('selection');
-        var qfield = GeoRefine.app.facetsEditor.model.get('quantity_fields').get(qfield_id);
+        var qfield = GeoRefine.app.facetsEditor.model.get('selected_qfield');
         facet.model.set({quantity_field: qfield }, {silent: true});
 
         // Set filters.
@@ -664,7 +661,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
     actionHandlers.facets_facetsEditorSetQField = function(opts){
         var facetsEditor = GeoRefine.app.facetsEditor;
         var qfield = facetsEditor.model.get('quantity_fields').get(opts.id);
-        facetsEditor.qFieldSelect.model.set('selection', qfield.id);
+        facetsEditor.model.set('selected_qfield', qfield);
     };
 
     // Define alterState hook for saving facetEditor state.
