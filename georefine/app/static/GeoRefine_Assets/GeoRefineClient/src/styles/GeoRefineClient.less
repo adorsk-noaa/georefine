@@ -38,123 +38,124 @@
     width: 100%;
     height: 100%;
     position: relative;
+  }
 
-    @header_h: 1px;
-    > .header {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: @header_h;
+  > .inner > table {
+    height: 100%;
+    width: 100%;
+  }
 
-      > .inner{
-        position: relative;
-        width: 100%;
-        height: 100%;
+  > .inner > table, .inner > table > tbody{
 
-        > .controls{
-          position: absolute;
-          right: 25px;
-          bottom: 0;
-          height: 30px;
+    > tr{
+      > td{
+        vertical-align: top;
+      }
+    }
 
-          > .control{
-            .button;
-            display: inline-block;
-            vertical-align: center;
+    > tr.header-row {
+
+      > .header {
+
+        > .inner{
+          position: relative;
+          width: 100%;
+          height: 100%;
+
+          > .controls{
+            float: right;
+            margin-bottom: @padding_normal;
+            > .control{
+              .button;
+              display: inline-block;
+              vertical-align: center;
+            }
           }
         }
       }
     }
 
-    > .body{
-      position: absolute;
-      top: @header_h;
-      bottom: 0;
-      left: 0;
-      right: 0;
+    > tr.body-row{
 
-      > .inner{
-        position: relative;
-        width: 100%;
+      > td {
         height: 100%;
+        position: relative;
 
-
-        > .left-cell{
-          float: left;
-          height: 100%;
-          width: 300px;
-
-          > .inner{
-            height: 100%;
-            width: 100%;
-            display: inline-block;
-          }
+        > .inner{
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
         }
+      }
 
-        > .right-cell{
-          height: 100%;
-          overflow: hidden;
+      > .left-cell{
+        width: 300px;
 
-          > .inner{
-            > .header{
-              > h3{
-                margin: 0 0px 5px 5px;
-                padding: 5px;
-                font-weight: normal;
-                font-size: 16px;
-                background-color: @chrome_secondary;
-              }
+      }
 
-              > .launchers {
-                margin-left: 5px;
-                height: 27px;
-                border-bottom: thin solid @chrome_secondary;
-              }
+      > .right-cell{
+        overflow: hidden;
 
-              overflow-y: scroll;
-              overflow-x: hidden;
+        > .inner{
+          > .header{
+            > h3{
+              margin: 0 0px 5px 5px;
+              padding: 5px;
+              font-weight: normal;
+              font-size: 16px;
+              background-color: @chrome_secondary;
             }
 
-            > .body{
-              position: relative;
-              width: 100%;
+            > .launchers {
+              margin-left: 5px;
+              height: 27px;
+              border-bottom: thin solid @chrome_secondary;
+            }
 
-              > .data-views-container{
-                position: absolute;
-                top: 0;
-                bottom: 0px;
-                left: 5px;
-                right: 0;
-                overflow: scroll;
-                // Pad for scrollbars.
-                padding: 0 20px 20px 0;
+            overflow-y: scroll;
+            overflow-x: hidden;
+          }
 
-                > .inner{
-                  position: relative;
-                  height: 100%;
-                  width: 100%;
+          > .body{
+            position: relative;
+            width: 100%;
 
-                  > .data-views-constraint{
-                    position: absolute;
-                    visibility: hidden;
-                    top: 0;
-                    left: 0;
-                    width: 3000px;
-                    height: 3000px;
-                  }
+            > .data-views-container{
+              position: absolute;
+              top: 0;
+              bottom: 0px;
+              left: 5px;
+              right: 0;
+              overflow: scroll;
+              // Pad for scrollbars.
+              padding: 0 20px 20px 0;
 
-                  > .data-views{
-                    position: absolute;
-                    top: 5px;
-                    bottom: 0;
-                    left: 5px;
-                    right: 5px;
-                    overflow: visible;
+              > .inner{
+                position: relative;
+                height: 100%;
+                width: 100%;
 
-                    .window_frame{
-                      padding: @padding_normal;
-                    }
+                > .data-views-constraint{
+                  position: absolute;
+                  visibility: hidden;
+                  top: 0;
+                  left: 0;
+                  width: 3000px;
+                  height: 3000px;
+                }
+
+                > .data-views{
+                  position: absolute;
+                  top: 5px;
+                  bottom: 0;
+                  left: 5px;
+                  right: 5px;
+                  overflow: visible;
+
+                  .window_frame{
+                    padding: @padding_normal;
                   }
                 }
               }
@@ -170,4 +171,8 @@
   color: #4272DB !important;
   cursor: help !important;
   text-decoration: none !important;
+}
+
+.clearfix {
+  clear: both;
 }
