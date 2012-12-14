@@ -226,6 +226,7 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
             });
             return formatted_filters;
         };
+        numericFacet.updateFilters();
 
         // Define formatter for the view.
         numericFacet.formatter = function(format, value){
