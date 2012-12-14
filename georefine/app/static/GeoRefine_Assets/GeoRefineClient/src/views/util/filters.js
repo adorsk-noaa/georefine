@@ -68,14 +68,20 @@ function($, Backbone, _, _s, Util, serializationUtil){
     };
 
 
-    // Update model's filter attributes by getting filters from its
-    // filter groups.
-    var updateModelFilters = function(model, filterCategory, opts){
+    // Get filters from model's specified filter group.
+    var getModelFilters = function(model, filterCategory, opts){
         var filters = _.clone(model.get(filterCategory + '_filters')) || {} ;
         _.each(model.get(filterCategory + '_filter_groups'), function(filterGroupId, key){
             var filterGroup = GeoRefine.app.filterGroups[filterGroupId];
             filters[filterGroupId] = filterGroup.getFilters();
         });
+        return filters;
+    };
+
+    // Update model's filter attributes by getting filters from its
+    // filter groups.
+    var updateModelFilters = function(model, filterCategory, opts){
+        var filters = getModelFilters(model, filterCategory, opts);
         var setObj = {};
         setObj[filterCategory + '_filters'] = filters;
         model.set(setObj, opts);
@@ -112,6 +118,7 @@ function($, Backbone, _, _s, Util, serializationUtil){
     var filtersUtil = {
         filterObjectGroupsToArray: filterObjectGroupsToArray,
         setUpFilterGroups: setUpFilterGroups,
+        getModelFilters: getModelFilters,
         updateModelFilters: updateModelFilters,
         alterStateHooks : [
             filterGroups_alterState
