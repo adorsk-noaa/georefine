@@ -65,9 +65,7 @@ function($, Backbone, _, _s, Util, filtersUtil){
         // Initialize query definition.
         // Note: 'ID' must be 'inner' to conform to conventions.
         var inner_q = {
-            'ID': 'inner',
-            'SELECT_GROUP_BY': true,
-            'GROUP_BY': []
+            'ID': 'inner'
         };
 
         // Add quantity field parameters if quantity field exists.
@@ -93,8 +91,7 @@ function($, Backbone, _, _s, Util, filtersUtil){
         // Initialize the outer query.
         var outer_q = {
             'ID': query_id || 'outer',
-            'FROM': [{'ID': 'inner', 'SOURCE': inner_query}],
-            'GROUP_BY': []
+            'FROM': [{'ID': 'inner', 'SOURCE': inner_query}]
         };
 
         // Add quantity field parameters if quantity field exists.
