@@ -226,7 +226,6 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
             });
             return formatted_filters;
         };
-        numericFacet.updateFilters();
 
         // Define formatter for the view.
         numericFacet.formatter = function(format, value){
@@ -543,6 +542,9 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
         // Set quantity field.
         var qfield = GeoRefine.app.facetsEditor.model.get('selected_qfield');
         facet.model.set({quantity_field: qfield }, {silent: true});
+
+        // Update filters.
+        facet.updateFilters();
 
         // Set filters.
         updateFacetModelPrimaryFilters(facet.model, {silent: true});
