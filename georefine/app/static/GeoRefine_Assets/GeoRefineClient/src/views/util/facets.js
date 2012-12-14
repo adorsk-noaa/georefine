@@ -171,22 +171,11 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                     var base_histogram = [];
                     var primary_histogram = [];
 
-                    // Generate stats and choices from data.
-                    var range_min = null;
-                    var range_max = null;
+                    // Generate choices from data.
                     var choices = [];
                     _.each(results['keyed_results'], function(result){
                         var bucketLabel = result['label'];
                         var bminmax = functionsUtil.parseBucketLabel(bucketLabel);
-
-                        if (bminmax.min < range_min || range_min == null){
-                            range_min = bminmax.min;
-                        }
-
-                        if (bminmax.max > range_max || range_max == null){
-                           range_max = bminmax.max; 
-                        }
-
 
                         if (result['data']['base']){
                             var base_bucket = {
@@ -212,19 +201,10 @@ function($, Backbone, _, _s, Facets, Util, summaryBarUtil, requestsUtil, filters
                     base_histogram = _.sortBy(base_histogram, function(b){return b.count});
                     primary_histogram = _.sortBy(primary_histogram, function(b){return b.count;});
 
-                    if (opts.updateRange){
-                        _this.get('range').set({
-                            min: range_min,
-                            max: range_max
-                        });
-                    }
-
                     _this.set({
                         base_histogram: base_histogram,
                         filtered_histogram: primary_histogram,
                     });
-
-
                 }
             });
 
