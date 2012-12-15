@@ -219,7 +219,7 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     return keyed_results
 
 
-def create_project(project_file=None, logger=logging.getLogger(), 
+def create_project(input_path=None, logger=logging.getLogger(), 
                    session=None, db_uri=None, **kwargs):
     """ Create a project from a project bundle file. """
     # Get transactional session.
@@ -242,23 +242,28 @@ def create_project(project_file=None, logger=logging.getLogger(),
                                           'project_' + str(project.id))
         os.makedirs(project.static_dir)
 
-        # Unpack project bundle to temp dir.
-        tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
-        tar = tarfile.open(project_file)
-        tar.extractall(tmp_dir)
-        tar.close()
+        # If tarball, unpack project bundle to temp dir.
+        tmp_dir = None
+        if input_path.endwsith('.tar.gz') or input_path.endswith('.tgz'):
+            tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
+            tar = tarfile.open(project_file)
+            tar.extractall(src_dir)
+            tar.close()
+            src_dir = tmp_dir
+        else:
+            src_dir = input_path
 
         # Ingest app config.
-        manage.ingest_app_config(project, tmp_dir)
+        manage.ingest_app_config(project, src_dir)
 
         # Ingest project static files.
-        manage.ingest_static_files(project, tmp_dir)
+        manage.ingest_static_files(project, src_dir)
 
         # Ingest map layers.
-        manage.ingest_map_layers(project, tmp_dir, session)
+        manage.ingest_map_layers(project, src_dir, session)
 
         # Setup project schema and db.
-        manage.ingest_schema(project, tmp_dir)
+        manage.ingest_schema(project, src_dir)
         if not db_uri:
             project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
         else:
@@ -268,10 +273,11 @@ def create_project(project_file=None, logger=logging.getLogger(),
         dao = manage.get_dao(project)
         dao.create_all()
         ingest_kwargs = kwargs.get('ingest_kwargs', {})
-        manage.ingest_data(project, tmp_dir, dao, **ingest_kwargs)
+        manage.ingest_data(project, src_dir, dao, **ingest_kwargs)
 
-        # Clean up tmpdir.
-        shutil.rmtree(tmp_dir)
+        # Clean up tmpdir (if created).
+        if tmp_dir:
+            shutil.rmtree(tmp_dir)
 
         session.commit()
         trans.commit()
@@ -281,7 +287,8 @@ def create_project(project_file=None, logger=logging.getLogger(),
         try:
             if project:
                 delete_project_dirs(project)
-            shutil.rmtree(tmp_dir)
+            if tmp_dir:
+                shutil.rmtree(tmp_dir)
         except NameError:
             pass
         trans.rollback()

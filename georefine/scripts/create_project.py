@@ -4,7 +4,7 @@ import argparse
 
 def main():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('project_file')
+    argparser.add_argument('input_path')
     argparser.add_argument('--db-uri')
     argparser.add_argument('--commit-interval', default=int(1e5), type=int)
 
@@ -17,7 +17,7 @@ def main():
 
     ingest_kwargs = {'commit_interval': args.commit_interval}
 
-    p = create_project(args.project_file, logger=logger, db_uri=args.db_uri,
+    p = create_project(args.input_path, logger=logger, db_uri=args.db_uri,
                        ingest_kwargs=ingest_kwargs)
     print "project id: ", p.id
 
