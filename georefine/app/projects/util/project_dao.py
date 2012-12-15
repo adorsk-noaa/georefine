@@ -22,19 +22,20 @@ class ProjectDAO(SqlAlchemyDAO):
         # Get normal query.
         q, q_registries = self.get_query(query_def, return_registries=True)
 
-
-
         # Get entities from registry.
-        geom_entity = self.get_registered_entity(q_registries['sources'],
-                                                 q_registries['entities'],
-                                                 geom_entity_def)
+        geom_entity = self.get_registered_entity(
+            source_registry=q_registries['sources'],
+            entity_registry=q_registries['entities'],
+            entity_def=geom_entity_def
+        )
 
-        frame_entity = self.get_registered_entity(q_registries['sources'],
-                                                 q_registries['entities'],
-                                                 frame_entity_def)
+        frame_entity = self.get_registered_entity(
+            source_registry=q_registries['sources'],
+            entity_registry=q_registries['entities'],
+            entity_def=frame_entity_def
+        )
         # Get entity's source element.
         geom_el = self.get_source_entity(geom_entity)
-        print geom_el
 
         # If element is a column...
         if isinstance(geom_el, (Column, RawColumn,)):
@@ -95,12 +96,6 @@ class ProjectDAO(SqlAlchemyDAO):
                         parent = from_
 
         return parent
-
-    def get_registered_entity(self, source_registry, entity_registry,
-                              entity_def):
-        entity = super(ProjectDAO, self).get_registered_entity(
-            source_registry, entity_registry, entity_def)
-        return entity
 
     def alter_col(self, col):
         if isinstance(col, GeometryExtensionColumn):

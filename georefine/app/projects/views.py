@@ -39,6 +39,12 @@ def georefine_client(project_id):
     context_root = app.config['APPLICATION_ROOT']
     project = get_project(project_id)
 
+    ### TESTING
+    ac = {}
+    execfile('/tmp/grt/app_config.py', ac)
+    project.app_config = ac['app_config']
+    ###
+
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
