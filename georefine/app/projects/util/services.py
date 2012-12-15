@@ -244,7 +244,7 @@ def create_project(input_path=None, logger=logging.getLogger(),
 
         # If tarball, unpack project bundle to temp dir.
         tmp_dir = None
-        if input_path.endwsith('.tar.gz') or input_path.endswith('.tgz'):
+        if input_path.endswith('.tar.gz') or input_path.endswith('.tgz'):
             tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
             tar = tarfile.open(project_file)
             tar.extractall(src_dir)
