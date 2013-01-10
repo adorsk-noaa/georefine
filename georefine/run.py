@@ -28,9 +28,8 @@ if __name__ == '__main__':
     )
 
     # Defaults.
-    app.config['SERVER_NAME'] = None
-    app.config['APPLICATION_ROOT'] = 'georefine'
-    app.config['DEBUG'] = True
+    app.config.setdefault('SERVER_NAME', None)
+    app.config.setdefault('DEBUG', True)
 
     port = 8000
     db_url = None
