@@ -3,7 +3,6 @@ from flask import Blueprint, request, redirect, render_template, flash, g, sessi
 from werkzeug import secure_filename
 from jinja2 import Markup
 from georefine.app import db
-from georefine.app.projects.forms import CreateProjectForm
 from georefine.app.projects.models import Project, MapLayer
 from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
