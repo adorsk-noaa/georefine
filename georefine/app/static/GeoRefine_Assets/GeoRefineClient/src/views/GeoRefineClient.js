@@ -45,10 +45,10 @@ function($, Backbone, _, ui, qtip, _s, Facets, MapView, Charts, Windows, Util, G
       };
 
       // Set endpoints
-      GeoRefine.app.requestsEndpoint = _s.sprintf('/%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-      GeoRefine.app.keyedStringsEndpoint = _s.sprintf('/%s/ks', GeoRefine.config.context_root);
-      GeoRefine.app.dataLayerEndpoint = _s.sprintf('/%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
-      GeoRefine.app.WMSLayerEndpoint = _s.sprintf('/%s/projects/%s/layer', GeoRefine.config.context_root, GeoRefine.config.project_id);
+      GeoRefine.app.requestsEndpoint = _s.sprintf('%s/projects/execute_requests/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+      GeoRefine.app.keyedStringsEndpoint = _s.sprintf('%s/ks', GeoRefine.config.context_root);
+      GeoRefine.app.dataLayerEndpoint = _s.sprintf('%s/projects/get_map/%s/', GeoRefine.config.context_root, GeoRefine.config.project_id);
+      GeoRefine.app.WMSLayerEndpoint = _s.sprintf('%s/projects/%s/layer', GeoRefine.config.context_root, GeoRefine.config.project_id);
 
       // Set tokens.
       GeoRefine.app.tokens = {
