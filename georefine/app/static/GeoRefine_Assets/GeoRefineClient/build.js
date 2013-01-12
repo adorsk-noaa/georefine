@@ -1,4 +1,5 @@
 requirejs = require('requirejs');
+wrench = require('wrench');
 
 fs = require('fs');
 vm = require('vm');
@@ -6,6 +7,12 @@ vm = require('vm');
 requireConfig = {};
 BASE_URL = __dirname + '/';
 DIST_DIR = __dirname + '/dist';
+
+// Create dist dir if it does not exist.
+if (! fs.existsSync(DIST_DIR)){
+  wrench.mkdirSyncRecursive(DIST_DIR);
+}
+
 requireConfigPath = BASE_URL + 'require_config.js';
 script = vm.createScript(fs.readFileSync(requireConfigPath));
 requireConfig = {};
