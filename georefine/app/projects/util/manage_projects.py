@@ -15,6 +15,16 @@ sys.modules['pysqlite2'] = pyspatialite
 import logging
 
 
+class LoggerLogHandler(logging.Handler):
+    """ Custom log handler that logs messages to another
+    logger. This can be used to chain together loggers. """
+    def __init__(self, logger=None, **kwargs):
+        logging.Handler.__init__(self, **kwargs)
+        self.logger = logger
+    def emit(self, record):
+        self.logger.log(record.levelno, self.format(record))
+
+
 def ingest_schema(project, data_dir, session=db.session): 
     schema_code = open(os.path.join(data_dir, "schema.py"), "rb").read()
     compiled_schema = compile(schema_code, '<schema>', 'exec') 
@@ -52,7 +62,17 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
 
     # Load data (in order defined by schema).
     for t in schema['ordered_sources']:
-        logger.info("Ingesting data for source '%s'" % t['id'])
+
+        # Setup source logger.
+        source_logger = logging.getLogger("source_%s" % id(t))
+        formatter = logging.Formatter(
+            "ingesting '%s'..." % t['id'] + ' %(message)s')
+        source_log_handler = LoggerLogHandler(logger)
+        source_log_handler.setFormatter(formatter)
+        source_logger.addHandler(source_log_handler)
+        source_logger.setLevel(logger.level)
+        source_logger.info("")
+
         table = t['source']
 
         # Get the filename for the table.
@@ -67,6 +87,17 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
 
         # Read rows from data file.
         table_file = open(table_filename, 'rb') 
+
+        # Count number of records.
+        source_logger.info("Counting total # of records...")
+        reader = csv.reader(table_file)
+        num_records = 0
+        for r in reader: 
+            num_records += 1
+        source_logger.info("%s records total, starting ingest..." % num_records)
+
+        # Process records.
+        table_file.seek(0)
         reader = csv.DictReader(table_file)
 
         row_counter = 0
@@ -75,7 +106,10 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
         for row in reader:
             row_counter += 1
             if (row_counter % logging_interval) == 0:
-                logger.info("row %d" % row_counter)
+                source_logger.info(
+                    "row %.1e (%.1f%% of %.1e total)" % (
+                        row_counter, 100.0 * row_counter/num_records, 
+                        num_records))
 
             processed_row = {}
             # Parse values for columns.
@@ -114,7 +148,7 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
                         processed_row[c.name] = cast(row[key])
 
                 except Exception, err:
-                    logger.exception("Error")
+                    source_logger.exception("Error")
                     raise Exception, "Error: %s\n Table was: %s, row was: %s, column was: %s, cast was: %s" % (err, table.name, row, c.name, cast)
 
             processed_rows.append(processed_row)

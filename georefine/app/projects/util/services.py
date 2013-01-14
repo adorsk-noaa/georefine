@@ -14,6 +14,14 @@ import logging
 import shutil
 from StringIO import StringIO
 
+class LoggerLogHandler(logging.Handler):
+    """ Custom log handler that logs messages to another
+    logger. This can be used to chain together loggers. """
+    def __init__(self, logger=None, **kwargs):
+        logging.Handler.__init__(self, **kwargs)
+        self.logger = logger
+    def emit(self, record):
+        self.logger.log(record.levelno, self.format(record))
 
 def get_colorbar(colorbar_def, width=100, height=1, format_='GIF'):
     colorbar_img = cmap.generate_colorbar_img(
@@ -230,11 +238,13 @@ def create_project(input_path=None, logger=logging.getLogger(),
 
     try:
         # Create project model.
+        logger.info("Initializing project...")
         project = Project()
         session.add(project)
         session.commit()
 
         # Create project directories.
+        logger.info("Setting up project directories...")
         project.data_dir = os.path.join(app.config['DATA_DIR'], 'projects',
                                    'project_' + str(project.id))
         os.makedirs(project.data_dir)
@@ -245,6 +255,7 @@ def create_project(input_path=None, logger=logging.getLogger(),
         # If tarball, unpack project bundle to temp dir.
         tmp_dir = None
         if input_path.endswith('.tar.gz') or input_path.endswith('.tgz'):
+            logger.info("Unpacking project file...")
             tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
             tar = tarfile.open(input_path)
             tar.extractall(tmp_dir)
@@ -254,26 +265,41 @@ def create_project(input_path=None, logger=logging.getLogger(),
             src_dir = input_path
 
         # Ingest app config.
+        logger.info("Ingesting app_config...")
         manage.ingest_app_config(project, src_dir)
 
         # Ingest project static files.
+        logger.info("Ingesting static files...")
         manage.ingest_static_files(project, src_dir)
 
         # Ingest map layers.
+        logger.info("Ingesting map layers...")
         manage.ingest_map_layers(project, src_dir, session)
 
         # Setup project schema and db.
+        logger.info("Setting up project DB...")
         manage.ingest_schema(project, src_dir)
         if not db_uri:
             project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
         else:
             project.db_uri = db_uri
 
+        # Setup project db.
         manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
+
+        # Setup ingest logger.
+        ingest_logger = logging.getLogger("ingest_%s" % id(project))
+        formatter = logging.Formatter("Ingesting data..." + ' %(message)s')
+        ingest_log_handler = LoggerLogHandler(logger)
+        ingest_log_handler.setFormatter(formatter)
+        ingest_logger.addHandler(ingest_log_handler)
+        ingest_logger.setLevel(logging.INFO)
         ingest_kwargs = kwargs.get('ingest_kwargs', {})
-        manage.ingest_data(project, src_dir, dao, logger=logger, **ingest_kwargs)
+
+        # Ingest data.
+        manage.ingest_data(project, src_dir, dao, logger=ingest_logger, **ingest_kwargs)
 
         # Clean up tmpdir (if created).
         if tmp_dir:
