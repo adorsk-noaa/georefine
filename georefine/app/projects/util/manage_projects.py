@@ -115,8 +115,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
         tran = dao.connection.begin()
 
         # For time estimates.
-        t_prev = time.time()
-        row_prev = 0
+        t_start = time.time()
         t_remaining = '---'
 
         for row in reader:
@@ -128,8 +127,6 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                                row_counter, 100.0 * row_counter/num_records,
                                num_records, t['id'], t_remaining)
                 source_logger.info(log_msg)
-                t_prev = t_now
-                row_prev = row_counter
 
             if (progress_counter % logging_interval) == 0:
                 progress_logger.info(100.0 * progress_counter/total_records)
@@ -191,9 +188,8 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
 
                 # Update time estimates.
                 t_now = time.time()
-                t_elapsed = t_now - t_prev
-                row_elapsed = row_counter - row_prev
-                t_per_row = t_elapsed/float(row_elapsed)
+                t_elapsed = t_now - t_start
+                t_per_row = t_elapsed/float(row_counter)
                 seconds_remaining = (num_records - row_counter) * t_per_row
                 t_remaining = datetime.timedelta(seconds=int(seconds_remaining))
         
