@@ -13,6 +13,8 @@ import pyspatialite
 import sys
 sys.modules['pysqlite2'] = pyspatialite
 import logging
+import time
+import datetime
 
 
 class LoggerLogHandler(logging.Handler):
@@ -111,14 +113,23 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
         row_counter = 0
         processed_rows = []
         tran = dao.connection.begin()
+
+        # For time estimates.
+        t_prev = time.time()
+        row_prev = 0
+        t_remaining = '---'
+
         for row in reader:
             row_counter += 1
             progress_counter += 1
             if (row_counter % logging_interval) == 0:
-                source_logger.info(
-                    "row %.1e (%.1f%% of %.1e total)" % (
-                        row_counter, 100.0 * row_counter/num_records, 
-                        num_records))
+                log_msg = ("row %.1e (%.1f%% of %.1e total, estimated time "
+                           "remaining for '%s': %s)") % (
+                               row_counter, 100.0 * row_counter/num_records,
+                               num_records, t['id'], t_remaining)
+                source_logger.info(log_msg)
+                t_prev = t_now
+                row_prev = row_counter
 
             if (progress_counter % logging_interval) == 0:
                 progress_logger.info(100.0 * progress_counter/total_records)
@@ -177,6 +188,14 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                 tran.commit()
                 tran = dao.connection.begin()
                 processed_rows = []
+
+                # Update time estimates.
+                t_now = time.time()
+                t_elapsed = t_now - t_prev
+                row_elapsed = row_counter - row_prev
+                t_per_row = t_elapsed/float(row_elapsed)
+                seconds_remaining = (num_records - row_counter) * t_per_row
+                t_remaining = datetime.timedelta(seconds=int(seconds_remaining))
         
         # Commit any remaining rows.
         if not has_geom:
