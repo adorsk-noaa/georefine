@@ -273,7 +273,7 @@ def create_project(input_path=None, logger=logging.getLogger(),
         dao = manage.get_dao(project)
         dao.create_all()
         ingest_kwargs = kwargs.get('ingest_kwargs', {})
-        manage.ingest_data(project, src_dir, dao, **ingest_kwargs)
+        manage.ingest_data(project, src_dir, dao, logger=logger, **ingest_kwargs)
 
         # Clean up tmpdir (if created).
         if tmp_dir:
