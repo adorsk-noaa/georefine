@@ -227,8 +227,9 @@ def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
     return keyed_results
 
 
-def create_project(input_path=None, logger=logging.getLogger(), 
-                   session=None, db_uri=None, **kwargs):
+def create_project(input_path=None, msg_logger=logging.getLogger(), 
+                   progress_logger=logging.getLogger(), session=None, 
+                   db_uri=None, **kwargs):
     """ Create a project from a project bundle file. """
     # Get transactional session.
     if not session:
@@ -238,24 +239,26 @@ def create_project(input_path=None, logger=logging.getLogger(),
 
     try:
         # Create project model.
-        logger.info("Initializing project...")
+        msg_logger.info("Initializing project...")
         project = Project()
         session.add(project)
         session.commit()
+        progress_logger.info(2)
 
         # Create project directories.
-        logger.info("Setting up project directories...")
+        msg_logger.info("Setting up project directories...")
         project.data_dir = os.path.join(app.config['DATA_DIR'], 'projects',
                                    'project_' + str(project.id))
         os.makedirs(project.data_dir)
         project.static_dir = os.path.join(app.static_folder, 'projects',
                                           'project_' + str(project.id))
         os.makedirs(project.static_dir)
+        progress_logger.info(3)
 
         # If tarball, unpack project bundle to temp dir.
         tmp_dir = None
         if input_path.endswith('.tar.gz') or input_path.endswith('.tgz'):
-            logger.info("Unpacking project file...")
+            msg_logger.info("Unpacking project file...")
             tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
             tar = tarfile.open(input_path)
             tar.extractall(tmp_dir)
@@ -263,43 +266,66 @@ def create_project(input_path=None, logger=logging.getLogger(),
             src_dir = tmp_dir
         else:
             src_dir = input_path
+        progress_logger.info(4)
 
         # Ingest app config.
-        logger.info("Ingesting app_config...")
+        msg_logger.info("Ingesting app_config...")
         manage.ingest_app_config(project, src_dir)
+        progress_logger.info(5)
 
         # Ingest project static files.
-        logger.info("Ingesting static files...")
+        msg_logger.info("Ingesting static files...")
         manage.ingest_static_files(project, src_dir)
+        progress_logger.info(6)
 
         # Ingest map layers.
-        logger.info("Ingesting map layers...")
+        msg_logger.info("Ingesting map layers...")
         manage.ingest_map_layers(project, src_dir, session)
+        progress_logger.info(7)
 
         # Setup project schema and db.
-        logger.info("Setting up project DB...")
+        msg_logger.info("Setting up project DB...")
         manage.ingest_schema(project, src_dir)
         if not db_uri:
             project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
         else:
             project.db_uri = db_uri
-
-        # Setup project db.
         manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
+        progress_logger.info(8)
 
-        # Setup ingest logger.
-        ingest_logger = logging.getLogger("ingest_%s" % id(project))
+        # Setup ingest msg logger.
+        ingest_msg_logger = logging.getLogger("ingest_msg_%s" % id(project))
         formatter = logging.Formatter("Ingesting data..." + ' %(message)s')
-        ingest_log_handler = LoggerLogHandler(logger)
-        ingest_log_handler.setFormatter(formatter)
-        ingest_logger.addHandler(ingest_log_handler)
-        ingest_logger.setLevel(logging.INFO)
-        ingest_kwargs = kwargs.get('ingest_kwargs', {})
+        ingest_msg_log_handler = LoggerLogHandler(msg_logger)
+        ingest_msg_log_handler.setFormatter(formatter)
+        ingest_msg_logger.addHandler(ingest_msg_log_handler)
+        ingest_msg_logger.setLevel(msg_logger.level)
+
+        # Setup ingest progress logger to scale progress.
+        class ScalingProgressHandler(logging.Handler):
+            def __init__(self, logger=None, min_=0.0, max_=100.0, **kwargs):
+                logging.Handler.__init__(self, **kwargs)
+                self.logger = logger
+                self.max = max_
+                self.min = min_
+                self.range = max_ - min_
+            def emit(self, record):
+                value = float(self.format(record))
+                scaled_value = self.min + self.range * (value/100.0)
+                self.logger.log(record.levelno, scaled_value)
+
+        ingest_prg_logger = logging.getLogger("ingest_prg_%s" % id(project))
+        ingest_prg_log_handler = ScalingProgressHandler(progress_logger,
+                                                        min_=8, max_=99)
+        ingest_prg_logger.addHandler(ingest_prg_log_handler)
+        ingest_prg_logger.setLevel(progress_logger.level)
 
         # Ingest data.
-        manage.ingest_data(project, src_dir, dao, logger=ingest_logger, **ingest_kwargs)
+        ingest_kwargs = kwargs.get('ingest_kwargs', {})
+        manage.ingest_data(project, src_dir, dao, msg_logger=ingest_msg_logger,
+                           progress_logger=ingest_prg_logger, **ingest_kwargs)
 
         # Clean up tmpdir (if created).
         if tmp_dir:
@@ -309,7 +335,7 @@ def create_project(input_path=None, logger=logging.getLogger(),
         trans.commit()
 
     except Exception as e:
-        logger.exception("Error creating project.")
+        msg_logger.exception("Error creating project.")
         try:
             if project:
                 delete_project_dirs(project)
@@ -320,6 +346,8 @@ def create_project(input_path=None, logger=logging.getLogger(),
         trans.rollback()
         raise e
 
+    msg_logger.info("Project with id '%s' been created." % project.id)
+    progress_logger.info(100)
     return project
 
 def delete_project(project, session=None):

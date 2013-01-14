@@ -54,23 +54,42 @@ def initialize_db(project):
         con = engine.connect()
         con.execute("SELECT InitSpatialMetaData()")
 
-def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
-                logging_interval=1000, commit_interval=1e4, **kwargs):
+def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
+                logging_interval=1000, commit_interval=1e4, 
+                progress_logger=logging.getLogger(), **kwargs):
     schema = project.schema
 
-    logger.info("Starting ingest...")
+    msg_logger.info("Starting ingest...")
+
+    # Get total count of records from all sources to use for progress.
+    msg_logger.info("Counting data records...")
+    total_records = 0
+    source_counts = {}
+    for t in schema['ordered_sources']:
+        msg_logger.info("Counting total # of '%s' records..." % t['id'])
+        table_filename = os.path.join(data_dir, 'data', "%s.csv" % (t['id']))
+        table_file = open(table_filename, 'rb') 
+        reader = csv.reader(table_file)
+        num_records = 0
+        for r in reader: 
+            num_records += 1
+        msg_logger.info("%s total '%s' records" % (num_records, t['id']))
+        source_counts[t['id']] = num_records
+        total_records += num_records
+        table_file.close()
 
     # Load data (in order defined by schema).
+    progress_counter = 0
     for t in schema['ordered_sources']:
 
         # Setup source logger.
         source_logger = logging.getLogger("source_%s" % id(t))
         formatter = logging.Formatter(
             "ingesting '%s'..." % t['id'] + ' %(message)s')
-        source_log_handler = LoggerLogHandler(logger)
+        source_log_handler = LoggerLogHandler(msg_logger)
         source_log_handler.setFormatter(formatter)
         source_logger.addHandler(source_log_handler)
-        source_logger.setLevel(logger.level)
+        source_logger.setLevel(msg_logger.level)
         source_logger.info("")
 
         table = t['source']
@@ -87,29 +106,22 @@ def ingest_data(project, data_dir, dao, logger=logging.getLogger(),
 
         # Read rows from data file.
         table_file = open(table_filename, 'rb') 
-
-        # Count number of records.
-        source_logger.info("Counting total # of records...")
-        reader = csv.reader(table_file)
-        num_records = 0
-        for r in reader: 
-            num_records += 1
-        source_logger.info("%s records total, starting ingest..." % num_records)
-
-        # Process records.
-        table_file.seek(0)
         reader = csv.DictReader(table_file)
-
+        num_records = source_counts[t['id']]
         row_counter = 0
         processed_rows = []
         tran = dao.connection.begin()
         for row in reader:
             row_counter += 1
+            progress_counter += 1
             if (row_counter % logging_interval) == 0:
                 source_logger.info(
                     "row %.1e (%.1f%% of %.1e total)" % (
                         row_counter, 100.0 * row_counter/num_records, 
                         num_records))
+
+            if (progress_counter % logging_interval) == 0:
+                progress_logger.info(100.0 * progress_counter/total_records)
 
             processed_row = {}
             # Parse values for columns.
