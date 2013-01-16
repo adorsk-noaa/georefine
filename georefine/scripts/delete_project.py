@@ -1,6 +1,8 @@
 from georefine.app.projects.util.services import delete_project_by_id
 import logging
 import argparse
+import os
+#from georefine.app import app
 
 def main():
     argparser = argparse.ArgumentParser()
@@ -14,7 +16,7 @@ def main():
     if args.verbose:
         handler = logging.StreamHandler()
     else:
-        handler = logging.NullHandler()
+        handler = logging.FileHandler(os.path.devnull)
     logger.addHandler(handler)
 
     delete_project_by_id(args.project_id, logger=logger)

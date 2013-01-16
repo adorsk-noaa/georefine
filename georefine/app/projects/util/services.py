@@ -371,5 +371,5 @@ def delete_project(project=None, session=None, logger=logging.getLogger()):
 def delete_project_dirs(project):
     for dir_attr in ['data_dir', 'static_dir']:
         dir_ = getattr(project, dir_attr, None)
-        if dir_:
+        if dir_ and os.path.isdir(dir_):
             shutil.rmtree(dir_)
