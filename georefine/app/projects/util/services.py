@@ -350,8 +350,12 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
     progress_logger.info(100)
     return project
 
-def delete_project(project, session=None):
-    """ Delete a project. """
+def delete_project_by_id(project_id=None, **kwargs):
+    project = db.session.query(Project).get(project_id)
+    if project:
+        delete_project(project, **kwargs)
+
+def delete_project(project=None, session=None, logger=logging.getLogger()):
     # Get transactional session.
     if not session:
         session = db.session
@@ -369,6 +373,7 @@ def delete_project(project, session=None):
         raise e
 
     trans.commit()
+    logger.info("Deleted project with id '%s'" % project.id)
     return True
 
 def delete_project_dirs(project):
