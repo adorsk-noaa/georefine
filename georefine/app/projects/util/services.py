@@ -360,9 +360,9 @@ def delete_project(project, session=None):
     project = session.merge(project)
 
     try:
-        delete_project_dirs(project)
         session.delete(project)
         session.commit()
+        delete_project_dirs(project)
 
     except Exception as e:
         trans.rollback()
