@@ -3,12 +3,15 @@ from flask import Blueprint, request, redirect, render_template, flash, g, sessi
 from werkzeug import secure_filename
 from jinja2 import Markup
 from georefine.app import db
-from georefine.app.projects.models import Project, MapLayer
+from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as projects_manage
 from georefine.app.projects.util import services as projects_services
 from georefine.app.keyed_strings import util as ks_util
 import os
 import tarfile
+import hashlib
+import marshal
+
 
 bp = Blueprint('projects', __name__, url_prefix='/projects', template_folder='templates')
 
@@ -64,11 +67,20 @@ def execute_queries(project_id):
     # Parse request parameters.
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    results = projects_services.execute_keyed_queries(
-            project = project,
-            query_defs = query_defs
-            )
-
+    fn = projects_sevices.execute_keyed_queries
+    fn_args = [project]
+    fn_kwargs = {'query_defs': query_defs}
+    if app.config.get('GR_PROJECTS_CACHE'):
+        results = _get_cached(
+            project,
+            fn,
+            fn_args=fn_args,
+            fn_kwargs=fn_kwargs,
+            key_args=['execute_queries'],
+            key_kwargs=fn_args,
+        )
+    else:
+        results = fn(*fn_args, **fn_kwargs)
     return jsonify(results=results)
 
 @bp.route('/execute_keyed_queries//<int:project_id>/', methods=['GET', 'POST'])
@@ -79,14 +91,21 @@ def execute_keyed_queries(project_id):
     key_def = json.loads(request.args.get('KEY', '{}'))
     query_defs= json.loads(request.args.get('QUERIES', '[]'))
 
-    results = projects_services.execute_keyed_queries(
-            project = project,
-            key_def=key_def,
-            query_defs = query_defs
-            )
-
+    fn = projects_services.execute_keyed_queries
+    fn_args = [project]
+    fn_kwargs = {'key_def': key_def, 'query_defs': query_defs}
+    if app.config.get('GR_PROJECTS_CACHE'):
+        results = _get_cached(
+            project,
+            fn,
+            fn_args=fn_args,
+            fn_kwargs=fn_kwargs,
+            key_args=['execute_keyed_queries'], 
+            key_kwargs=fn_kwargs,
+        )
+    else:
+        results = fn(*fn_args, **fn_kwargs)
     return jsonify(results=results)
-
 
 # @TODO: Kludge to get stuff working for now, clean this up later.
 @bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
@@ -99,19 +118,25 @@ def execute_requests(project_id):
     results = {}
     for request_def in request_defs:
         if request_def['REQUEST'] == 'execute_keyed_queries':
-            results[request_def['ID']] = projects_services.execute_keyed_queries(
-                    project = project,
-                    **request_def['PARAMETERS']
-                    )
-
+            fn = projects_services.execute_keyed_queries
         elif request_def['REQUEST'] == 'execute_queries':
-            results[request_def['ID']] = projects_services.execute_queries(
-                    project = project,
-                    **request_def['PARAMETERS']) 
+            fn = projects_services.execute_queries
+        fn_args = [project]
+        fn_kwargs = request_def['PARAMETERS']
+        if app.config.get('GR_PROJECTS_CACHE'):
+            req_results = _get_cached(
+                project,
+                fn,
+                fn_args=fn_args,
+                fn_kwargs=fn_kwargs,
+                key_args=[request_def['REQUEST']],
+                key_kwargs=fn_kwargs,
+            )
+        else:
+            req_results = fn(*fn_args, **fn_kwargs)
+        results[request_def['ID']] = req_results
 
     return jsonify(results=results)
-            
-
 
 @bp.route('/get_map/<int:project_id>/', methods=['GET'])
 def get_map(project_id):
@@ -137,11 +162,20 @@ def get_map(project_id):
 
     wms_parameters = get_wms_parameters(request.args)
 
-    map_image = projects_services.get_data_map(
-            project, 
-            wms_parameters=wms_parameters,
-            **params
-            )
+    fn = projects_services.get_data_map
+    fn_args = [project]
+    fn_kwargs = dict([('wms_parameters', wms_parameters)] + params.items())
+    if app.config.get('GR_PROJECTS_CACHE'):
+        map_image = _get_cached(
+            project,
+            fn,
+            fn_args=fn_args,
+            fn_kwargs=fn_kwargs,
+            key_args=['get_data_map'],
+            key_kwargs=fn_kwargs,
+        )
+    else:
+        map_image = fn(*fn_args, **fn_kwargs)
     return Response(map_image, mimetype=wms_parameters['FORMAT'])
 
 def get_wms_parameters(parameters):
@@ -164,20 +198,26 @@ def get_wms_parameters(parameters):
         wms_parameters[wms_parameter] = value
     return wms_parameters
 
-def get_layer(project_id, layer_id):
-    return db.session.query(MapLayer)\
-            .filter(MapLayer.layer_id == layer_id)\
-            .filter(MapLayer.project_id == project_id)\
-            .one()
-
 @bp.route('/<int:project_id>/layer/<layer_id>/wms', methods=['GET'])
 def layer_wms(project_id, layer_id):
-    layer = get_layer(project_id, layer_id)
+    project = get_project(project_id)
+
     wms_parameters = get_wms_parameters(request.args)
-    map_image = projects_services.get_layer_map(
-        layer=layer,
-        wms_parameters=wms_parameters
-    )
+
+    fn = projects_services.get_layer_map
+    fn_args = [project, layer_id]
+    fn_kwargs = wms_parameters
+    if app.config.get('GR_PROJECTS_CACHE'):
+        map_image = _get_cached(
+            project,
+            fn,
+            fn_args=fn_args,
+            fn_kwargs=fn_kwargs,
+            key_args=['get_layer_map', layer_id],
+            key_kwargs=fn_kwargs,
+        )
+    else:
+        map_image = fn(*fn_args, **fn_kwargs)
     return Response(map_image, mimetype=wms_parameters['FORMAT'])
 
 @bp.route('/colorbar/', methods=['GET'])
@@ -188,3 +228,31 @@ def get_colorbar():
     colorbar_data = projects_services.get_colorbar(colorbar_def, width=width, height=height, format_='PNG')
     return Response(colorbar_data, mimetype='image/png')
 
+""" Basic disk-based caching, for data which can be easily serialized. """
+def _generate_cache_key(*args, **kwargs):
+    s = repr(args) + repr(kwargs)
+    return hashlib.md5(s).hexdigest()
+
+def _get_cached(project, fn, fn_args=[], fn_kwargs={}, key_args=[],
+                key_kwargs={}):
+    cache_dir = _get_cache_dir(project)
+    serialized_args = ''.join([repr(a) for a in [key_args, key_kwargs]])
+    key = hashlib.md5(serialized_args).hexdigest()
+    key_path = os.path.join(cache_dir, key)
+    # Cache if not already cached..
+    if not os.path.exists(key_path):
+        print "cache miss"
+        with open(key_path, 'wb') as f:
+            result = fn(*fn_args, **fn_kwargs)
+            marshal.dump(result, f)
+        return result
+    # Otherwise return from cache.
+    print "cache hit"
+    with open(key_path, 'rb') as f:
+        return marshal.load(f)
+
+def _get_cache_dir(project):
+    cache_dir_path = os.path.join(project.data_dir, 'cache')
+    if not os.path.exists(cache_dir_path):
+        os.makedirs(cache_dir_path)
+    return cache_dir_path

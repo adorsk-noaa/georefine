@@ -11,3 +11,5 @@ APPLICATION_ROOT = "georefine"
 #GRC_USE_MINIFIED = True
 
 DATA_DIR = "/data/georefine"
+
+GR_PROJECTS_CACHE = True

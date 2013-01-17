@@ -1,6 +1,6 @@
 from georefine.app import app
 from georefine.app import db
-from georefine.app.projects.models import Project
+from georefine.app.projects.models import Project, MapLayer
 from georefine.app.projects.util import manage_projects as manage
 import georefine.util.mapping.colormap as cmap
 
@@ -13,6 +13,8 @@ import os
 import logging
 import shutil
 from StringIO import StringIO
+import hashlib
+
 
 class LoggerLogHandler(logging.Handler):
     """ Custom log handler that logs messages to another
@@ -183,8 +185,14 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
 
     return img
 
-def get_layer_map(layer, wms_parameters={}, **kwargs):
+def get_layer_map(project, layer_id, wms_parameters={}, **kwargs):
     """ Get a map image for a given project layer. """
+
+    # Get layer object.
+    layer = db.session.query(MapLayer)\
+            .filter(MapLayer.layer_id == layer_id)\
+            .filter(MapLayer.project_id == project.id)\
+            .one()
 
     # Render w/ GeoTools if using jython.
     if platform.system() == 'Java':
@@ -221,7 +229,7 @@ def execute_queries(project, QUERIES=[]):
     results = dao.execute_queries(QUERIES)
     return results
 
-def execute_keyed_queries(project=None, KEY=None, QUERIES=[]):
+def execute_keyed_queries(project, KEY=None, QUERIES=[]):
     dao = manage.get_dao(project)
     keyed_results = dao.get_keyed_results(key_def=KEY, query_defs=QUERIES)
     return keyed_results
