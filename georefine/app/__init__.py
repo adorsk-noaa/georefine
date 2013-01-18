@@ -44,6 +44,11 @@ def not_found(error):
 def shutdown_session(exception=None):
 	db.session.remove()
 
+@app.after_request
+def after(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
+
 from georefine.app.projects.views import bp as projects_bp
 app.register_blueprint(projects_bp)
 
