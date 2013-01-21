@@ -28,14 +28,14 @@ class LoggerLogHandler(logging.Handler):
 
 
 def ingest_schema(project, data_dir, session=db.session): 
-    schema_code = open(os.path.join(data_dir, "schema.py"), "rb").read()
+    schema_code = open(os.path.join(data_dir, "schema.py"), "rU").read()
     compiled_schema = compile(schema_code, '<schema>', 'exec') 
     schema_objs = {}
     exec compiled_schema in schema_objs
     project.schema = schema_objs['schema']
 
 def ingest_app_config(project, data_dir): 
-    app_config_code = open(os.path.join(data_dir, "app_config.py"), "rb").read()
+    app_config_code = open(os.path.join(data_dir, "app_config.py"), "rU").read()
     compiled_app_config= compile(app_config_code, '<app_config>', 'exec') 
     app_config_objs = {}
     exec compiled_app_config in app_config_objs
@@ -70,7 +70,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
     for t in schema['ordered_sources']:
         msg_logger.info("Counting total # of '%s' records..." % t['id'])
         table_filename = os.path.join(data_dir, 'data', "%s.csv" % (t['id']))
-        table_file = open(table_filename, 'rb') 
+        table_file = open(table_filename, 'rU') 
         reader = csv.reader(table_file)
         num_records = 0
         for r in reader: 
@@ -107,7 +107,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                 break
 
         # Read rows from data file.
-        table_file = open(table_filename, 'rb') 
+        table_file = open(table_filename, 'rU') 
         reader = csv.DictReader(table_file)
         num_records = source_counts[t['id']]
         row_counter = 0
@@ -210,7 +210,7 @@ def ingest_map_layers(project, source_data_dir, session):
     os.makedirs(target_layers_dir, 0775)
 
     map_layers_file = os.path.join(layers_data_dir, "map_layers.csv")
-    reader = csv.DictReader(open(map_layers_file, "rb"))
+    reader = csv.DictReader(open(map_layers_file, "rU"))
     layers = [row for row in reader]
 
     for layer in layers:
@@ -218,7 +218,7 @@ def ingest_map_layers(project, source_data_dir, session):
 
         layer_config_file = os.path.join(layer_data_dir, "config.json")
         if os.path.exists(layer_config_file):
-            layer_config = json.load(open(layer_config_file, "rb"))
+            layer_config = json.load(open(layer_config_file, "rU"))
         else:
             layer_config = {}
 

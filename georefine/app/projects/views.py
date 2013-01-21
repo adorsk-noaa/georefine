@@ -247,7 +247,7 @@ def _get_cached(project, fn, fn_args=[], fn_kwargs={}, key_args=[],
         os.chmod(key_path, 0775)
         return result
     # Otherwise return from cache.
-    with open(key_path, 'rb') as f:
+    with open(key_path, 'rU') as f:
         return marshal.load(f)
 
 def _get_cache_dir(project):

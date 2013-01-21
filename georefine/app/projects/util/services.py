@@ -348,6 +348,7 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
     except Exception as e:
         msg_logger.exception("Error creating project.")
         try:
+            pass
             if project:
                 delete_project_dirs(project)
             if tmp_dir:
