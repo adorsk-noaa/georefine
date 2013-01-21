@@ -257,10 +257,10 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
         msg_logger.info("Setting up project directories...")
         project.data_dir = os.path.join(app.config['DATA_DIR'], 'projects',
                                    'project_' + str(project.id))
-        os.makedirs(project.data_dir)
+        os.makedirs(project.data_dir, 0775)
         project.static_dir = os.path.join(app.static_folder, 'projects',
                                           'project_' + str(project.id))
-        os.makedirs(project.static_dir)
+        os.makedirs(project.static_dir, 0775)
         progress_logger.info(3)
 
         # If .zip, unpack project bundle to temp dir.
@@ -295,10 +295,13 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
         msg_logger.info("Setting up project DB...")
         manage.ingest_schema(project, src_dir)
         if not db_uri:
-            project.db_uri = "sqlite:///%s" % os.path.join(project.data_dir, "db.sqlite")
+            db_file = os.path.join(project.data_dir, "db.sqlite")
+            project.db_uri = "sqlite:///%s" % db_file
+            manage.initialize_db(project)
+            os.chmod(db_file, 0775)
         else:
             project.db_uri = db_uri
-        manage.initialize_db(project)
+            manage.initialize_db(project)
         dao = manage.get_dao(project)
         dao.create_all()
         progress_logger.info(8)

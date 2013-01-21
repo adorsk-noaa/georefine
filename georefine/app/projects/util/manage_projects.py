@@ -207,7 +207,7 @@ def ingest_map_layers(project, source_data_dir, session):
         return
 
     target_layers_dir = os.path.join(project.data_dir, "map_layers")
-    os.makedirs(target_layers_dir)
+    os.makedirs(target_layers_dir, 0775)
 
     map_layers_file = os.path.join(layers_data_dir, "map_layers.csv")
     reader = csv.DictReader(open(map_layers_file, "rb"))
@@ -225,6 +225,10 @@ def ingest_map_layers(project, source_data_dir, session):
         target_layer_dir = os.path.join(target_layers_dir, layer['id'])
         shutil.copytree(layer_data_dir, target_layer_dir)
 
+        for root, dirs, files in os.walk(target_layer_dir):
+            for item in dirs + files:
+                os.chmod(os.path.join(root, item), 0775)
+
         layer_model = MapLayer(
             layer_id=layer['id'],
             project=project,
@@ -238,7 +242,11 @@ def ingest_static_files(project, data_dir):
     static_dir_name = 'static'
     static_files_dir = os.path.join(data_dir, static_dir_name)
     if os.path.isdir(static_files_dir):
+        target_dir = os.path.join(project.static_dir, static_dir_name)
         shutil.copytree(
             static_files_dir, 
             os.path.join(project.static_dir, static_dir_name)
         )
+        for root, dirs, files in os.walk(target_dir):
+            for item in dirs + files:
+                os.chmod(os.path.join(root, item), 0775)

@@ -241,13 +241,12 @@ def _get_cached(project, fn, fn_args=[], fn_kwargs={}, key_args=[],
     key_path = os.path.join(cache_dir, key)
     # Cache if not already cached..
     if not os.path.exists(key_path):
-        print "cache miss"
         with open(key_path, 'wb') as f:
             result = fn(*fn_args, **fn_kwargs)
             marshal.dump(result, f)
+        os.chmod(key_path, 0775)
         return result
     # Otherwise return from cache.
-    print "cache hit"
     with open(key_path, 'rb') as f:
         return marshal.load(f)
 
@@ -255,4 +254,5 @@ def _get_cache_dir(project):
     cache_dir_path = os.path.join(project.data_dir, 'cache')
     if not os.path.exists(cache_dir_path):
         os.makedirs(cache_dir_path)
+        os.chmod(cache_dir_path, 0775)
     return cache_dir_path
