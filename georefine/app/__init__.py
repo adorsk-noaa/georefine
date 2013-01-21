@@ -46,7 +46,9 @@ def shutdown_session(exception=None):
 
 @app.after_request
 def after(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    if app.config.get('ALLOW_ORIGIN'):
+        response.headers.add('Access-Control-Allow-Origin',
+                             app.config.get('ALLOW_ORIGIN'))
     return response
 
 from georefine.app.projects.views import bp as projects_bp

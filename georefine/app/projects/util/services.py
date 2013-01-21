@@ -8,7 +8,7 @@ from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
 import platform
 import copy
 import tempfile
-import tarfile
+from zipfile import ZipFile
 import os
 import logging
 import shutil
@@ -263,14 +263,14 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
         os.makedirs(project.static_dir)
         progress_logger.info(3)
 
-        # If tarball, unpack project bundle to temp dir.
+        # If .zip, unpack project bundle to temp dir.
         tmp_dir = None
-        if input_path.endswith('.tar.gz') or input_path.endswith('.tgz'):
+        if input_path.endswith('.zip'):
             msg_logger.info("Unpacking project file...")
             tmp_dir = tempfile.mkdtemp(prefix="gr.prj_%s." % project.id)
-            tar = tarfile.open(input_path)
-            tar.extractall(tmp_dir)
-            tar.close()
+            zfile = ZipFile(input_path, 'r')
+            zfile.extractall(tmp_dir)
+            zfile.close()
             src_dir = tmp_dir
         else:
             src_dir = input_path
