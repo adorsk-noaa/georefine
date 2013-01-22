@@ -309,7 +309,7 @@ function($, Backbone, _, _s, Util, MapView, requestsUtil, filtersUtil, formatUti
             var BaseLayerEditor = BaseCollectionEditor.prototype.getLayerEditorClass.apply(this, arguments);
             var GRLayerEditor = BaseLayerEditor.extend({
               formatter: function(){
-                var orig = SelectorBaseClass.prototype.formatter.apply(this, arguments);
+                var orig = BaseLayerEditor.prototype.formatter.apply(this, arguments);
                 return formatUtil.GeoRefineTokenFormatter(orig);
               }
             });
