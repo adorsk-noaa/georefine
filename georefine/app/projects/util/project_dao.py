@@ -14,6 +14,7 @@ class ProjectDAO(SqlAlchemyDAO):
         'func.ST_AsBinary',
         'func.ST_AsText',
         'func.ST_Intersects',
+        'func.AsGeoJSON',
     ]
 
     def get_spatialite_spatial_query(
