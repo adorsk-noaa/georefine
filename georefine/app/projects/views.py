@@ -241,8 +241,8 @@ def _get_cached(project, fn, fn_args=[], fn_kwargs={}, key_args=[],
     key_path = os.path.join(cache_dir, key)
     # Cache if not already cached..
     if not os.path.exists(key_path):
+        result = fn(*fn_args, **fn_kwargs)
         with open(key_path, 'wb') as f:
-            result = fn(*fn_args, **fn_kwargs)
             marshal.dump(result, f)
         os.chmod(key_path, 0775)
         return result
