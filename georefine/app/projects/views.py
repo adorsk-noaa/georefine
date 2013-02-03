@@ -41,20 +41,19 @@ def georefine_client(project_id):
     context_root = '/' + app.config['APPLICATION_ROOT']
     project = get_project(project_id)
 
+    static_dir_url = url_for_project_static_dir(project)
     georefine_config = {
         "context_root": context_root,
         "project_id": project_id,
-        "project_static_dir": url_for_project_static_dir(project),
-        "filter_groups": project.app_config.get('filter_groups', {}),
-        "facets": project.app_config.get('facets', {}),
-        "charts": project.app_config.get('charts', {}),
-        "maps": project.app_config.get('maps', {}),
-        "summary_bar": project.app_config.get('summary_bar', {}),
-        "initial_state": project.app_config.get('initial_state', {}),
-        "defaultInitialState": project.app_config.get('defaultInitialState', {}),
+        "project_static_dir": static_dir_url,
     }
     json_georefine_config = json.dumps(georefine_config)
-    return render_template("projects/georefine_client.html", app=app, context_root=context_root, georefine_config=Markup(json_georefine_config))
+    app_config_url = static_dir_url + '/appConfig.js'
+    return render_template("projects/georefine_client.html",
+                           app=app, 
+                           georefine_config=Markup(json_georefine_config),
+                           app_config_url=app_config_url,
+                          )
 
 @bp.route('/')
 def home():

@@ -3,13 +3,14 @@
 <head>
 
 	<script type="text/javascript">
-        GRC_BASE_PATH= "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/')}}";
-        ASSETS_PATH= "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/')}}";
+        BASE_PATH ="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/')}}";
+        ASSETS_PATH = "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/')}}";
 		var GeoRefine = {};
-        GeoRefine.app = {};
 		GeoRefine.config = {{georefine_config}};
-        GeoRefine.mainEl= '#main';
+        GeoRefine.config.mainEl= '#main';
 	</script>
+
+    <script type="text/javascript" src="{{app_config_url}}"></script>
 
     {% if app.config['GRC_USE_MINIFIED']%}
     <link rel="stylesheet" href="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/dist/css/consolidated.css')}}" type="text/css">
