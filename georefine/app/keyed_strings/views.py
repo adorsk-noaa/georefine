@@ -11,7 +11,7 @@ def getKey():
     key = ks_util.getKey(s)
     return jsonify(key=key)
 
-@bp.route('/getString/<key>', methods=['GET'])
+@bp.route('/getString/<key>/', methods=['GET'])
 def getString(key):
     s = ks_util.getString(key)
     return jsonify(s=s)

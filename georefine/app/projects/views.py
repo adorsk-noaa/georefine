@@ -48,7 +48,7 @@ def georefine_client(project_id):
         "project_static_dir": static_dir_url,
     }
     json_georefine_config = json.dumps(georefine_config)
-    app_config_url = static_dir_url + '/appConfig.js'
+    app_config_url = static_dir_url + '/static/GeoRefine_appConfig.js'
     return render_template("projects/georefine_client.html",
                            app=app, 
                            georefine_config=Markup(json_georefine_config),

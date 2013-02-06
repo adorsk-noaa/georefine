@@ -3,7 +3,7 @@ from georefine.app import app, db
 import georefine.util.shapefile as shp_util
 import georefine.util.gis as gis_util
 from georefine.app.projects.util.project_dao import ProjectDAO
-from sqlalchemy import Column, Float, Integer, String, MetaData
+from sqlalchemy import Column, Float, Integer, String, Boolean, MetaData
 from geoalchemy import *
 from geoalchemy.geometry import Geometry
 from sqlalchemy import create_engine, MetaData
@@ -26,6 +26,14 @@ class LoggerLogHandler(logging.Handler):
     def emit(self, record):
         self.logger.log(record.levelno, self.format(record))
 
+def parse_bool(v):
+    if type(v) in [str, unicode]:
+        if v.upper() == 'TRUE':
+            return True
+    try:
+        return bool(float(v))
+    except:
+        return False
 
 def ingest_schema(project, data_dir, session=db.session): 
     schema_code = open(os.path.join(data_dir, "schema.py"), "rU").read()
@@ -33,13 +41,6 @@ def ingest_schema(project, data_dir, session=db.session):
     schema_objs = {}
     exec compiled_schema in schema_objs
     project.schema = schema_objs['schema']
-
-def ingest_app_config(project, data_dir): 
-    app_config_code = open(os.path.join(data_dir, "app_config.py"), "rU").read()
-    compiled_app_config= compile(app_config_code, '<app_config>', 'exec') 
-    app_config_objs = {}
-    exec compiled_app_config in app_config_objs
-    project.app_config = app_config_objs['app_config']
 
 def get_dao(project):
     """ Get DAO for a project. """
@@ -143,6 +144,9 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                         cast = float
                     elif isinstance(c.type, Integer):
                         cast = int
+                    elif isinstance(c.type, Boolean):
+                        cast = parse_bool
+
                     elif isinstance(c.type, Geometry):
                         if row.has_key(c.name + "_wkt"):
                             key = c.name + "_wkt"

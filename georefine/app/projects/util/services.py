@@ -276,11 +276,6 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
             src_dir = input_path
         progress_logger.info(4)
 
-        # Ingest app config.
-        msg_logger.info("Ingesting app_config...")
-        manage.ingest_app_config(project, src_dir)
-        progress_logger.info(5)
-
         # Ingest project static files.
         msg_logger.info("Ingesting static files...")
         manage.ingest_static_files(project, src_dir)
