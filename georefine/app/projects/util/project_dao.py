@@ -105,7 +105,6 @@ class ProjectDAO(SqlAlchemyDAO):
         return col
 
     def get_source_entity(self, entity):
-        print "gse"
         """ Get the original source element for a given entity. 
         If entity is an alias to a column, returns the original column.
         """
