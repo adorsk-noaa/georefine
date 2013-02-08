@@ -28,15 +28,15 @@ def setup_projects_static_dir():
 def url_for_project_static_dir(project):
     """ Get the url for a project's static dir. """
     if not app.config.get('GR_PROJECTS_STATIC_URL_PATH'):
-        project_full_path = project.static_dir
-        project_rel_path = project_full_path.replace(
+        full_path = project.static_dir
+        rel_path = full_path.replace(
             app.config['GR_STATIC_FOLDER'] + '/', '')
-        return url_for('static', filename=project_rel_path)
+        return url_for('static', filename=rel_path)
 
 def get_project(project_id):
     return db.session.query(Project).get(project_id)
 
-@bp.route('/view/client/<int:project_id>/')
+@bp.route('/<int:project_id>/view/client/')
 def georefine_client(project_id):
     context_root = '/' + app.config['APPLICATION_ROOT']
     project = get_project(project_id)
@@ -55,11 +55,7 @@ def georefine_client(project_id):
                            app_config_url=app_config_url,
                           )
 
-@bp.route('/')
-def home():
-    return 'home'
-
-@bp.route('/execute_queries/<int:project_id>/', methods=['GET', 'POST'])
+@bp.route('/<int:project_id>/execute_queries/', methods=['GET', 'POST'])
 def execute_queries(project_id):
     project = get_project(project_id)
 
@@ -82,7 +78,7 @@ def execute_queries(project_id):
         results = fn(*fn_args, **fn_kwargs)
     return jsonify(results=results)
 
-@bp.route('/execute_keyed_queries//<int:project_id>/', methods=['GET', 'POST'])
+@bp.route('/<int:project_id>/execute_keyed_queries/', methods=['GET', 'POST'])
 def execute_keyed_queries(project_id):
     project = get_project(project_id)
 
@@ -107,7 +103,7 @@ def execute_keyed_queries(project_id):
     return jsonify(results=results)
 
 # @TODO: Kludge to get stuff working for now, clean this up later.
-@bp.route('/execute_requests/<int:project_id>/', methods=['GET', 'POST'])
+@bp.route('/<int:project_id>/execute_requests/', methods=['GET', 'POST'])
 def execute_requests(project_id):
     project = get_project(project_id)
 
@@ -137,7 +133,7 @@ def execute_requests(project_id):
 
     return jsonify(results=results)
 
-@bp.route('/get_map/<int:project_id>/', methods=['GET'])
+@bp.route('/<int:project_id>/get_map/', methods=['GET'])
 def get_map(project_id):
     project = get_project(project_id)
 
@@ -218,14 +214,6 @@ def layer_wms(project_id, layer_id):
     else:
         map_image = fn(*fn_args, **fn_kwargs)
     return Response(map_image, mimetype=wms_parameters['FORMAT'])
-
-@bp.route('/colorbar/', methods=['GET'])
-def get_colorbar():
-    colorbar_def = json.loads(request.args.get('CBAR'))
-    width = int(request.args.get('WIDTH', 100))
-    height = int(request.args.get('HEIGHT', 1))
-    colorbar_data = projects_services.get_colorbar(colorbar_def, width=width, height=height, format_='PNG')
-    return Response(colorbar_data, mimetype='image/png')
 
 """ Basic disk-based caching, for data which can be easily serialized. """
 def _generate_cache_key(*args, **kwargs):

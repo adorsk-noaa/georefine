@@ -1,19 +1,16 @@
 from georefine.app import app
 from georefine.app import db
-from georefine.app.projects.models import Project, MapLayer
+from georefine.app.projects.models import Project
 from georefine.app.projects.util import manage_projects as manage
 import georefine.util.mapping.colormap as cmap
 
-from sa_dao.sqlalchemy_dao import SqlAlchemyDAO
+import json
 import platform
-import copy
 import tempfile
 from zipfile import ZipFile
 import os
 import logging
 import shutil
-from StringIO import StringIO
-import hashlib
 
 
 class LoggerLogHandler(logging.Handler):
@@ -24,16 +21,6 @@ class LoggerLogHandler(logging.Handler):
         self.logger = logger
     def emit(self, record):
         self.logger.log(record.levelno, self.format(record))
-
-def get_colorbar(colorbar_def, width=100, height=1, format_='GIF'):
-    colorbar_img = cmap.generate_colorbar_img(
-        width=width, 
-        height=height,
-        **colorbar_def
-    )
-    buf = StringIO()
-    colorbar_img.save(buf, format=format_)
-    return buf.getvalue()
 
 def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
             geom_entity=None, wms_parameters={}, **kwargs):
@@ -188,11 +175,13 @@ def get_data_map(project, query=None, data_entity=None, geom_id_entity=None,
 def get_layer_map(project, layer_id, wms_parameters={}, **kwargs):
     """ Get a map image for a given project layer. """
 
-    # Get layer object.
-    layer = db.session.query(MapLayer)\
-            .filter(MapLayer.layer_id == layer_id)\
-            .filter(MapLayer.project_id == project.id)\
-            .one()
+    # @TODO: implicit convention? maybe should centralize layer dir...
+    layer_dir = os.path.join(project.static_dir, 'map_layers', layer_id)
+
+    # Read layer WMS config.
+    config_path = os.path.join(layer_dir, 'wmsConfig.json')
+    with open(config_path, 'rb') as f:
+        wms_config = json.load(f)
 
     # Render w/ GeoTools if using jython.
     if platform.system() == 'Java':
@@ -204,19 +193,16 @@ def get_layer_map(project, layer_id, wms_parameters={}, **kwargs):
         from georefine.util.mapping.ms_renderer import MapScriptRenderer
         renderer = MapScriptRenderer()
 
-        layer_def = {}
-        layer_def.update(layer.config)
-
         # Rewrite relative paths as needed.
         path_attrs = ['mapfile']
         for path_attr in path_attrs:
-            path = layer_def.get(path_attr)
+            path = wms_config.get(path_attr)
             if path:
-                layer_def[path_attr] = os.path.join(layer.dir_, path)
+                wms_config[path_attr] = os.path.join(layer_dir, path)
 
         imgObj = renderer.render_map(
             wms_parameters=wms_parameters,
-            **layer_def
+            **wms_config
         )
 
         img = renderer.imgObj_to_bytes(imgObj)
@@ -280,11 +266,6 @@ def create_project(input_path=None, msg_logger=logging.getLogger(),
         msg_logger.info("Ingesting static files...")
         manage.ingest_static_files(project, src_dir)
         progress_logger.info(6)
-
-        # Ingest map layers.
-        msg_logger.info("Ingesting map layers...")
-        manage.ingest_map_layers(project, src_dir, session)
-        progress_logger.info(7)
 
         # Setup project schema and db.
         msg_logger.info("Setting up project DB...")

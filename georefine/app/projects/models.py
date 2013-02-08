@@ -5,51 +5,23 @@ from sqlalchemy.orm import mapper, relationship, backref
 
 
 class Project(object):
-    def __init__(self, id=None, name=None, schema=None, app_config=None,
-                 data_dir=None, static_dir=None, static_url=None,
-                 layers=[]):
+    def __init__(self, id=None, name=None, schema=None, data_dir=None, 
+                 static_dir=None, static_url=None):
         self.id = id
         self.name = name
         self.schema = schema
-        self.app_config = app_config
-        self.layers = layers
+        self.data_dir = data_dir
+        self.static_dir = static_dir
+        self.static_url = static_url
 
 project_table = Table('project_projects', db.metadata,
         Column('id', Integer, primary_key=True),
         Column('name', String),
         Column('schema', PickleType),
-        Column('app_config', PickleType),
         Column('data_dir', String),
         Column('db_uri', String),
         Column('static_dir', String),
         Column('static_url', String),
         )
 
-class MapLayer(object):
-    def __init__(self, id=None, layer_id=None, project=None, dir_=None,
-                 config={}):
-        self.id = id
-        self.layer_id = layer_id
-        self.project = project
-        self.dir_ = dir_
-        self.config = config
-
-maplayer_table = Table('project_maplayers', db.metadata,
-        Column('id', Integer, primary_key=True),
-        Column('layer_id', String),
-        Column('project_id', Integer, ForeignKey(project_table.c.id)),
-        Column('dir_', String),
-        Column('config', PickleType),
-        )
-
-mapper(Project, project_table, properties={
-    'layers': relationship(
-        MapLayer,
-        cascade="all, delete-orphan",
-        single_parent=True,
-    )
-})
-mapper(MapLayer, maplayer_table, properties={
-    'project': relationship(Project)
-})
-
+mapper(Project, project_table)

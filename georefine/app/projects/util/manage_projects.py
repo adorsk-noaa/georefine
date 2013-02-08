@@ -1,4 +1,4 @@
-from georefine.app.projects.models import Project, MapLayer
+from georefine.app.projects.models import Project
 from georefine.app import app, db
 import georefine.util.shapefile as shp_util
 import georefine.util.gis as gis_util
@@ -203,44 +203,6 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
         tran.commit()
 
         table_file.close()
-
-def ingest_map_layers(project, source_data_dir, session):
-    layers_data_dir = os.path.join(source_data_dir, 'data', 'map_layers', 'data')
-
-    if not os.path.exists(layers_data_dir):
-        return
-
-    target_layers_dir = os.path.join(project.data_dir, "map_layers")
-    os.makedirs(target_layers_dir, 0775)
-
-    map_layers_file = os.path.join(layers_data_dir, "map_layers.csv")
-    reader = csv.DictReader(open(map_layers_file, "rU"))
-    layers = [row for row in reader]
-
-    for layer in layers:
-        layer_data_dir = os.path.join(layers_data_dir, layer['id'])
-
-        layer_config_file = os.path.join(layer_data_dir, "config.json")
-        if os.path.exists(layer_config_file):
-            layer_config = json.load(open(layer_config_file, "rU"))
-        else:
-            layer_config = {}
-
-        target_layer_dir = os.path.join(target_layers_dir, layer['id'])
-        shutil.copytree(layer_data_dir, target_layer_dir)
-
-        for root, dirs, files in os.walk(target_layer_dir):
-            for item in dirs + files:
-                os.chmod(os.path.join(root, item), 0775)
-
-        layer_model = MapLayer(
-            layer_id=layer['id'],
-            project=project,
-            dir_=target_layer_dir,
-            config=layer_config,
-        )
-        session.add(layer_model)
-    session.commit()
 
 def ingest_static_files(project, data_dir):
     static_dir_name = 'static'
