@@ -193,7 +193,7 @@ def get_wms_parameters(parameters):
         wms_parameters[wms_parameter] = value
     return wms_parameters
 
-@bp.route('/<int:project_id>/layer/<layer_id>/wms', methods=['GET'])
+@bp.route('/<int:project_id>/layers/<layer_id>/wms', methods=['GET'])
 def layer_wms(project_id, layer_id):
     project = get_project(project_id)
 
@@ -201,7 +201,7 @@ def layer_wms(project_id, layer_id):
 
     fn = projects_services.get_layer_map
     fn_args = [project, layer_id]
-    fn_kwargs = wms_parameters
+    fn_kwargs = {'wms_parameters': wms_parameters}
     if app.config.get('GR_PROJECTS_CACHE'):
         map_image = _get_cached(
             project,

@@ -176,10 +176,10 @@ def get_layer_map(project, layer_id, wms_parameters={}, **kwargs):
     """ Get a map image for a given project layer. """
 
     # @TODO: implicit convention? maybe should centralize layer dir...
-    layer_dir = os.path.join(project.static_dir, 'map_layers', layer_id)
+    layer_dir = os.path.join(project.static_dir, 'static', 'map_layers', layer_id)
 
     # Read layer WMS config.
-    config_path = os.path.join(layer_dir, 'wmsConfig.json')
+    config_path = os.path.join(layer_dir, 'wms.json')
     with open(config_path, 'rb') as f:
         wms_config = json.load(f)
 

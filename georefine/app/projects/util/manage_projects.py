@@ -184,7 +184,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
 
             if (row_counter % commit_interval) == 0:
                 # Do bulk insert for tables w/out geometry columns.
-                if not has_geom:
+                if not has_geom and processed_rows:
                     dao.connection.execute(t['source'].insert(), processed_rows)
                 tran.commit()
                 tran = dao.connection.begin()
@@ -198,7 +198,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                 t_remaining = datetime.timedelta(seconds=int(seconds_remaining))
         
         # Commit any remaining rows.
-        if not has_geom:
+        if not has_geom and processed_rows:
             dao.connection.execute(t['source'].insert(), processed_rows)
         tran.commit()
 
