@@ -12,11 +12,34 @@
         }
     </style>
 
+    <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/jquery.js')}}"></script>
+
 	<script type="text/javascript">
-        BASE_PATH ="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/')}}";
-        ASSETS_PATH = "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/')}}";
-		var GeoRefine = {};
-		GeoRefine.config = {{georefine_config}};
+
+        if (typeof GeoRefine == 'undefined'){
+            GeoRefine = {};
+        }
+
+        if (! GeoRefine.config){
+            GeoRefine.config = {};
+        }
+		$.extend(true, GeoRefine.config, {{georefine_config}});
+        var projectId = GeoRefine.config.projectId;
+
+        if (! GeoRefine.app){
+            GeoRefine.app = {};
+        }
+        if (! GeoRefine.app.tokens){
+            GeoRefine.app.tokens = {};
+        }
+        GeoRefine.app.tokens.PROJECT_STATIC_DIR = GeoRefine.config.projectStaticDir;
+
+        var contextRoot = GeoRefine.config.contextRoot;
+        var requestRoot = contextRoot + '/projects/' + projectId;
+        GeoRefine.app.requestsEndpoint = requestRoot + '/execute_requests/';
+        GeoRefine.app.WMSLayerEndpoint = requestRoot + '/layers';
+        GeoRefine.app.keyedStringsEndpoint = contextRoot + '/ks';
+
         GeoRefine.config.mainEl= '#main';
 	</script>
 
@@ -25,19 +48,58 @@
     {% if app.config['GRC_USE_MINIFIED']%}
     <link rel="stylesheet" href="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/dist/css/consolidated.css')}}" type="text/css">
     <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/dist/GeoRefineClient.min.js')}}" type="text/javascript"></script>
-    <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/src/app.js')}}"></script>
-
     {% else %}
+    <script>
+        BASE_PATH ="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/')}}";
+        ASSETS_PATH = "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/')}}";
+    </script>
     <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/require_config.js')}}"></script>
     <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/require.js')}}"></script>
-    <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/src/app-dev.js')}}"></script>
     {% endif %}
+
+    <script src="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/jReject/js/jquery.reject.js')}}"></script>
+    <link rel="stylesheet" href="{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/jReject/css/jquery.reject.css')}}" type="text/css">
+    <script type="text/javascript">
+$(document).ready(function(){
+    var minVersions = {
+        safari: 4,
+        chrome: 4,
+        firefox: 3,
+        msie: 9,
+        opera: 9
+    };
+    var reject = {
+        unknown: true
+    };
+    for (var browser in minVersions){
+        var minV = minVersions[browser];
+        for (var i = 1; i < minV; i++){
+            reject[browser + i] = true;
+        }
+    }
+    $.reject({
+        reject: reject,
+        close: false,
+        imagePath: "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/jReject/images/')}}",
+        header: 'This site requires a newer browser.',
+        paragraph1: 'Please upgrade to one of the browsers below.',
+        onFail: function(){
+            require([
+                {% if app.config['GRC_USE_MINIFIED'] -%}
+                "GeoRefineClient/app"
+                {% else -%}
+                "GeoRefineClient/app-dev"
+                {% endif -%}
+            ]);
+        }
+    });
+});
+    </script>
 
 </head>
 
 <body>
-    <div id="main">
-	</div>
+    <div id="main" style="position: absolute; top: 0; right: 0; left: 0; bottom: 0;"></div>
 </body>
 </html>
 
