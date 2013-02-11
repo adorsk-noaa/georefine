@@ -58,7 +58,7 @@ def initialize_db(project):
         con.execute("SELECT InitSpatialMetaData()")
 
 def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
-                logging_interval=1000, commit_interval=1e4, 
+                logging_interval=1e4, commit_interval=1e4, 
                 progress_logger=logging.getLogger(), **kwargs):
     schema = project.schema
 
@@ -139,6 +139,10 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                 try:
                     # Defaults.
                     key = c.name
+
+                    # Iniialize stub value for column.
+                    processed_row[key] = None
+
                     cast = str
                     if isinstance(c.type, Float):
                         cast = float
@@ -155,7 +159,7 @@ def ingest_data(project, data_dir, dao, msg_logger=logging.getLogger(),
                             key = c.name + "_wkb"
                             cast = WKBSpatialElement
 
-                    # Skip row if no corresponding key.
+                    # Skip column if no corresponding key.
                     if not row.has_key(key): 
                         continue
 
