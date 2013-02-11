@@ -32,7 +32,7 @@
         if (! GeoRefine.app.tokens){
             GeoRefine.app.tokens = {};
         }
-        GeoRefine.app.tokens.PROJECT_STATIC_DIR = GeoRefine.config.projectStaticDir;
+        GeoRefine.app.tokens.PROJECT_STATIC_DIR = GeoRefine.config.projectStaticDir + '/static';
 
         var contextRoot = GeoRefine.config.contextRoot;
         var requestRoot = contextRoot + '/projects/' + projectId;
