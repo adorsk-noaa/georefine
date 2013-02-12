@@ -62,11 +62,10 @@
     <script type="text/javascript">
 $(document).ready(function(){
     var minVersions = {
-        safari: 4,
-        chrome: 4,
-        firefox: 3,
-        msie: 9,
-        opera: 9
+        chrome: 23,
+        firefox: 16,
+        safari: 6,
+        opera: 12,
     };
     var reject = {
         unknown: true
@@ -77,12 +76,31 @@ $(document).ready(function(){
             reject[browser + i] = true;
         }
     }
+    $.extend(true, reject, {
+        msie: true,
+    });
+
     $.reject({
         reject: reject,
         close: false,
         imagePath: "{{url_for('static', filename='GeoRefine_Assets/GeoRefineClient/assets/js/jReject/images/')}}",
         header: 'This site requires a newer browser.',
         paragraph1: 'Please upgrade to one of the browsers below.',
+        paragraph2: '',
+        browserInfo: {
+            firefox: {
+                text: 'Mozilla Firefox',
+                url: 'http://www.mozilla.com/firefox/'
+            },
+            chrome: {
+                text: 'Google Chrome',
+                url: 'http://www.google.com/chrome/'
+            },
+            msie: false,
+            safari: false,
+            opera: false,
+            gcf: false,
+        },
         onFail: function(){
             require([
                 {% if app.config['GRC_USE_MINIFIED'] -%}
