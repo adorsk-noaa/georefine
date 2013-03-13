@@ -63,12 +63,13 @@
 $(document).ready(function(){
     var minVersions = {
         chrome: 23,
-        firefox: 16,
         safari: 6,
         opera: 12,
     };
     var reject = {
-        unknown: true
+        unknown: true,
+        firefox: true,
+        msie: true,
     };
     for (var browser in minVersions){
         var minV = minVersions[browser];
@@ -76,9 +77,6 @@ $(document).ready(function(){
             reject[browser + i] = true;
         }
     }
-    $.extend(true, reject, {
-        msie: true,
-    });
 
     $.reject({
         reject: reject,
@@ -88,14 +86,11 @@ $(document).ready(function(){
         paragraph1: 'Please upgrade to one of the browsers below.',
         paragraph2: '',
         browserInfo: {
-            firefox: {
-                text: 'Mozilla Firefox',
-                url: 'http://www.mozilla.com/firefox/'
-            },
             chrome: {
                 text: 'Google Chrome',
                 url: 'http://www.google.com/chrome/'
             },
+            firefox: false,
             msie: false,
             safari: false,
             opera: false,
